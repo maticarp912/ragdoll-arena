@@ -5,14 +5,20 @@ Leyenda: ✅ comprobado en Studio · 🟡 implementado, sin probar jugando · �
 Responsables actuales: ver [[Reparto etapa 8]].
 
 ## Pendientes importantes (resumen)
-1. ⬜ **Primera publicación para la beta** (hermano en celular con mando): integrar, regenerar y probar en Studio con emulador de celular y mando. — Claude
-2. 🟡 **Espada a dos manos y martillo más grande**: los hizo Claude (Gemini no los recibió). Maza ×1,3 con alcance 7 / 7,5.
-3. 🟡 **Botones táctiles ocultos cuando hay mando** y B que cierra los menús. — Claude
-4. 🟡 **Arenas** (Codex ronda 2, revisado por Claude en Studio el 9/11): las 4 se construyen (Bosque, Cañón 243 piezas, Templo 495, Mano 198) y rotan por partida. Acabado básico: el Cañón es un anillo de bloques, el Templo se reconoce (columnas con jeroglíficos) y la Mano **no se lee como mano**. ⬜ Falta probar el derrumbe y el bug negro, y una segunda pasada de arte.
+1. 🔧 **Primera publicación para la beta** (hermano en celular con mando). Prueba en Studio del 9/11, 18:45:
+   - ✅ Partida 1v1 con 2 jugadores.
+   - ✅ Celular (iPhone XR) y emulador de mando.
+   - ✅ Las 5 armas.
+   - ⬜ Falta integrar la ronda 6 y volver a probar. — Claude
+2. ✅ **Espada a dos manos y martillo más grande** (visto en Studio: espada tomada con las dos manos, maza grande en reposo alto): los hizo Claude (Gemini no los recibió). Maza ×1,3 con alcance 7 / 7,5.
+3. ✅ **Botones táctiles ocultos cuando hay mando** (emulador de mando: se ocultan y vuelven al tocar). 🟡 B que cierra los menús, sin probar. — Claude
+4. 🟡 **Arenas** (Codex ronda 2, revisado por Claude en Studio el 9/11): las 4 se construyen (Bosque, Cañón 243 piezas, Templo 495, Mano 198) y rotan por partida. Acabado básico: el Cañón es un anillo de bloques, el Templo se reconoce (columnas con jeroglíficos) y la Mano **no se lee como mano**. ✅ Derrumbe visto en Studio: las losas caen y se ve lava abajo, sin bloque negro. ⬜ Falta una segunda pasada de arte.
 5. ✅ **Cielo de estrellas doradas** (Claude, visto en Studio): ~3.200 estrellas doradas (1.400 en celular) de tres tamaños, halos cálidos en las grandes, titileo, luna azulada con halo; sigue a la cámara (ciudad y arenas). Límite: la niebla de la atmósfera apaga lo lejano, por eso están a 650 studs; para igualar la densidad de la referencia haría falta un cielo con imágenes subidas (6 caras).
 6. ⬜ **Ciudad estilo pueblo RPG**: Codex hace la taberna, el santuario del punto de aparición, los hongos y la vegetación (`CityProps`, ronda 3); Claude, el estilo general (tejados, caminos curvos).
 7. ⬜ **Tableros de clasificación en la plaza.** — Codex (ronda 3); el servidor y el dibujo ya están.
-8. 🟡 **Cámara de espectador** al morir en 2v2: sigue a un aliado vivo (o a un rival). — Claude, falta probar en una partida 2v2.
+8. 🟡 **Cámara de espectador** al morir en 2v2: sigue a un aliado vivo (o a un rival). — Claude
+   - Falta probarla en una partida 2v2 (hacen falta 4 jugadores).
+   - Arreglado el 9/11: Roblox regenera la vida de un cuerpo muerto, así que un aliado caído volvía a contar como vivo en la ronda, en el fijado y en el espectador. Ahora se mira `Eliminated` y el estado Dead.
 9. 👤 Pasar el ID de Roblox del hermano para el menú de depuración. Crear los productos de Robux (skin `Requiem`, auras Ojos que vigilan y Fractura pálida).
 
 ## Pedidos del 9/11, 18:00
@@ -27,7 +33,7 @@ Responsables actuales: ver [[Reparto etapa 8]].
 |---|---|---|
 | Quitar los «golpecitos» del dash y dejar el woosh | Claude | 🟡 sin sonidos de librería y sin pasos de Roblox durante el dash |
 | Botón Armería que no funcionaba | Codex | ✅ |
-| Al fijar objetivo, HUD completo; en la arena se fija solo al rival | Claude | ✅ HUD con objetivo (visto); 🟡 fijado automático al entrar a partida (alcance de arena 220) |
+| Al fijar objetivo, HUD completo; en la arena se fija solo al rival | Claude | ✅ HUD con objetivo (visto); ✅ fijado automático al entrar a partida (visto con 2 jugadores) |
 | Vista previa de auras incorrecta | Claude | ✅ arreglada |
 
 ## Pedidos del 9/11, 16:40 (con capturas)
@@ -87,7 +93,7 @@ Responsables actuales: ver [[Reparto etapa 8]].
 | Monedas por victoria y por misiones | Codex | 🟡 (220 por victoria, 65 por derrota, misiones de 100–130) |
 | Apartado «Clasificatorias: próximamente» | Gemini | 🟡 |
 | Dash que siga y rodee al objetivo fijado; arreglar su animación | Claude | ✅ medido en Studio |
-| Bug: algo negro bajo la arena en el derrumbe | Codex | 🟡 causa probable corregida (capa de roca continua y suelo negro del abismo); falta verlo en un derrumbe |
+| Bug: algo negro bajo la arena en el derrumbe | Codex | ✅ visto en un derrumbe (9/11): sin bloque negro, lava abajo |
 | Peligros en el vacío (púas, lava) | Codex | 🟡 lava, púas y agua según la arena |
 | Más de una arena (`arena 2`, `arena 3`, `mano como arena 4`) | Codex | 🟡 4 arenas en rotación; arte básico, la Mano necesita rehacerse |
 | Interfaz trabajada por un profesional de diseño | Gemini | 🟡 |
@@ -107,7 +113,7 @@ Responsables actuales: ver [[Reparto etapa 8]].
 | Pedido | Resp. | Estado |
 |---|---|---|
 | Publicar para probar con el hermano (celular con mando) y actualizar seguido | Claude / 👤 | ⬜ primera versión lista para publicar |
-| Botones táctiles ocultos con mando | Gemini | 🔧 |
+| Botones táctiles ocultos con mando | Claude | ✅ (emulador de mando en Studio) |
 | Monedas de depuración para el hermano | Claude / 👤 | ⬜ falta su ID de Roblox |
 
 ## De etapas anteriores, todavía abiertos

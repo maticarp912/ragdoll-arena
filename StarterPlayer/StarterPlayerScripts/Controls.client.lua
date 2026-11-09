@@ -73,11 +73,19 @@ local lockValue = Instance.new("ObjectValue")
 lockValue.Name = "LockTarget"
 lockValue.Parent = player
 
+-- Roblox regenera la vida de un Humanoid muerto, así que Health > 0 no alcanza:
+-- también se mira el estado Dead y el atributo Eliminated del jugador dueño.
+local function isAlive(hum)
+	if not hum or hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then return false end
+	local owner = Players:GetPlayerFromCharacter(hum.Parent)
+	return not (owner and owner:GetAttribute("Eliminated"))
+end
+
 local function canLock(model)
 	local char = getChar()
 	local hum = model and model:FindFirstChildOfClass("Humanoid")
 	local mine = char and char:FindFirstChildOfClass("Humanoid")
-	return model ~= nil and model.Parent ~= nil and hum ~= nil and hum.Health > 0
+	return model ~= nil and model.Parent ~= nil and isAlive(hum)
 		and mine ~= nil and mine.Health > 0
 		and not char:GetAttribute("Carrying") and not char:GetAttribute("CarriedBy")
 		and char:GetAttribute("Action") ~= "PickUp"
@@ -208,7 +216,7 @@ local function updateSpectate()
 		end
 		return nil
 	end
-	if spectating and spectating.Parent and spectating.Health > 0 then return spectating end
+	if spectating and spectating.Parent and isAlive(spectating) then return spectating end
 	spectating = nil
 	for _, pass in { true, false } do -- primero aliados, después cualquiera
 		for _, p in Players:GetPlayers() do
@@ -238,7 +246,7 @@ RunService:BindToRenderStep("LockOn", Enum.RenderPriority.Camera.Value + 1, func
 	if locked and not canLock(locked) then setLock(nil) end
 	local tHum = locked and locked:FindFirstChildOfClass("Humanoid")
 	local tRoot = locked and locked:FindFirstChild("HumanoidRootPart")
-	if locked and (not (locked.Parent and tHum and tHum.Health > 0 and tRoot)
+	if locked and (not (locked.Parent and isAlive(tHum) and tRoot)
 		or (tRoot.Position - root.Position).Magnitude > (player:GetAttribute("InMatch") and CombatConfig.Controls.MatchLockRange or CombatConfig.Controls.LockOnBreakRange)) then
 		setLock(nil)
 	end

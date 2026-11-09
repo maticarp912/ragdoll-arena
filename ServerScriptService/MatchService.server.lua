@@ -329,7 +329,9 @@ local function runRound(roundNumber: number, modeName: string, teamsMap)
 
 		for _, f in fighters do
 			local root = f.char:FindFirstChild("HumanoidRootPart")
-			if f.player.Parent and f.hum.Parent and f.hum.Health > 0 and root then
+			-- Eliminated: Roblox regenera la vida de un Humanoid muerto (visto en Studio: 0 → 4 → 9),
+			-- así que Health > 0 sola haría volver a contar como vivo a un aliado caído en 2v2.
+			if f.player.Parent and f.hum.Parent and f.hum.Health > 0 and not f.player:GetAttribute("Eliminated") and root then
 				if root.Position.Y < voidY then
 					f.hum.Health = 0 -- eliminado: cayó de la arena
 				else

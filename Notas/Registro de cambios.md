@@ -46,6 +46,13 @@
   - Nuevo `PlayerData.saveSoon`: las opciones, el idioma y la equipación de auras se agrupan en un solo guardado cada 6 s (`Economy.SaveDebounce`). Antes, cada petición del cliente guardaba en el DataStore. 🟡 sin probar en Studio.
   - Nota [[Referencia LihFolk]] y regla C0 en [[Contratos etapa 8]]. Place regenerado.
 - **Git (18:30)**: la carpeta del juego es un repositorio (rama `main`, primer commit `dab2bce`). Fuera del repositorio: `.rbxlx`, `_backup_*`, `ragdoll-2v2/`, `.log` y el estado de Obsidian. Solo Claude hace commits (regla C0b). Copia privada en GitHub: `maticarp912/ragdoll-arena`.
+- **Prueba en Studio antes de la beta (18:45)**:
+  - ✅ Remotos con datos malos: no dan errores.
+  - ✅ Las 5 armas golpean y gastan resistencia. La espada se toma a dos manos y la maza se ve grande.
+  - ✅ Partida 1v1 con 2 jugadores: cola, arena, fijado automático, derrumbe con lava (sin bloque negro), caída que elimina en menos de 2 s, segunda ronda, victoria 2-0, pantalla de DERROTA y vuelta a la ciudad sin pantalla borrosa.
+  - ✅ Celular (iPhone XR): botones táctiles, panel izquierdo, barra de partida y Armería con un toque. Con el emulador de mando, los botones táctiles se ocultan y vuelven al tocar.
+  - **Bug arreglado** (`MatchService`, `Controls`): Roblox regenera la vida de un cuerpo muerto, y en 2v2 un aliado caído volvía a contar como vivo en la ronda, el fijado y el espectador. Ahora se usa `Eliminated` y el estado Dead. 🟡 Sin probar en 2v2.
+  - Pendiente: espectador en 2v2 (4 jugadores), B que cierra menús con mando, guardado agrupado con DataStore real (lugar publicado). En celular, los textos de la Armería son muy chicos.
 
 ## Lote 7 — 9/11/2026 (Claude)
 - **Controles por defecto**: los de la captura del usuario. La **patada** tiene tecla propia: C en teclado y LT/L2 en mando. Agarrar (E / X) ya no patea. Con el ratón libre, el clic derecho funciona así: toque corto = fuerte, arrastrar = cámara. 🟡
