@@ -6,7 +6,7 @@ Puntos de conexión entre las tres IA. Quien «produce» lo crea y lo mantiene; 
 Antes de terminar una tarea, cada IA pasa `node tools/check_lua.js .` **y** el revisor LihFolk (comando en [[Referencia LihFolk]]): 0 errores, y cada aviso nuevo en sus archivos arreglado o justificado en el reporte.
 
 ## C0b. Git (desde el 9/11) ✅
-La carpeta del juego es un repositorio de Git (rama `main`). **Solo Claude hace commits**: uno al integrar cada ronda y otro antes de empezar la siguiente.
+La carpeta del juego es un repositorio de Git (rama `main`), con copia privada en GitHub: `maticarp912/ragdoll-arena`. **Solo Claude hace commits y los sube**: uno al integrar cada ronda y otro antes de empezar la siguiente.
 - Codex y Gemini pueden usar `git status` y `git diff` para ver qué cambiaron.
 - No hacen `commit`, `checkout`, `reset`, `stash`, `restore` ni cambian de rama.
 - El place `.rbxlx`, los `_backup_*` y los `.log` no se versionan (ver `.gitignore`).
