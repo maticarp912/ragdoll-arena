@@ -5,6 +5,12 @@ Puntos de conexión entre las tres IA. Quien «produce» lo crea y lo mantiene; 
 ## C0. Revisión antes de entregar (desde el 9/11) ✅
 Antes de terminar una tarea, cada IA pasa `node tools/check_lua.js .` **y** el revisor LihFolk (comando en [[Referencia LihFolk]]): 0 errores, y cada aviso nuevo en sus archivos arreglado o justificado en el reporte.
 
+## C0b. Git (desde el 9/11) ✅
+La carpeta del juego es un repositorio de Git (rama `main`). **Solo Claude hace commits**: uno al integrar cada ronda y otro antes de empezar la siguiente.
+- Codex y Gemini pueden usar `git status` y `git diff` para ver qué cambiaron.
+- No hacen `commit`, `checkout`, `reset`, `stash`, `restore` ni cambian de rama.
+- El place `.rbxlx`, los `_backup_*` y los `.log` no se versionan (ver `.gitignore`).
+
 ## C1. Idiomas ✅
 `Localization.lua` (Claude) mezcla `ReplicatedStorage/LocaleCodex.lua` (Codex) y `ReplicatedStorage/LocaleGemini.lua` (Gemini).
 Formato: `return { ES = { clave = "texto" }, EN = {...}, ["PT-BR"] = {...} }`, mismas claves en los tres. Las claves de `LocaleES/EN/PT.lua` ganan (en Studio se avisa si se repiten). Parámetros `{nombre}`; un parámetro `nombreKey` con una clave de idioma se traduce y rellena `{nombre}`.

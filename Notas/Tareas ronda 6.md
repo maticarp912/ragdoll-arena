@@ -9,6 +9,7 @@ Reglas de siempre:
 - **Nuevo (regla C0):** pasá también el revisor LihFolk antes de terminar. El comando está en [[Referencia LihFolk]].
   - Tiene que dar 0 errores. Hoy da 0 errores y 0 avisos en 71 archivos.
   - Cada aviso nuevo en tus archivos se arregla o se justifica en el reporte.
+- **Nuevo (regla C0b): la carpeta ahora es un repositorio de Git.** Podés mirar tus cambios con `git status` y `git diff`. No hagas commits, no cambies de rama ni deshagas cambios con Git: eso lo hace Claude al integrar.
 - Textos nuevos en tu archivo de idioma, con las mismas claves en ES, EN y PT-BR.
 - Reporte con implementado / comprobado / pendiente de Studio.
 - **Guías:** en [[Referencia LihFolk]] está cómo buscar en las guías de LihFolk sin Python. Citá en el reporte el título de la nota que uses. No copies su contenido al vault (licencia).
