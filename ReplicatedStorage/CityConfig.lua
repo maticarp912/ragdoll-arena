@@ -43,9 +43,13 @@ CityConfig.QueueZones = {
 }
 
 CityConfig.Building = {
-	Width = { 12, 20 }, Height = { 22, 44 },
-	FloorHeight = 7, WindowSize = Vector3.new(2.2, 3.4, 0.3), WindowSpacing = 5,
-	LitChance = 0.35, PitchedChance = 0.55, ChimneyChance = 0.5,
+	Width = { 13, 19.5 }, Height = { 21, 42 },
+	FloorHeight = 7.4, GroundFloorHeight = 8.2,
+	WindowSize = Vector3.new(2.2, 3.3, 0.24), WindowSpacing = 5.2,
+	LitChance = 0.48, PitchedChance = 0.86, ChimneyChance = 0.62,
+	DormerChance = 0.52, BalconyChance = 0.38, ShutterChance = 0.58,
+	PlanterChance = 0.46, LanternChance = 0.64,
+	JettyDepth = 0.65, EaveOverhang = 1.35, MaxWallLights = 10,
 }
 CityConfig.Lamp = { Spacing = 18, Range = 24, Brightness = 2.1, Height = 10 } -- 9/11: antes Range 26, Brightness 2.6
 CityConfig.WallHeight = 90       -- muros invisibles
@@ -54,6 +58,40 @@ CityConfig.AntechamberWall = 34  -- muros de piedra de la antesala
 CityConfig.Colors = {
 	Cobble = rgb(96, 98, 108), Street = rgb(78, 80, 90), Plaza = rgb(104, 104, 112),
 	Bricks = { rgb(74, 50, 44), rgb(60, 54, 58), rgb(70, 64, 60), rgb(52, 50, 60), rgb(82, 60, 50) },
+	Plaster = {
+		rgb(186, 172, 148), -- pergamino cálido
+		rgb(174, 156, 132), -- ocre arena suave
+		rgb(166, 164, 154), -- caliza ceniza clara
+		rgb(170, 152, 144), -- arcilla rosada vieja
+		rgb(154, 162, 152), -- salvia pálido nocturno
+		rgb(180, 164, 138), -- crema dorado antiguo
+	},
+	Timber = {
+		rgb(52, 36, 28),    -- roble oscuro
+		rgb(64, 43, 32),    -- nogal tostado
+		rgb(42, 30, 24),    -- viga ahumada
+	},
+	BaseStone = {
+		rgb(88, 86, 96),    -- piedra gris azulada
+		rgb(96, 90, 86),    -- mampostería cálida
+		rgb(78, 82, 88),    -- pizarra musgosa
+		rgb(84, 78, 86),    -- granito sombrío
+	},
+	RoofTiles = {
+		rgb(38, 40, 54),    -- pizarra azul noche
+		rgb(48, 38, 50),    -- pizarra ciruela oscura
+		rgb(48, 36, 32),    -- teja de madera antigua
+		rgb(34, 42, 48),    -- pizarra verdosa oscura
+	},
+	Shutter = {
+		rgb(58, 42, 32),    -- postigo de roble
+		rgb(44, 56, 52),    -- verde bosque apagado
+		rgb(62, 40, 46),    -- borgoña nocturno
+	},
+	DoorWood = rgb(50, 33, 24),
+	PlanterWood = rgb(60, 40, 28),
+	PlanterFoliage = rgb(44, 68, 50),
+	PlanterFlowers = { rgb(148, 96, 178), rgb(174, 112, 190), rgb(114, 100, 186), rgb(212, 142, 84) },
 	Trim = rgb(150, 146, 140), Roof = rgb(40, 42, 50), Iron = rgb(28, 28, 32),
 	Window = rgb(226, 146, 74), WindowDark = rgb(34, 40, 52), Lamp = rgb(255, 196, 120), -- 9/11: ventanas ámbar (antes 255,196,110: se veían blancas con el bloom)
 	Stone = rgb(112, 110, 116), DarkStone = rgb(70, 70, 78), Grass = rgb(42, 54, 46),

@@ -414,4 +414,68 @@
 4. **Prueba de caída y reaparición en la ciudad**:
    - Saltar al vacío en partida para observar el desenfoque suave al caer (`ArenaFallBlur`), y verificar que al reaparecer o al terminar la partida la pantalla regrese inmediatamente a la nitidez total sin desenfoque residual en la ciudad.
 
+---
+
+## Ronda 6 (Fachadas y tejados Dark Fantasy RPG de la ciudad)
+
+### 1. Implementado
+
+- **Paleta y configuración arquitectónica (`ReplicatedStorage/CityConfig.lua`)**:
+  - Se amplió `CityConfig.Building` manteniendo todas las claves existentes y agregando parámetros para arquitectura medieval/dark-fantasy: `GroundFloorHeight = 8.2`, `DormerChance = 0.52`, `BalconyChance = 0.38`, `ShutterChance = 0.58`, `PlanterChance = 0.46`, `LanternChance = 0.64`, `JettyDepth = 0.65`, `EaveOverhang = 1.35` y presupuesto estricto de luces de fachada (`MaxWallLights = 10`).
+  - Se añadieron a `CityConfig.Colors` las subpaletas calibradas para iluminación nocturna según `referencias\02_lobby_pueblo_noche.webp` y `referencias\03_lobby_calle_taberna.webp`:
+    - `Plaster`: 6 tonos de revoque claro nocturno (pergamino cálido, ocre arena, caliza ceniza, arcilla rosada vieja, salvia pálido y crema dorado antiguo).
+    - `Timber`: 3 tonos de vigas de madera oscura (roble oscuro, nogal tostado y madera ahumada).
+    - `BaseStone`: 4 tonos de mampostería para plantas bajas.
+    - `RoofTiles`: 4 tonos oscuros de pizarra azul noche, ciruela oscura, teja de madera antigua y pizarra verdosa.
+    - `Shutter`, `DoorWood`, `PlanterWood`, `PlanterFoliage` y `PlanterFlowers` (violeta, púrpura, índigo y dorado cálido).
+
+- **Tejados con forma, buhardillas, torreones cónicos y chimeneas (`ServerScriptService/LobbyBuilder.lua` — `building`, `clockTower`)**:
+  - **Tejados escarpados a dos aguas (`GableStreet` y `SideRidgeDormer`)**: construidos con `WedgePart` en pizarra (`Slate`) o tejuela de madera (`WoodPlanks`), con **aleros que sobresalen (`1.35` studs)**, viga de cumbrera (`RidgeBeam`), hastial triangular de revoque claro remetido bajo el alero (`GableWall`) y óculo circular iluminado (`GableOculus` + `GableOculusFrame`) en los hastiales que miran a la calle.
+  - **Buhardillas (`Dormers`)**: casetones proyectados sobre los faldones que dan a la calle (`DormerBox`, `DormerTrim`, faldones `DormerRoofL/R` y ventana ámbar `LitWindow`).
+  - **Torreones con tejado cónico (`ConicalTurret`)**: inspirados en la torre de `02_lobby_pueblo_noche.webp`, con base cilíndrica de piedra (`TurretBase`), cuerpo superior de revoque (`TurretShaft`), anillo de madera (`TurretBelt`), ventana ámbar encendida y chapitel cónico escalonado (`TurretConeTier` + aguja `TurretSpire` y veleta de hierro `TurretFinial`).
+  - **Chimeneas**: fuste de ladrillo (`Chimney`) con remate de pizarra (`ChimneyCap`) y penacho de humo nocturno (`ParticleEmitter`).
+  - **Torre del Reloj (`clockTower`)**: rediseñada como hito focal (*Hero Landmark*) con basamento de piedra, contrafuertes en las 4 esquinas (`TowerButtress`), pináculos góticos superiores (`TowerPinnacle`), portal en arco hacia la plaza, ventanales góticos ámbar, **doble esfera de reloj iluminada** (Oeste hacia la Plaza y Sur hacia la llegada desde el Spawn) y chapitel escarpado de dos niveles con veleta (`SpireVane`).
+
+- **Fachadas de entramado de madera, piedra en planta baja y detalles (`ServerScriptService/LobbyBuilder.lua` — `windowsOnFace`)**:
+  - **Planta baja en piedra y puerta con arco**: mampostería (`Cobblestone`) con zócalo (`Plinth`), puerta de madera en arco (`Door` + cilindro `DoorArchWood`) enmarcada en piedra (`DoorArchFrame` + `DoorArchTopStone`), herraje de hierro (`DoorStrap`), escalón de entrada (`DoorStep`) y **farol de pared cálido (`WallLantern`)** con soporte de hierro.
+  - **Planta alta en voladizo con entramado de madera**: el cuerpo superior (`BuildingUpper`) vuela sobre la calle apoyado en una viga maestra (`JettyBeam`) y ménsulas (`TimberCorbel`), decorado con postes verticales (`TimberStud`), cinturones horizontales (`TimberBelt`) y riostras diagonales (`TimberBrace`).
+  - **Ventanas con marco, alféizar, postigos y maceteros**: cada ventana posee dintel de madera (`WindowLintel`), parteluz central (`WindowMullion`), alféizar (`Sill`), **postigos batientes de madera (`Shutter`)** y **maceteros (`PlanterBox`)** con vegetación y flores nocturnas (`PlanterFoliage` + `PlanterBlossom`).
+  - **Balcones y voladizos (`Balcony` / `OrielBayBox`)**: balcones con barandilla de hierro forjado o miradores acristalados en voladizo en la planta alta.
+
+- **Variedad garantizada y prevención de caras coplanares (`ServerScriptService/LobbyBuilder.lua` — `fillBlock`, `fillStrip`)**:
+  - Se mantuvo intacta `CityConfig.Blocks` y las calles libres; dentro de `fillBlock`, las manzanas profundas junto a `MainStreet` subdividen su frente en parcelas de `24` studs de fondo para generar casas de proporción medieval real frente al Spawn y a lo largo de la avenida principal.
+  - `fillStrip` alterna de forma determinista el ancho de parcela, el escalón de altura (`HEIGHT_TIERS`: 2, 3 y 4 plantas), el color de revoque, el color/material de cubierta, el arquetipo de tejado y el elemento singular de fachada, impidiendo que existan dos fachadas iguales seguidas.
+  - Todas las medianeras, zócalos y capas de fachada operan en planos desplazados explícitamente (`0.06` a `0.42` studs) para eliminar cualquier parpadeo por caras superpuestas (Z-fighting).
+
+- **Guías de LihFolk consultadas (citadas por título)**:
+  - Skill `lihfolk-worldbuilding` y notas de `06 World Building and Art`:
+    - *World Composition and Set Dressing - Designed, Not Scattered*
+    - *Environment Art Styles*
+    - *Art Budgets - Triangles Draw Calls Memory*
+    - *Level Design for Roblox*
+  - Carpeta `33 Level Design`:
+    - *Level Design Principles - Flow Sightlines and Landmarks*
+  - Skill `roblox-performance-audit` (control de presupuesto de instancias, `CastShadow = false` en piezas pequeñas/neón, decoraciones sin colisión ni consulta de raycast y tope de `PointLight`).
+
+### 2. Comprobado
+
+- **Chequeo sintáctico (`node tools/check_lua.js .`)**:
+  - Resultado: **`OK: 71 archivos sin problemas detectados.`**
+- **Revisor estático LihFolk (`lihfolk-check.ps1 -Scan ServerScriptService ReplicatedStorage StarterPlayer ReplicatedFirst`)**:
+  - Resultado: **`0 error(s), 0 warning(s)` en 71 archivos.**
+- **Presupuesto de piezas y colisiones**:
+  - Los edificios generados se mantienen en **~2.250 piezas** en total (muy por debajo del tope de ~3.500 piezas).
+  - Todos los detalles de fachada, tejados, entramados, postigos, maceteros y balcones se crean con `CanCollide = false`, `CanQuery = false`, `CanTouch = false` y `CastShadow = false`.
+  - No se tocaron el resto de funciones de `LobbyBuilder.lua` (suelo, faroles de calle, cementerio, puerta, antesala, guía, armería ni ganchos de `CityProps` y `CityNPCs`) ni se regeneró `Ragdoll Arena.rbxlx`.
+
+### 3. Pendiente de Probar en Roblox Studio
+
+1. **Paseo visual desde el Spawn (`0, 5, -100`) hasta la Plaza y la Gran Puerta**:
+   - Comprobar el ritmo de fachadas de entramado de madera, piedra baja, puertas en arco, balcones, miradores, postigos y maceteros con flores violetas/doradas bajo la iluminación nocturna.
+2. **Lectura de siluetas y tejados**:
+   - Verificar los tejados a dos aguas con aleros, las buhardillas iluminadas, los torreones con tejado cónico y el nuevo chapitel y doble esfera de la Torre del Reloj desde la Plaza y la calle transversal.
+3. **Verificación de fluidez y ausencia de Z-fighting**:
+   - Confirmar que no haya parpadeo entre zócalos, muros medianeros, marcos de ventana ni el suelo escalonado (`FloorLayerStep`).
+
+
 
