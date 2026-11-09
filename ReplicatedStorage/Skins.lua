@@ -25,11 +25,11 @@ Skins.Data = {
 		blade = Color3.fromRGB(170, 140, 80), accent = Color3.fromRGB(60, 50, 40),
 		material = Enum.Material.Metal, trail = Color3.fromRGB(200, 170, 110) },
 
-	Cyber = { name = "Runas Etéreas", currency = "Robux", price = 99, productId = 0, desc = "Acero oscuro con runas que brillan en frío.",
+	Cyber = { name = "Runas Etéreas", currency = "Coins", price = 1600, productId = 0, desc = "Acero oscuro con runas que brillan en frío.",
 		blade = Color3.fromRGB(40, 44, 56), accent = Color3.fromRGB(120, 200, 220),
 		material = Enum.Material.Metal, neonAccent = true, trail = Color3.fromRGB(140, 220, 240) },
 
-	Blood = { name = "Linaje Carmesí", currency = "Robux", price = 149, productId = 0, desc = "Forjada con sangre de un linaje maldito.",
+	Blood = { name = "Linaje Carmesí", currency = "Coins", price = 2400, productId = 0, desc = "Forjada con sangre de un linaje maldito.",
 		blade = Color3.fromRGB(90, 20, 26), accent = Color3.fromRGB(160, 30, 40),
 		material = Enum.Material.Metal, neonAccent = true, trail = Color3.fromRGB(170, 25, 40) },
 }
@@ -41,8 +41,8 @@ Skins.Data.Requiem = {
 	desc = "Acero negro de guardia gótica con cuernos curvos y espina funeraria.",
 	weapon = "Sword",
 	rarity = "Epic",
-	currency = "Robux",
-	price = 149,
+	currency = "Coins",
+	price = 3400,
 	productId = 0,
 	comingSoon = false,
 	design = "RequiemHorns",

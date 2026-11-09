@@ -121,3 +121,96 @@ Pendiente Studio: Claude debe conectar CityNPCs.start(cityFolder,ctx); no se toc
 ### Cierre Ronda 4
 Chequeos después de tareas 1/2/3: OK, respectivamente 70/70/71 archivos. Bordes de pasto añadidos fuera del corredor central y santuario. Salud finita alta para pueblerinos; exclusión del combate depende de no tener Combatant (validar en Studio).
 Implementado en archivos autorizados; ningún archivo de arenas/combate/UiTheme/UiAssets ni LobbyBuilder fue modificado, no se regeneró rbxlx. No se ejecutó Studio en esta sesión. Claude: conectar CityNPCs, ejecutar checklist de cada tarea y revisar apariencia/posiciones con los cambios paralelos; el chequeo básico no prueba navegación, física, cámara ni carga real de assets.
+
+## Ronda 6 — revisión técnica previa a beta, solo lectura
+
+### Alcance y comprobaciones
+Leídas reglas y sección B de Tareas ronda 6 y Referencia LihFolk. Revisados los seis handlers: Input, Debug, Shop, Settings, Queue y Missions; guardado/recibos, estadísticas/partida, carga cliente, auras y vida de ciudad. No se repiten como fallos los tipos action de Queue/Missions/Settings ni el guardado diferido saveSoon que Claude ya corrigió.
+- LihFolk ejecutado PRIMERO con -Scan ServerScriptService ReplicatedStorage StarterPlayer ReplicatedFirst desde el proyecto: **71 archivos, 0 errores, 0 avisos, 0 info**.
+- node tools/check_lua.js .: **OK, 71 archivos**.
+- Consultadas las cinco skills indicadas y sus notas de apoyo: se usaron Checklist y Common mistakes de Rate Limiting and Abuse Prevention, Session Locking and Profile Libraries, Purchase Data and Receipts, Economy Exploits - Dupes Races and Purchase Abuse y Memory Budgets and Leaks. Las notas Skill son índices; las listas Checklist están en las notas temáticas. No se copia contenido de las guías al vault: abajo solo títulos citados y análisis propio del proyecto.
+- git status --short devolvió «this operation must be run in a work tree» en este entorno. No se modificó configuración de Git, ramas ni commits. Otros agentes trabajan en paralelo; líneas corresponden a esta lectura, confirmar al integrar.
+- No se editó ningún archivo de código ni se regeneró el place. Única entrega: esta sección. Revisor heurístico limpio no equivale a beta validada.
+
+### Hallazgos ordenados por gravedad
+
+#### 1. P1 — Studio escribe el mismo perfil que producción
+**Archivo/línea:** ServerScriptService/PlayerData.lua:24; ServerScriptService/PlayerData.lua:104; ServerScriptService/ShopService.server.lua:28 y :100.
+**Problema:** el nombre RagdollArena_v2 y las claves u_UserId se usan también en Studio. Con API activada, monedas gratuitas/reset de compras de prueba se guardan en el perfil real. LeaderboardService.lua:11 también usa nombres productivos para OrderedDataStore. No es una fuga por sí misma, pero permite alterar datos reales durante pruebas rutinarias.
+**Arreglo propuesto:** separar namespace/perfil y clasificaciones Studio/beta/producción antes de probar guardado. Mantener la prueba de persistencia en un entorno aislado; no migrar automáticamente compras de test al real.
+**LihFolk:** «Session Locking and Profile Libraries», Checklist; «Skill - Roblox DataStore Safety», aislamiento de Studio.
+**Verificación pendiente:** misma cuenta en Studio y servidor privado, confirmar claves distintas sin tocar saldo productivo.
+
+#### 2. P1 — fallo del guardado final descarta la única copia en memoria
+**Archivo/línea:** ServerScriptService/PlayerData.lua:122, :136, :278 y :284.
+**Problema:** persist hace un único intento. PlayerRemoving ignora false de save y borra cache/writable de todas formas. Una recompensa posterior al último autosave puede perderse si falla la escritura al salir. BindToClose tampoco reintenta según resultado y su espera no tiene plazo explícito; la espera del mutex puede consumir el tiempo de cierre.
+**Arreglo propuesto:** reintentos acotados con backoff/jitter, plazo común de cierre, cola de finalización y observabilidad del fallo; conservar snapshot hasta agotarlo y no anunciar persistencia antes de confirmarla. Autosaves escalonados y control de presupuesto.
+**LihFolk:** «Skill - Roblox DataStore Safety»; «Session Locking and Profile Libraries», Checklist.
+**Verificación pendiente:** inyectar fallo transitorio de UpdateAsync solo en entorno de prueba; salir con recompensa pendiente y volver.
+
+#### 3. P1 — Shop permite reconstrucciones caras sin límite por jugador
+**Archivo/línea:** ServerScriptService/ShopService.server.lua:69, :115, :137; refreshWeapon en :63. DebugRemote en ServerScriptService/CombatService.server.lua:120.
+**Problema:** SelectWeapon/Equip vuelven a ejecutar Combat.setupCharacter incluso si la selección no cambia, sin bucket ni estado ocupado. Un cliente puede forzar reconstrucciones repetidas de armas/personaje. Las compras y prompts de Shop tampoco tienen límite inicial; el mutex de PlayerData serializa la compra, pero no limita tareas esperando. Debug también ejecuta reset/spawn/trabajo de arena sin frecuencia, aunque sí está restringido por permisos (menor alcance).
+**Arreglo propuesto:** limiter por jugador/acción fija antes del trabajo, ignorar selección ya activa y mutex para refresh; limitar cola de peticiones y prompts. Mantener lista de permisos de Debug y añadir su propio bucket, limpiando al salir.
+**LihFolk:** «Rate Limiting and Abuse Prevention», Checklist/Common mistakes; «Skill - Roblox Secure Remotes»; «Skill - Roblox Anti-Exploit Review».
+**Verificación pendiente:** pruebas controladas de spam en Studio, comprobar coste y estado final. No se realizó prueba ofensiva ni se generaron scripts de explotación.
+
+#### 4. P2 — salida durante load puede publicar un perfil huérfano
+**Archivo/línea:** ServerScriptService/PlayerData.lua:82, :104, :119 y :278.
+**Problema:** load cede durante UpdateAsync/reintentos. Si el jugador sale antes de que cache exista, PlayerRemoving no guarda nada. Si luego termina load, vuelve a añadir cache y writable para un Player que ya salió; no vuelve a dispararse PlayerRemoving ni el autosave lo visita (recorre Players). El lease queda hasta expirar y retiene referencias; puede impedir una reconexión inmediata. En un mismo servidor el token es común a todos los perfiles/cargas, de modo que también conviene evitar dos cargas simultáneas del mismo UserId.
+**Arreglo propuesto:** estado loading/cancelado por UserId y token de carga; comprobar presencia tras cada yield y liberar el lease recién adquirido si la carga fue cancelada. No publicar cache para jugador desconectado; impedir cargas dobles.
+**LihFolk:** «Session Locking and Profile Libraries»; «Memory Budgets and Leaks», Checklist.
+**Verificación pendiente:** retrasar carga artificialmente y desconectar/reconectar durante ella; confirmar liberación y eliminación de referencias.
+
+#### 5. P2 — lease perdido no bloquea mutaciones posteriores
+**Archivo/línea:** ServerScriptService/PlayerData.lua:122, :136, :240 (get/isPersistent y mutadores); ServerScriptService/MissionService.lua:57; ServerScriptService/StatsService.lua:40.
+**Problema:** la escritura rechaza un token ajeno, pero no marca la sesión como perdida ni desactiva writable. Tras una transferencia por expiración, el servidor viejo puede seguir entregando recompensas en memoria e indicar progreso que nunca podrá guardar. No significa que pueda sobrescribir al dueño nuevo: el fencing de la escritura sí existe.
+**Arreglo propuesto:** distinguir guardado transitoriamente fallido de lease perdido; marcar estado lost, negar nuevos cambios de valor y finalizar/reconectar de forma controlada. Renovación escalonada sin esperar a guardar todos los jugadores en serie.
+**LihFolk:** «Session Locking and Profile Libraries», Checklist; «Economy Exploits - Dupes Races and Purchase Abuse», Checklist.
+**Verificación pendiente:** simular expiración y adquisición por segundo servidor de prueba.
+
+#### 6. P2 — vectores infinitos y objetivos fuera del conjunto esperado
+**Archivo/línea:** ServerScriptService/CombatService.server.lua:27 y :53.
+**Problema:** validDir rechaza NaN de X/Z, pero acepta infinitos; f.Unit puede producir componentes no finitos que pasan a dodge/throw. validTarget comprueba Model, raíces, humanoide y distancia, pero no pertenencia a Workspace/Combatant ni enemigo/misma partida. El comentario promete un combatiente; el handler permite también pueblerinos cercanos como referencia de dash. No se demostró daño a NPCs por este camino.
+**Arreglo propuesto:** componentes finitos y módulo acotado antes de normalizar; validar descendencia, etiqueta, salud y contexto del objetivo contra la política de lock-on del servidor. Input ya tiene límite 30/s: conservarlo.
+**LihFolk:** «Skill - Roblox Secure Remotes»; «Skill - Roblox Anti-Exploit Review», validación de objetos/física.
+**Verificación pendiente:** valores límite y objetivos ajenos en harness local de Studio, sin datos productivos.
+
+#### 7. P2 — desconectarse omite el cierre estadístico de la partida
+**Archivo/línea:** ServerScriptService/StatsService.lua:60; ServerScriptService/MatchService.server.lua:332, :405 y :421.
+**Problema:** la ronda deja de contar al desconectado (bien), pero StatsService borra active al salir y MatchService solo finaliza jugadores con Parent. No queda partida/derrota en sus totales ni progreso de Match; en 1v1 se resuelven las rondas restantes contra un equipo vacío, y en 2v2 el compañero sigue solo. Es una decisión incompleta de abandono, no un bloqueo demostrado de la cola. Puede sesgar las estadísticas por abandonar antes del resultado.
+**Arreglo propuesto:** definir abandono antes de beta: cerrar registro y persistir una sola vez antes de liberar perfil, sin monedas gratis por salir; terminar por forfeit si no queda equipo, permitir al compañero seguir si se desea. Coordinar orden PlayerRemoving con PlayerData y evitar doble finish.
+**LihFolk:** «Economy Exploits - Dupes Races and Purchase Abuse», Checklist; «Skill - Roblox Anti-Exploit Review».
+**Verificación pendiente:** salir en cola, cuenta atrás, primera ronda y última ronda con 2/4 clientes; revisar arena, resumen de quienes siguen, premio único e InMatch.
+
+#### 8. P2 condicional — precios premium estáticos antes de habilitar productos
+**Archivo/línea:** StarterPlayer/StarterPlayerScripts/Shop.client.lua:165; ServerScriptService/ShopService.server.lua:162 y :170.
+**Problema:** priceText muestra item.price sin obtener precio efectivo de MarketplaceService. Con productos actuales en cero la compra está bloqueada: no es un cobro incorrecto activo. Al configurar productos, la etiqueta puede diferir del diálogo de Roblox. Además el mapa de skins sobreescribe IDs repetidos y el de auras solo advierte colisión contra skins, sin comprobar duplicados dentro de auras.
+**Arreglo propuesto:** precio desde información del producto, cacheado con estado no disponible; validar unicidad del catálogo al arrancar y mantener handlers para productos retirados. Confirmar catálogo de Creator Dashboard antes de habilitar venta.
+**LihFolk:** «Skill - Roblox Monetization Compliance»; «Purchase Data and Receipts», Checklist. Se cita criterio de diseño de la guía, no se certifica cumplimiento legal ni políticas actuales.
+**Verificación pendiente:** producto de prueba válido, precio por cuenta/región y correspondencia ID-recompensa. No se consultó Dashboard.
+
+#### 9. P3 — búsqueda recursiva de ciudad se mantiene fuera del lobby
+**Archivo/línea:** StarterPlayer/StarterPlayerScripts/CityLife.client.lua:76 y :79; ServerScriptService/LeaderboardService.lua:8 y :27.
+**Problema:** CityLife recorre Workspace con FindFirstChild(...,true) cada 0,08 s incluso en partida/lejos de la ciudad. El cache names de LeaderboardService retiene cada jugador visto durante la vida del servidor sin tope ni limpieza. Son riesgos de coste/crecimiento; no se midió lag ni pendiente de memoria, por lo que no se afirma una fuga grave.
+**Arreglo propuesto:** conservar referencia a CityDressing con invalidación/streaming y saltar consulta antes si InMatch; cache de nombres acotada con TTL/LRU. Perfilar antes de decidir más cambios.
+**LihFolk:** «Memory Budgets and Leaks», Checklist/Common mistakes; «Skill - Roblox Performance Audit».
+**Verificación pendiente:** sesión de 15 minutos en teléfono real y ciclos de respawn/menús/auras; medir tiempo de frame y pendiente de memoria, no solo FPS de Studio.
+
+### Puntos comprobados sin hallazgo nuevo
+- Búsqueda de requires directos a hijos en cliente/ReplicatedStorage: los módulos encontrados del runtime usan WaitForChild. Los require(RS.Economy) de Stats/Mission/Leaderboard son servidor; no se reportan como carrera de replicación cliente. No se certifica toda carga por esta búsqueda.
+- Auras.client limpia efectos/conexiones por personaje y jugador; AuraFx devuelve cleanup y desconecta Heartbeat. No se observó duplicación evidente en ese ciclo por lectura.
+- Recibos: una sola asignación ProcessReceipt; grant y PurchaseId se guardan juntos, y PurchaseGranted se devuelve después de persistencia. Lista acotada; resetTestPurchases conserva Receipts. No se confirma una duplicación de Robux. Sigue pendiente prueba de recibo repetido/fallo concurrente en sandbox.
+- Missions marca claimed antes de conceder sin yield en ese tramo; no se encontró doble cobro directo por reclamo simultáneo. Get sin bucket tiene coste acotado a tres misiones; menor prioridad que reconstrucción de Shop.
+- Controles táctiles existentes usan InputBridge y mando tiene rutas alternativas. No se encontró aquí una acción esencial exclusivamente de ratón; navegación efectiva y retención de Block requieren pruebas en móvil con mando. No se probó Studio en esta revisión.
+
+### Implementado / comprobado / pendiente
+**Implementado:** únicamente este informe, sin correcciones de código por instrucción de solo lectura.
+**Comprobado:** revisión estática y referencias originales, escaneo LihFolk limpio y check_lua limpio.
+**Pendiente:** Claude debe priorizar 1–3 antes de beta; ejecutar pruebas aisladas indicadas y volver a pasar ambos revisores tras los cambios. No dar por corregido un hallazgo solo por desaparecer un aviso heurístico.
+
+## Ronda 7 — integración de beta
+### Tarea 0
+Revisado diff Gemini: cambios limitados al bloque de edificios y torre del reloj y CityConfig. Ganchos de CityProps/CityNPCs, suelo, puerta, guía, colas y armería sin cambios. Integrado tal cual en commit 311092c. El presupuesto ~2250 reportado por Gemini no fue medido en Studio por Codex; se comprobará allí, al igual que caras coplanares.
+### Tarea 1
+Todo el catálogo pasa a monedas: Requiem 3400 (Epic); WatchingEyes 8500 y PaleFracture 7800 (Legendary); también Cyber 1600 y Blood 2400, dos recolores antiguos que seguían en Robux. ProductId permanece cero y ProcessReceipt intacto. La tienda usa color/iconografía de monedas y deja de bloquear estos artículos por no tener producto. Pendiente Studio: compra, confirmación y equipamiento de los cinco.

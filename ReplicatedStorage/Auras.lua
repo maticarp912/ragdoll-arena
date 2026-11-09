@@ -7,12 +7,12 @@ A.Data = {
  SpectralChains = { kind = "Body", rarity = "Epic", currency = "Coins", price = 3900, pattern = "chains", color = Color3.fromRGB(90,220,255) },
  SmokeWings = { kind = "Body", rarity = "Legendary", currency = "Coins", price = 8000, pattern = "wings", color = Color3.fromRGB(170,90,255) },
  FootShroud = { kind = "Body", rarity = "Rare", currency = "Coins", price = 1500, pattern = "mist", color = Color3.fromRGB(110,255,170) },
- WatchingEyes = { kind = "Body", rarity = "Legendary", currency = "Robux", price = 399, productId = 0, pattern = "eyes", color = Color3.fromRGB(255,60,70) },
+ WatchingEyes = { kind = "Body", rarity = "Legendary", currency = "Coins", price = 8500, productId = 0, pattern = "eyes", color = Color3.fromRGB(255,60,70) },
  GraveRunes = { kind = "Body", rarity = "Epic", currency = "Coins", price = 4200, pattern = "runes", color = Color3.fromRGB(255,205,90) },
  WeepingBlade = { kind = "Weapon", rarity = "Rare", currency = "Coins", price = 2100, pattern = "drip", color = Color3.fromRGB(150,80,220) },
  BlackEmbers = { kind = "Weapon", rarity = "Epic", currency = "Coins", price = 3600, pattern = "embers", color = Color3.fromRGB(255,90,40) },
  BloodOath = { kind = "Weapon", rarity = "Epic", currency = "Coins", price = 4800, pattern = "blood", color = Color3.fromRGB(225,25,45) },
- PaleFracture = { kind = "Weapon", rarity = "Legendary", currency = "Robux", price = 299, productId = 0, pattern = "fracture", color = Color3.fromRGB(200,235,255) },
+ PaleFracture = { kind = "Weapon", rarity = "Legendary", currency = "Coins", price = 7800, productId = 0, pattern = "fracture", color = Color3.fromRGB(200,235,255) },
 }
 for id, data in A.Data do data.nameKey = "cx.aura." .. id data.descKey = data.nameKey .. ".desc" data.productId = data.productId or 0 end
 A.Fx = {

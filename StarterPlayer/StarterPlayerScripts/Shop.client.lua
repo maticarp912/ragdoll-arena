@@ -159,7 +159,7 @@ end
 
 local function pending(item)
 	if not item then return true end
-	return item.comingSoon or (item.currency == "Robux" and (not item.productId or item.productId <= 0))
+	return item.comingSoon
 end
 
 local function priceText(item)
@@ -530,7 +530,7 @@ local function confirmPurchase(id, isAura)
 		text = priceText(item),
 		font = "Number",
 		textSize = UiTheme.TextSizes.LG,
-		color = item.currency == "Robux" and C.Robux or C.Coins,
+		color = C.Coins,
 		alignX = Enum.TextXAlignment.Center,
 		zIndex = 42,
 	})
@@ -707,7 +707,7 @@ function inspect(id)
 			text = L.t(item.rarity or "Common") .. "  ·  " .. priceText(item),
 			font = "Number",
 			textSize = UiTheme.TextSizes.MD,
-			color = item.currency == "Robux" and C.Robux or C.Coins,
+			color = C.Coins,
 		})
 	end
 
@@ -1217,7 +1217,7 @@ function render()
 
 				local subText = (st == "buy" and item) and priceText(item) or L.t(st)
 				local subColor = st == "equipped" and C.Success
-					or (st == "buy" and item and (item.currency == "Robux" and C.Robux or C.Coins) or C.TextSecondary)
+					or (st == "buy" and item and (C.Coins) or C.TextSecondary)
 
 				UiTheme.label({
 					parent = card,
