@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
+local RunService=game:GetService("RunService")
 local DSS = game:GetService("DataStoreService")
 local Http = game:GetService("HttpService")
 local E = require(RS.Economy)
@@ -8,7 +9,7 @@ local folder = Instance.new("Folder") folder.Name = "Leaderboards" folder.Parent
 local boards, names = {}, {}
 for _, key in { "Wins", "Kills", "Knockdowns", "Coins" } do
  local value = Instance.new("StringValue") value.Name = key value.Value = "[]" value.Parent = folder
- local ok, store = pcall(function() return DSS:GetOrderedDataStore("RagdollArena_Stage8_" .. key) end)
+ local ok, store = pcall(function() return DSS:GetOrderedDataStore((RunService:IsStudio() and E.Stores.BoardsStudio or E.Stores.BoardsLive) .. key) end)
  boards[key] = { value = value, store = ok and store or nil }
 end
 local function nameFor(id)

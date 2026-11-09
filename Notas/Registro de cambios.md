@@ -120,3 +120,7 @@
 
 ## Lote 1 — 8/11/2026
 - Núcleo de combate, ragdoll, muñecos, tienda, menú de controles. `REVISION_CODEX.md`.
+
+## Ronda 7 — preparación beta (Codex)
+Implementado: integración de fachadas Gemini, catálogo íntegro con monedas, stores separados Studio/live, reintentos y plazo del guardado final, carga cancelada con liberación, límites Shop/Debug y validación de direcciones/objetivos. Sin prueba de Studio por Codex todavía.
+Post-beta de Ronda 6: hallazgo 5 (estado lease perdido), 7 (abandono y estadísticas), 8 (precios/catálogo si vuelven productos premium), 9 (coste CityLife/cache de nombres).

@@ -11,7 +11,10 @@ local RunService = game:GetService("RunService")
 local PlayerData = {}
 local HttpService = game:GetService("HttpService")
 local E = require(game:GetService("ReplicatedStorage"):WaitForChild("Economy"))
-local session = game.JobId .. HttpService:GenerateGUID(false)
+local tokens, loading = {}, {}
+local finalizing = {}
+local finalResults = setmetatable({}, { __mode = "k" })
+local shutdownDeadline
 local writable, saving, closing = {}, {}, {}
 local function copy(value)
  if type(value) ~= "table" then return value end
@@ -21,7 +24,7 @@ end
 -- GetDataStore lanza error si el lugar no está publicado: lo capturamos para que el juego
 -- funcione igual (sin guardar progreso).
 local storeOk, storeOrErr = pcall(function()
-	return DataStoreService:GetDataStore("RagdollArena_v2")
+	return DataStoreService:GetDataStore(RunService:IsStudio() and E.Stores.Studio or E.Stores.Live)
 end)
 local store = storeOk and storeOrErr or nil
 if not store then
@@ -80,13 +83,17 @@ local function refresh(player: Player)
 end
 
 function PlayerData.load(player: Player)
- if cache[player] then return end
+ if cache[player] or loading[player] or not player.Parent then return end
+ loading[player] = true
+ local session = game.JobId .. HttpService:GenerateGUID(false)
+ tokens[player] = session
  local data = defaults()
  local ok, saved = false, nil
  -- Claude (etapa 8): reintentos antes de expulsar. Un fallo pasajero del DataStore o el bloqueo
  -- de un servidor que acaba de cerrar ya no echan al jugador al primer intento.
  if store then
   for attempt = E.One, E.LoadAttempts do
+   if not player.Parent then break end
    ok, saved = pcall(function()
     return store:UpdateAsync("u_" .. player.UserId, function(old)
      old = type(old) == "table" and old or defaults()
@@ -101,6 +108,26 @@ function PlayerData.load(player: Player)
    if attempt < E.LoadAttempts and player.Parent then task.wait(E.LoadRetryDelay * attempt) end
   end
  end
+ -- A disconnected load must not publish a profile or leave its newly acquired lease.
+ if not player.Parent then
+  if ok and type(saved)=="table" and saved.Session and saved.Session.id==session then
+   local released=false
+   for attempt=E.One,E.FinalSaveAttempts do
+    local success=pcall(function()
+     store:UpdateAsync("u_"..player.UserId,function(old)
+      if type(old)~="table" or type(old.Session)~="table" or old.Session.id~=session then return nil end
+      old.Session=nil return old
+     end)
+    end)
+    if success then released=true break end
+    if attempt<E.FinalSaveAttempts then task.wait(E.FinalSaveDelay*attempt) end
+   end
+   if not released then warn("[PlayerData] Cancelled load lease release failed: "..player.UserId) end
+  end
+  tokens[player], loading[player] = nil, nil
+  return
+ end
+ loading[player] = nil
  writable[player] = ok and type(saved) == "table" and saved.Session and saved.Session.id == session
  if writable[player] then
   for key in data do if type(saved[key]) == type(data[key]) then data[key] = copy(saved[key]) end end
@@ -123,10 +150,10 @@ local function persist(player, data, release)
  if not store or not writable[player] then return false end
  local ok, result = pcall(function()
   return store:UpdateAsync("u_" .. player.UserId, function(old)
-   if type(old) ~= "table" or type(old.Session) ~= "table" or old.Session.id ~= session then return nil end
+   if type(old) ~= "table" or type(old.Session) ~= "table" or old.Session.id ~= tokens[player] then return nil end
    local nextData = copy(data)
    if release then nextData.Session = nil
-   else nextData.Session = { id = session, expires = os.time() + E.SessionTTL } end
+   else nextData.Session = { id = tokens[player], expires = os.time() + E.SessionTTL } end
    return nextData
   end)
  end)
@@ -134,11 +161,40 @@ local function persist(player, data, release)
 end
 
 function PlayerData.save(player: Player, release)
- while saving[player] do task.wait(E.RetryDelay) end
- if not cache[player] then return false end
- saving[player] = true
- local ok = persist(player, copy(cache[player]), release)
- saving[player] = nil
+ local function expired() return shutdownDeadline and os.clock()>=shutdownDeadline end
+ if not release and closing[player] then return false end
+ if release then
+  if finalResults[player]~=nil then return finalResults[player] end
+  if finalizing[player] then
+   while finalizing[player] and not expired() do task.wait(E.RetryDelay) end
+   return finalResults[player]==true
+  end
+  finalizing[player]=true closing[player]=true
+ end
+ while saving[player] and not expired() do task.wait(E.RetryDelay) end
+ if not release and closing[player] then return false end
+ local ok=false
+ if not saving[player] and cache[player] and not expired() then
+  saving[player]=true
+  local snapshot=copy(cache[player])
+  local attempts=release and E.FinalSaveAttempts or E.One
+  for attempt=E.One,attempts do
+   if expired() then break end
+   ok=persist(player,snapshot,release)
+   if ok then break end
+   if attempt<attempts then
+    local delay=E.FinalSaveDelay*attempt
+    if shutdownDeadline then delay=math.min(delay,math.max(E.Zero,shutdownDeadline-os.clock())) end
+    task.wait(delay)
+   end
+  end
+  saving[player]=nil
+ end
+ if release then
+  if not ok and cache[player] then warn("[PlayerData] Final save failed for UserId "..player.UserId) end
+  finalResults[player]=ok finalizing[player]=nil
+  if ok then writable[player]=nil end
+ end
  return ok
 end
 
@@ -278,16 +334,19 @@ end
 Players.PlayerRemoving:Connect(function(player)
 	closing[player] = true
 	PlayerData.save(player, true)
-	cache[player], writable[player], closing[player] = nil, nil, nil
+	cache[player], writable[player] = nil, nil
+ if not loading[player] then tokens[player]=nil end
+ closing[player]=nil
 end)
 
 game:BindToClose(function()
-	local remaining = E.Zero
- for _, player in Players:GetPlayers() do
+	shutdownDeadline=os.clock()+E.CloseTimeout
+ local remaining = E.Zero
+ for player in cache do
   remaining += E.One
   task.spawn(function() closing[player] = true PlayerData.save(player, true) remaining -= E.One end)
  end
- while remaining > E.Zero do task.wait(E.RetryDelay) end
+ while remaining > E.Zero and os.clock()<shutdownDeadline do task.wait(math.min(E.RetryDelay,math.max(E.Zero,shutdownDeadline-os.clock()))) end
 end)
 
 task.spawn(function()

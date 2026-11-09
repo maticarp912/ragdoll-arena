@@ -5,6 +5,8 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local E=require(ReplicatedStorage:WaitForChild("Economy"))
+local Collection=game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
 
 local CombatConfig = require(ReplicatedStorage:WaitForChild("CombatConfig"))
@@ -26,9 +28,12 @@ end
 
 local function validDir(v)
 	if typeof(v) ~= "Vector3" then return nil end
-	if v.X ~= v.X or v.Z ~= v.Z then return nil end -- NaN
+	for _,component in {v.X,v.Y,v.Z} do
+  if component~=component or math.abs(component)==math.huge or math.abs(component)>E.MaxDirectionMagnitude then return nil end
+ end
+ if v.Magnitude>E.MaxDirectionMagnitude then return nil end
 	local f = flat(v)
-	if f.Magnitude < 0.1 then return nil end
+	if f.Magnitude < E.MinDirectionMagnitude then return nil end
 	return f.Unit
 end
 
@@ -52,7 +57,8 @@ Players.PlayerRemoving:Connect(function(p) rate[p] = nil end)
 -- Objetivo fijado que manda el cliente con la esquiva: solo combatientes vivos y cerca
 local function validTarget(char, target)
 	if typeof(target) ~= "Instance" or not target:IsA("Model") or target == char then return nil end
-	local tRoot, root = target:FindFirstChild("HumanoidRootPart"), char:FindFirstChild("HumanoidRootPart")
+	if not target:IsDescendantOf(workspace) or not Collection:HasTag(target,"Combatant") then return nil end
+ local tRoot, root = target:FindFirstChild("HumanoidRootPart"), char:FindFirstChild("HumanoidRootPart")
 	if not (tRoot and root and Combat.getHum(target)) then return nil end
 	if (tRoot.Position - root.Position).Magnitude > CombatConfig.Controls.LockOnBreakRange then return nil end
 	return target
@@ -117,7 +123,12 @@ for _, p in Players:GetPlayers() do onPlayer(p) end
 ----------------------------------------------------------------------
 -- Panel de depuración
 ----------------------------------------------------------------------
+local debugAt={}
+Players.PlayerRemoving:Connect(function(player) debugAt[player]=nil end)
 DebugRemote.OnServerEvent:Connect(function(player, action, arg)
+ local now=os.clock()
+ if debugAt[player] and now-debugAt[player]<E.DebugInterval then return end
+ debugAt[player]=now
 	if typeof(action) ~= "string" or not canDebug(player) then return end
 	local char = player.Character
 

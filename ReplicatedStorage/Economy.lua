@@ -1,5 +1,7 @@
 -- Stage 8 server/data configuration. Ranked progression is reserved for a future stage.
 return {
+ Stores = { Live = "RagdollArena_v2", Studio = "RagdollArena_v2_Studio", BoardsLive = "RagdollArena_Stage8_", BoardsStudio = "RagdollArena_Stage8_Studio_" },
+ FinalSaveAttempts = 4, FinalSaveDelay = 1, CloseTimeout = 25, ShopInterval = 0.25, DebugInterval = 0.25, MaxDirectionMagnitude = 1000, MinDirectionMagnitude = 0.1,
  SessionTTL = 180, Autosave = 60, RetryDelay = 1, ReceiptLimit = 256,
  LoadAttempts = 5, LoadRetryDelay = 2, -- Claude: hasta ~20 s de reintentos al cargar el perfil antes de expulsar
  SaveDebounce = 6, -- Claude: opciones, idioma y auras se agrupan en un solo guardado cada 6 s (evita saturar el DataStore)

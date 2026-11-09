@@ -1,5 +1,6 @@
 return {
  ["ES"] = {
+ ["cx.shop.wait"] = "Esperá un momento antes de repetir.",
  ["cx.ui.ranked"] = "RANKED",
  ["cx.city.tavern"] = "El Frasco de Ceniza",
  ["cx.purchase.failed"] = "No se pudo guardar la compra. No se cobraron monedas.",
@@ -58,6 +59,7 @@ return {
  ["cx.debug.temporary"] = "Cambio temporal: no se pudo guardar.",
  },
  ["EN"] = {
+ ["cx.shop.wait"] = "Please wait before trying again.",
  ["cx.ui.ranked"] = "RANKED",
  ["cx.city.tavern"] = "The Ashen Flask",
  ["cx.purchase.failed"] = "The purchase could not be saved. No coins were charged.",
@@ -116,6 +118,7 @@ return {
  ["cx.debug.temporary"] = "Temporary change: saving unavailable.",
  },
  ["PT-BR"] = {
+ ["cx.shop.wait"] = "Aguarde um instante antes de tentar novamente.",
  ["cx.ui.ranked"] = "RANKED",
  ["cx.city.tavern"] = "O Frasco de Cinzas",
  ["cx.purchase.failed"] = "Não foi possível salvar a compra. Nenhuma moeda foi cobrada.",

@@ -66,7 +66,9 @@ local function refreshWeapon(player: Player)
 	if char then Combat.setupCharacter(player, char) end
 end
 
-ShopRF.OnServerInvoke = function(player, action, id)
+local shopAt, shopBusy = {}, {}
+Players.PlayerRemoving:Connect(function(player) shopAt[player]=nil shopBusy[player]=nil end)
+local function shopAction(player, action, id)
 	if type(action) ~= "string" or type(id) ~= "string" then
 		return false, { key = "invalid" }
 	end
@@ -112,6 +114,7 @@ ShopRF.OnServerInvoke = function(player, action, id)
   return true, { key = saved and "cx.debug.added" or "cx.debug.temporary", params = { amount = amount } }
 
 	elseif action == "SelectWeapon" then
+  if data.WeaponId==id then return true end
 		if not WeaponData.Data[id] then return false, { key = "invalid" } end
 		local equipped = Skins.Data[data.EquippedSkin]
 		if equipped and equipped.weapon and equipped.weapon ~= id then PlayerData.equipSkin(player, "Default") end
@@ -120,6 +123,7 @@ ShopRF.OnServerInvoke = function(player, action, id)
 		return true
 
 	elseif action == "SelectInfusion" then
+  if data.InfusionId==id then return true end
 		if not Infusions.Data[id] then return false, { key = "invalid" } end
 		PlayerData.setInfusion(player, id)
 		-- Se aplica al momento si no está encendida ahora mismo (en partida, también entre rondas)
@@ -130,6 +134,7 @@ ShopRF.OnServerInvoke = function(player, action, id)
 		return true, { key = "infusion." .. id }
 
 	elseif action == "Equip" then
+  if data.EquippedSkin==id then return true end
 		local skin = Skins.Data[id]
 		if not skin or skin.comingSoon then return false, { key = "soon" } end
 		if skin.weapon and skin.weapon ~= data.WeaponId then return false, { key = "otherWeapon" } end
@@ -157,6 +162,19 @@ ShopRF.OnServerInvoke = function(player, action, id)
 	end
 
 	return false, { key = "invalid" }
+end
+
+ShopRF.OnServerInvoke = function(player, action, id)
+ local now=os.clock()
+ if shopBusy[player] or (shopAt[player] and now-shopAt[player]<E.ShopInterval) then return false, {key="cx.shop.wait"} end
+ shopAt[player]=now
+ if type(action)~="string" or type(id)~="string" then return false,{key="invalid"} end
+ shopBusy[player]=true
+ local success,ok,message=pcall(shopAction,player,action,id)
+ shopBusy[player]=nil
+ if not player.Parent then shopAt[player]=nil end
+ if not success then warn("[Shop] Request failed for UserId "..player.UserId) return false,{key="error"} end
+ return ok,message
 end
 
 -- Compras con Robux: se concede la skin y se confirma el recibo
