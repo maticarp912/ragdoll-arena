@@ -45,7 +45,7 @@
   - Los 3 avisos se arreglaron con comprobación de tipo de `action` en `Queue` (`MatchService`), `Missions` (`MissionService`) y `Settings` (`ShopService`). El revisor queda en 0 avisos.
   - Nuevo `PlayerData.saveSoon`: las opciones, el idioma y la equipación de auras se agrupan en un solo guardado cada 6 s (`Economy.SaveDebounce`). Antes, cada petición del cliente guardaba en el DataStore. 🟡 sin probar en Studio.
   - Nota [[Referencia LihFolk]] y regla C0 en [[Contratos etapa 8]]. Place regenerado.
-- **Git (18:30)**: la carpeta del juego es un repositorio (rama `main`, primer commit `3db216c`). Fuera del repositorio: `.rbxlx`, `_backup_*`, `ragdoll-2v2/`, `.log` y el estado de Obsidian. Solo Claude hace commits (regla C0b).
+- **Git (18:30)**: la carpeta del juego es un repositorio (rama `main`, primer commit `dab2bce`). Fuera del repositorio: `.rbxlx`, `_backup_*`, `ragdoll-2v2/`, `.log` y el estado de Obsidian. Solo Claude hace commits (regla C0b).
 
 ## Lote 7 — 9/11/2026 (Claude)
 - **Controles por defecto**: los de la captura del usuario. La **patada** tiene tecla propia: C en teclado y LT/L2 en mando. Agarrar (E / X) ya no patea. Con el ratón libre, el clic derecho funciona así: toque corto = fuerte, arrastrar = cámara. 🟡

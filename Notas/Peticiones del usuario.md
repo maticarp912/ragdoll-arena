@@ -20,7 +20,7 @@ Responsables actuales: ver [[Reparto etapa 8]].
 |---|---|---|
 | Revisar LihFolk V2 y, si sirve, sumarlo al trabajo de las IA (con permiso para instalar) | Claude | 🟡 plugin configurado en `.claude/settings.json` (activo al abrir una sesión nueva); revisor pasado por los 71 archivos (3 avisos, arreglados; queda en 0); [[Referencia LihFolk]] escrita; regla C0 para todas las IA; prompts de la ronda 6 actualizados |
 
-| ¿Rojo, Git y Wally sirven? Armar Git | Claude | ✅ repositorio creado (rama `main`, primer commit `3db216c`, 255 archivos); regla C0b en [[Contratos etapa 8]]. ⬜ Rojo después de la ronda 6. Wally descartado por ahora |
+| ¿Rojo, Git y Wally sirven? Armar Git | Claude | ✅ repositorio creado (rama `main`, primer commit `dab2bce`, 255 archivos); regla C0b en [[Contratos etapa 8]]. ⬜ Rojo después de la ronda 6. Wally descartado por ahora |
 
 ## Pedidos del 9/11, 17:40
 | Pedido | Resp. | Estado |
