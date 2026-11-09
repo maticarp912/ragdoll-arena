@@ -124,3 +124,5 @@
 ## Ronda 7 — preparación beta (Codex)
 Implementado: integración de fachadas Gemini, catálogo íntegro con monedas, stores separados Studio/live, reintentos y plazo del guardado final, carga cancelada con liberación, límites Shop/Debug y validación de direcciones/objetivos. Sin prueba de Studio por Codex todavía.
 Post-beta de Ronda 6: hallazgo 5 (estado lease perdido), 7 (abandono y estadísticas), 8 (precios/catálogo si vuelven productos premium), 9 (coste CityLife/cache de nombres).
+
+Ronda 7: check_lua OK (71), LihFolk 0 errores/avisos y Ragdoll Arena.rbxlx regenerado localmente. Checklist detallada en Reporte Codex/Ronda 7. Sin nuevas pruebas en Studio por Codex; no se confunden con las pruebas previas de Claude.

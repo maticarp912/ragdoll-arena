@@ -127,3 +127,5 @@ Responsables actuales: ver [[Reparto etapa 8]].
 ## Ronda 7 — preparación beta (Codex)
 Implementado: integración de fachadas Gemini, catálogo íntegro con monedas, stores separados Studio/live, reintentos y plazo del guardado final, carga cancelada con liberación, límites Shop/Debug y validación de direcciones/objetivos. Sin prueba de Studio por Codex todavía.
 Post-beta de Ronda 6: hallazgo 5 (estado lease perdido), 7 (abandono y estadísticas), 8 (precios/catálogo si vuelven productos premium), 9 (coste CityLife/cache de nombres).
+
+Ronda 7 comprobada estáticamente: 71 scripts OK; LihFolk 0 errores/avisos; place local regenerado. Pendiente: usuario prueba Play solo, 1v1 con dos clientes, persistencia aislada y iPhone/mando. Todo el catálogo usa monedas (incluye Cyber y Blood).
