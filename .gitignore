@@ -1,0 +1,21 @@
+# Place generado por tools/make_rbxlx.js (se rehace desde los .lua) y copias viejas
+*.rbxlx
+*.rbxl
+*.rbxlx.lock
+*.rbxl.lock
+
+# Copias de seguridad manuales anteriores a Git y snapshot viejo del proyecto
+_backup_*/
+ragdoll-2v2/
+
+# Registros de ejecución
+*.log
+
+# Estado personal de Obsidian y de Claude Code
+**/.obsidian/workspace*.json
+.claude/settings.local.json
+
+# Varios
+node_modules/
+Thumbs.db
+desktop.ini

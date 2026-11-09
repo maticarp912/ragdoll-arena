@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "lihfolk": {
+      "source": {
+        "source": "directory",
+        "path": "F:\\obsidian\\vault git\\LIH.FOLK.VAULT.V2.FULL\\LihFolk Vault V2"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "lihfolk@lihfolk": true
+  }
+}

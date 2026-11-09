@@ -1,0 +1,173 @@
+-- ModuleScript: ReplicatedStorage/WeaponData
+-- Números de cada arma. TODO valor es una propuesta a calibrar jugando.
+-- archetype: tipo de animación (OneHand, TwoHand, Dual, Rapier, Hammer) en AnimClips.
+-- La "ulti" es la infusión (Infusions) y es genérica para todas las armas.
+--
+-- combo  : 3 golpes (M1). Listas = golpe 1, 2 y 3.
+--   damage / stun / knockback : por golpe
+--   duration : duración total de cada golpe (s). Mientras dura no puedes encadenar otra acción.
+--   hitTime  : momento del impacto (s desde el inicio) SI la animación no trae marcador "Hit".
+--   reach / width : caja de golpe delante del personaje (studs).
+--   hyperArmor    : por golpe; los golpes básicos del rival no lo interrumpen durante la preparación.
+--   guardDrainMult: cuánta Guardia gasta el rival al bloquear este combo (x daño x CombatConfig.Guard.LightDrainMult).
+--   staggerMult   : duración del aturdimiento corto que provoca cada golpe (interrupción).
+--   sweetSpot     : golpes en el extremo del alcance (desde "from" x reach) hacen x"mult" de daño (Estoque).
+-- heavy  : ataque fuerte (E / M2). Destello naranja; rompe la guardia pasiva.
+--   windup / hitDelay / recovery: preparación (ventana de parry/esquiva), impacto y tiempo vulnerable.
+--   feintable, hyperArmor, unblockable, blockDamageMult, guardBreakStunMult (ver CombatConfig).
+-- mobility: dodgeDistance (x distancia del dash) y dodgeCost (x stamina del dash).
+-- Situaciones que favorecen a cada arma: Notas/Equilibrio de armas.md
+
+local WeaponData = {}
+
+WeaponData.Order = { "Sword", "Greatsword", "Dagger", "Rapier", "Mace" }
+
+-- Armas con las que empieza un jugador nuevo. Se usa en la Fase E.
+WeaponData.Starters = { "Sword", "Greatsword", "Dagger" }
+
+WeaponData.Data = {
+	-- ESPADA: equilibrada y consistente. Nada destaca, nada falla.
+	Sword = {
+		archetype = "OneHand", name = "Espada", desc = "Equilibrada y consistente. Combo fluido y fuerte rápido.",
+		hp = 243, speed = 16, guardMax = 100, -- etapa 8: vida +35 % (era 180)
+		combo = {
+			damage = { 11, 12, 16 }, stun = { 15, 15, 30 }, knockback = { 6, 6, 16 },
+			duration = { 0.55, 0.55, 0.68 }, hitTime = { 0.28, 0.28, 0.36 },
+			reach = 7, width = 5,
+			hyperArmor = { false, false, false }, guardDrainMult = 1.0, staggerMult = 1.0,
+		},
+		heavy = {
+			name = "Tajo Cruzado", damage = 28, stun = 45, knockback = 26,
+			windup = 0.4, hitDelay = 0.09, recovery = 0.42, reach = 7.5, width = 5.5,
+			feintable = true, hyperArmor = false, unblockable = false,
+			blockDamageMult = 0.5, guardBreakStunMult = 1,
+		},
+		mobility = { dodgeDistance = 1.0, dodgeCost = 1.0 },
+		trait = "Fuerte rápido y fintable; buena en cualquier situación",
+	},
+
+	-- ESPADÓN: lento y previsible, pero alcance, barrido ancho, presión sobre la guardia
+	-- e hiperarmadura en los golpes 2 y 3 (los golpes rápidos del rival no lo frenan). Empuja lejos.
+	Greatsword = {
+		archetype = "TwoHand", name = "Espadón", desc = "Lento y previsible, pero con alcance, barridos anchos y presión que no se frena.",
+		hp = 290, speed = 12.5, guardMax = 115, -- etapa 8: +35 % (era 215)
+		combo = {
+			damage = { 17, 19, 26 }, stun = { 25, 28, 45 }, knockback = { 14, 14, 32 },
+			duration = { 0.92, 0.92, 1.05 }, hitTime = { 0.5, 0.5, 0.58 },
+			reach = 9.5, width = 7.5,
+			hyperArmor = { false, true, true }, guardDrainMult = 1.6, staggerMult = 1.3,
+		},
+		heavy = {
+			name = "Tajo Aplastante", damage = 45, stun = 70, knockback = 55,
+			windup = 0.64, hitDelay = 0.1, recovery = 0.66, reach = 10, width = 7,
+			feintable = true, hyperArmor = true, unblockable = false,
+			blockDamageMult = 0.5, guardBreakStunMult = 1.6,
+		},
+		mobility = { dodgeDistance = 0.9, dodgeCost = 1.25 },
+		trait = "Hiperarmadura en golpes 2-3 y en el fuerte; barre de lado y empuja hacia el borde",
+	},
+
+	-- DAGAS: velocidad y presión cuerpo a cuerpo. Interrumpen, se mueven más, pero alcance corto
+	-- y casi sin empuje (no sacan a nadie de la arena) y poca Guardia.
+	Dagger = {
+		archetype = "Dual", name = "Dagas", desc = "Velocidad y presión de cerca. Interrumpen y esquivan mejor que nadie.",
+		hp = 216, speed = 18.5, guardMax = 80, -- etapa 8: +35 % (era 160)
+		combo = {
+			damage = { 7, 8, 12 }, stun = { 11, 11, 20 }, knockback = { 3, 3, 8 },
+			duration = { 0.32, 0.32, 0.42 }, hitTime = { 0.15, 0.15, 0.21 },
+			reach = 5, width = 4,
+			hyperArmor = { false, false, false }, guardDrainMult = 0.9, staggerMult = 0.85,
+		},
+		heavy = {
+			name = "Doble Estocada", damage = 20, stun = 25, knockback = 12,
+			windup = 0.28, hitDelay = 0.06, recovery = 0.32, reach = 5.5, width = 4,
+			feintable = true, hyperArmor = false, unblockable = false,
+			blockDamageMult = 0.5, guardBreakStunMult = 1,
+			bleed = true, -- sangrado propio (Effects, más adelante)
+		},
+		mobility = { dodgeDistance = 1.15, dodgeCost = 0.75 },
+		trait = "Dash más largo y barato; golpes que interrumpen rápido",
+	},
+
+	-- ESTOQUE: precisión y alcance frontal. Hace más daño en la punta, pero su caja es estrecha
+	-- (falla de lado) y empuja y aturde poco.
+	Rapier = {
+		archetype = "Rapier", name = "Estoque", desc = "Precisión y alcance frontal. La punta castiga; de lado falla.",
+		hp = 230, speed = 17, guardMax = 90, -- etapa 8: +35 % (era 170)
+		combo = {
+			damage = { 9, 11, 15 }, stun = { 12, 12, 24 }, knockback = { 5, 5, 12 },
+			duration = { 0.4, 0.4, 0.5 }, hitTime = { 0.2, 0.2, 0.26 },
+			reach = 10, width = 2.5,
+			hyperArmor = { false, false, false }, guardDrainMult = 0.9, staggerMult = 1.0,
+			sweetSpot = { from = 0.65, mult = 1.25 },
+		},
+		heavy = {
+			name = "Puntada Perforante", damage = 26, stun = 35, knockback = 20,
+			windup = 0.36, hitDelay = 0.06, recovery = 0.42, reach = 11, width = 2.5,
+			feintable = true, hyperArmor = false, unblockable = false,
+			blockDamageMult = 1.0, guardBreakStunMult = 1, -- atraviesa el bloqueo: entra todo el daño
+		},
+		mobility = { dodgeDistance = 1.05, dodgeCost = 0.9 },
+		trait = "Golpe en la punta +25 %; la Puntada atraviesa el bloqueo",
+	},
+
+	-- MAZA: presión sobre Guardia y Stun. Destroza bloqueos y aturde, pero es lenta, corta
+	-- y pesada para esquivar.
+	Mace = {
+		archetype = "Hammer", name = "Maza", desc = "Presión sobre la Guardia y el Stun. Rompe bloqueos y aturde; lenta y corta.",
+		hp = 317, speed = 12.5, guardMax = 110, -- etapa 8: +35 % (era 235)
+		combo = {
+			damage = { 13, 15, 20 }, stun = { 32, 32, 52 }, knockback = { 8, 8, 22 },
+			duration = { 1.0, 1.0, 1.12 }, hitTime = { 0.56, 0.56, 0.63 },
+			reach = 7, width = 5, -- 9/11: 6.5 → 7, maza 30 % más grande (ver Equilibrio de armas)
+			hyperArmor = { false, false, true }, guardDrainMult = 2.0, staggerMult = 1.3,
+		},
+		heavy = {
+			name = "Machaque Pesado", damage = 40, stun = 85, knockback = 36,
+			windup = 0.6, hitDelay = 0.1, recovery = 0.68, reach = 7.5, width = 5.5, -- 9/11: 7 → 7.5
+			feintable = true, hyperArmor = false, unblockable = true,
+			blockDamageMult = 1.0, guardBreakStunMult = 1,
+		},
+		mobility = { dodgeDistance = 0.9, dodgeCost = 1.25 },
+		trait = "Gasta el doble de Guardia al bloquearla; Machaque imbloqueable",
+		blunt = true, -- martillo de guerra: sonido y efectos contundentes
+	},
+}
+
+-- Stamina por arma (etapa 8): cada golpe básico (m1) y cada fuerte (heavy) la gastan.
+-- Máximo 100, se recupera 30/s tras 0,8 s sin gastar (CombatConfig.Stamina). Las armas pesadas
+-- vacían la barra con menos golpes: un combo completo de espadón cuesta 30 y uno de dagas 12.
+WeaponData.Stamina = {
+	Sword = { m1 = 6, heavy = 20 },
+	Greatsword = { m1 = 10, heavy = 28 },
+	Dagger = { m1 = 4, heavy = 14 },
+	Rapier = { m1 = 5, heavy = 16 },
+	Mace = { m1 = 11, heavy = 30 },
+}
+
+function WeaponData.staminaCost(id, kind)
+	local s = WeaponData.Stamina[id] or WeaponData.Stamina.Sword
+	return s[kind] or 0
+end
+
+-- Sensación de cada arma (para que se note cuál llevas): peso del impacto y del movimiento.
+--   hitstop / shake : multiplican la micro-pausa y la sacudida de cámara al golpear
+--   lunge           : studs que avanzas con cada golpe (el fuerte avanza x1,5)
+--   weight          : 1 ligera .. 3 pesada (zancada, balanceo y bote al caminar)
+WeaponData.Feel = {
+	Sword = { hitstop = 1.0, shake = 1.0, lunge = 2.2, weight = 2 },
+	Greatsword = { hitstop = 1.5, shake = 1.45, lunge = 3.2, weight = 3 },
+	Dagger = { hitstop = 0.55, shake = 0.6, lunge = 1.4, weight = 1 },
+	Rapier = { hitstop = 0.75, shake = 0.75, lunge = 3.6, weight = 1 },
+	Mace = { hitstop = 1.7, shake = 1.65, lunge = 2.0, weight = 3 },
+}
+
+function WeaponData.feel(id)
+	return WeaponData.Feel[id] or WeaponData.Feel.Sword
+end
+
+function WeaponData.get(id)
+	return WeaponData.Data[id] or WeaponData.Data.Sword
+end
+
+return WeaponData
