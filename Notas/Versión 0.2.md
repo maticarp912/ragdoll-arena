@@ -1,0 +1,62 @@
+# Versión 0.2 (pedidos del 9/11, después de publicar la beta)
+
+Contexto: [[Peticiones del usuario]], [[Reparto etapa 8]], [[Equilibrio de armas]], [[Referencia LihFolk]].
+La beta 0.1 está publicada: «[BETA] Dark Fantasy Plataforme 2v2 1v1 PVP», de PapuDoNacimento. Se probó con el hermano (Mateito) en celular.
+Leyenda: ✅ comprobado en Studio · 🟡 implementado · 🔧 en curso · ⬜ pendiente · 👤 usuario.
+
+## 1. Bugs vistos en la beta
+| Pedido | Detalle | Resp. sugerido | Estado |
+|---|---|---|---|
+| Punto doble cuando caen los dos | Si los dos caen de la arena, hoy cada uno suma un punto. Tiene que ganar **el que cae segundo**. Hoy `MatchService` trata `alive.Red == 0 and alive.Blue == 0` como empate: guardar el orden de eliminación y darle la ronda al equipo del último en caer. | Codex | ⬜ |
+| Cámara rota en celular al fijar objetivo en partida | En el teléfono la cámara se traba o salta con el fijado automático. Revisar `Controls.client` (fijado, órbita y joystick táctil) y probar en teléfono real. | Claude | ⬜ |
+
+## 2. Celular (prioridad alta: el hermano juega en celular)
+| Pedido | Detalle | Resp. sugerido | Estado |
+|---|---|---|---|
+| Mejor soporte para celular | Botones más grandes y separados. Textos legibles en la Armería (hoy son muy chicos). Menús escalados a la pantalla. Revisar zonas seguras (notch). | Gemini | ⬜ |
+| Controles a preferencia | Mover y escalar los botones táctiles con un editor de diseño en Ajustes, guardado en el perfil. Ya existen controles reasignables para teclado y mando (`InputMap`). | Gemini (interfaz) + Codex (guardado) | ⬜ |
+
+## 3. HUD en partida (captura del usuario)
+- **Barra de vida grande y horizontal** abajo al centro (zona roja de la captura).
+- **Barra de infusión** justo encima (zona amarilla).
+- El panel vertical de abajo a la derecha queda solo para resistencia, guardia y aturdimiento, o se rediseña completo.
+- Responsable sugerido: Gemini. Estado: ⬜
+
+## 4. Sensación del combate (prioridad alta)
+«No se siente lo suficientemente bien pegar o recibir un golpe.»
+- **Ritmo más lento:**
+  - animaciones más largas y exageradas: más anticipación, golpe marcado, seguimiento;
+  - subir `duration` y `hitTime` en `WeaponData` de forma pareja, para no romper el equilibrio (ver [[Equilibrio de armas]]).
+- **Que se distinga cada situación:**
+  - **Pegar:** pausa de impacto corta (hit-stop) para el atacante, chispa y sonido grave, temblor leve.
+  - **Recibir:** retroceso marcado, destello rojo en el borde de la pantalla, sonido de carne o armadura, temblor más fuerte, animación de dolor exagerada.
+  - **Bloquear:** chispa metálica clara, sonido de metal contra metal, empuje corto hacia atrás, la barra de guardia parpadea y una pose de bloqueo más marcada.
+  - **Romper guardia / parry:** efectos únicos, cámara lenta breve.
+- Responsable: Claude (animaciones, efectos y sonido). Guías: LihFolk `lihfolk-vfx` (impactos, hit-stop, temblor) y `lihfolk-sfx`. Estado: ⬜
+
+## 5. Roles y administración
+| Pedido | Detalle | Resp. sugerido | Estado |
+|---|---|---|---|
+| Roles | Owner, Admin, Mod, Tester, VIP, Nuevo, etc. Etiqueta con color sobre la cabeza y en el chat. El rol se decide en el servidor por lista de UserIds (en un módulo de datos), y «Nuevo» por las horas jugadas. | Codex | ⬜ |
+| El Owner tiene todo | El Owner (PapuDoNacimento) tiene todas las armas, skins y auras sin comprarlas. | Codex | ⬜ |
+| Panel de administración | Solo Owner y Admin. Buscar un jugador y darle monedas, armas, skins, auras, nivel o rol. Todo se valida en el servidor y queda registrado (quién dio qué a quién). | Codex (servidor) + Gemini (interfaz) | ⬜ |
+
+## 6. Progresión
+| Pedido | Detalle | Resp. sugerido | Estado |
+|---|---|---|---|
+| Sistema de niveles | XP por partida, victoria, eliminación, derribo y misión. Curva de nivel en un módulo de datos. Nivel visible en el HUD y sobre la cabeza. Recompensas por nivel (monedas, cajas). | Codex | ⬜ |
+| Cajas de suerte | Se abren con monedas del juego (sin Robux por ahora). Dan multiplicadores temporales de XP y de monedas (×1,5, ×2, ×3 por X minutos), y a veces skins. Probabilidades visibles en la caja. Si algún día se venden con Robux, hay que cumplir las reglas de Roblox para premios al azar pagos (ver la guía `roblox-monetization-compliance`). | Codex (servidor) + Gemini (interfaz y animación de apertura) | ⬜ |
+
+## 7. Publicación
+- 👤 La página del juego todavía muestra el ícono gris de Roblox. Hay que subir el ícono y la miniatura: el usuario ya tiene un arte «Dark Fantasy 1v1 · 2v2 PvP». Se suben en Creator Dashboard → la experiencia → Places/Thumbnails.
+- 👤 Pasar el UserId de Mateito para darle el rol Tester.
+
+## Orden sugerido
+1. Bugs: el punto doble y la cámara en celular.
+2. HUD nuevo y soporte de celular.
+3. Sensación de combate.
+4. Roles, Owner y panel de administración.
+5. Niveles y cajas de suerte.
+
+## Registro
+- 9/11: nota creada con los pedidos de la beta 0.1.

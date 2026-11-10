@@ -4,6 +4,15 @@ Registro de todo lo que pidió el usuario, para no perder el hilo. **Se actualiz
 Leyenda: ✅ comprobado en Studio · 🟡 implementado, sin probar jugando · 🔧 en curso · ⬜ pendiente · 👤 lo hace el usuario.
 Responsables actuales: ver [[Reparto etapa 8]].
 
+## Versión 0.2
+Beta 0.1 publicada el 9/11. Los pedidos nuevos están en [[Versión 0.2]]:
+- bug del punto doble cuando caen los dos;
+- cámara en celular;
+- HUD con barra de vida abajo;
+- sensación del combate;
+- roles y panel de administración;
+- niveles y cajas de suerte.
+
 ## Pendientes importantes (resumen)
 1. 🔧 **Primera publicación para la beta** (hermano en celular con mando). Prueba en Studio del 9/11, 18:45:
    - ✅ Partida 1v1 con 2 jugadores.

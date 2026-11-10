@@ -4,6 +4,7 @@ Bóveda de Obsidian del proyecto. Juego de Roblox PvP 1v1/2v2 con ragdoll, estil
 
 ## Notas
 - [[Peticiones del usuario]] — **todo lo que pidió el usuario y en qué estado está** (se actualiza siempre)
+- [[Versión 0.2]] — pedidos después de la beta (combate, celular, roles, niveles)
 - [[Estado]] — qué está implementado, qué se comprobó en Studio y qué falta probar
 - [[Pendientes]] — próximas etapas y quién hace cada cosa
 - [[Decisiones]] — reglas de diseño ya decididas
