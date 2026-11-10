@@ -88,3 +88,18 @@ Revisar con datos de la beta. | Claude | ⬜ |
 
 ## Registro
 - 9/11: nota creada con los pedidos de la beta 0.1.
+
+## 10. Mesa de diseño direccional — propuestas nuevas, sin implementación (9/11)
+Decisión ya confirmada por el usuario: el direccional es el eje de la 0.2. Detalle actualizado en [[Diseño Combate PvP Direccional Roblox]], sección Mesa de diseño 0.2.
+- Propuesta: postura persistente de tres direcciones separada de atacar/bloquear, manteniendo controles conocidos del mando; celular con mando usa exactamente el mismo esquema.
+- F bloqueo, C patada, E agarrar y Q fijar como mapa candidato PC; comparar mouse frente a ataques directos Q/M1/E antes de decidir. Selector táctil con sectores y gesto; sin depender de puntería en botones chicos.
+- Priorizar arreglo de cámara en celular antes del prototipo. Resolver explícitamente quién usa el stick derecho en fijado, sin fijado y al lanzar.
+- Probar una ventana de parry común, sin ventaja automática por dispositivo; cambiar de guardia no renueva parry.
+- Primer prototipo con espada y muñeco en práctica; no activarlo en partidas públicas hasta jugarlo con Mateito en teléfono con mando y con táctil.
+- Propuesta de aprendizaje: ejercicio de una dirección, después tres, indicador propio y aviso enemigo con formas además de color. Registrar errores de selección/cámara, no solo victorias.
+- Revisar imbloqueable de Maza y bypass del Estoque para que leer la dirección siga teniendo sentido. Dejar números y Elo para después de validar controles.
+**Implementado:** ninguna mecánica nueva en esta sesión; solo notas. **Comprobado en Studio:** nada nuevo del direccional. **Pendiente:** confirmar esquema con el usuario, diseñar/probar prototipo y cerrar las preguntas abiertas. No modifica el estado histórico de la beta 0.1.
+
+## Prioridad de plataformas confirmada por el usuario (9/11)
+El combate direccional se diseña principalmente para **mando y teclado/mouse**. El celular táctil se adapta después como soporte secundario. Celular con mando sigue dentro del objetivo principal: requiere cámara estable y avisos/HUD legibles en pantalla chica. No se considera aprobado todavía ningún mapa de botones particular. Ver [[Diseño Combate PvP Direccional Roblox]].
+**Implementado:** solo actualización de diseño. **Comprobado en Studio:** nada nuevo. **Pendiente:** cerrar controles principales, prototipar y probar con Mateito; adaptar táctil después.

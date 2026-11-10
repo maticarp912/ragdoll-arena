@@ -138,3 +138,9 @@ Implementado: integración de fachadas Gemini, catálogo íntegro con monedas, s
 Post-beta de Ronda 6: hallazgo 5 (estado lease perdido), 7 (abandono y estadísticas), 8 (precios/catálogo si vuelven productos premium), 9 (coste CityLife/cache de nombres).
 
 Ronda 7 comprobada estáticamente: 71 scripts OK; LihFolk 0 errores/avisos; place local regenerado. Pendiente: usuario prueba Play solo, 1v1 con dos clientes, persistencia aislada y iPhone/mando. Todo el catálogo usa monedas (incluye Cyber y Blood).
+
+## Diseño de controles de la 0.2 — seguimiento (9/11)
+Pedido actual: seguir definiendo combate direccional y controles PC/táctil/mando, especialmente teléfono con mando. Solo documentación; sin código, place ni cambios a contratos. Las propuestas y preguntas quedan en [[Diseño Combate PvP Direccional Roblox]] y el alcance en [[Versión 0.2]]. Postura persistente, mapa de mando familiar, patada separada y parry común son PROPUESTAS DE CODEX a confirmar, no decisiones del usuario. Pendiente elegir mouse frente a Q/M1/E en PC y resolver cámara/selector sin fijado. Implementado: nada nuevo. Comprobado en Studio: nada nuevo. Pendiente: prototipo y prueba con Mateito.
+
+## Decisión 0.2 — prioridad de controles (9/11)
+Confirmado por el usuario: enfoque principal en mando y teclado/mouse; adaptar táctil como se pueda después. Teléfono con mando continúa siendo un caso principal, especialmente para Mateito. No se elimina el soporte táctil ni se aprueba todavía la asignación concreta de botones. Detalle en [[Versión 0.2]] y [[Diseño Combate PvP Direccional Roblox]]. Implementado: solo notas. Comprobado en Studio: sin pruebas nuevas. Pendiente: diseño final y prototipo.
