@@ -24,16 +24,17 @@ InputMap.Actions = {
 	{ id = "LockOn", name = "Fijar objetivo" },
 	{ id = "SwitchTarget", name = "Cambiar objetivo" },
 	{ id = "Menu", name = "Menú" },
+	{ id = "Armory", name = "Armería" },
 }
 
 InputMap.Defaults = {
 	Keyboard = {
 		Attack = "MouseButton1", Heavy = "MouseButton2", Block = "F", Dodge = "Space", Interact = "E",
-		Kick = "C", Infuse = "R", LockOn = "Q", SwitchTarget = "T", Menu = "B",
+		Kick = "C", Infuse = "R", LockOn = "Q", SwitchTarget = "T", Menu = "B", Armory = "V",
 	},
 	Gamepad = {
 		Attack = "ButtonR1", Heavy = "ButtonR2", Block = "ButtonL1", Dodge = "ButtonB", Interact = "ButtonX",
-		Kick = "ButtonL2", Infuse = "ButtonY", LockOn = "ButtonR3", SwitchTarget = "DPadRight", Menu = "DPadUp",
+		Kick = "ButtonL2", Infuse = "ButtonY", LockOn = "ButtonR3", SwitchTarget = "DPadRight", Menu = "DPadUp", Armory = "DPadLeft",
 	},
 }
 
@@ -42,11 +43,11 @@ InputMap.Defaults = {
 InputMap.DirectionalDefaults = {
 	Keyboard = {
 		Attack = "MouseButton1", Heavy = "MouseButton2", Block = "Q", Dodge = "Space", Interact = "E",
-		Kick = "F", Infuse = "R", LockOn = "T", SwitchTarget = "G", Menu = "B",
+		Kick = "F", Infuse = "R", LockOn = "T", SwitchTarget = "G", Menu = "B", Armory = "V",
 	},
 	Gamepad = {
 		Attack = "ButtonR1", Heavy = "ButtonR2", Block = "ButtonL2", Dodge = "ButtonL1", Interact = "ButtonX",
-		Kick = "ButtonB", Infuse = "ButtonY", LockOn = "ButtonR3", SwitchTarget = "DPadRight", Menu = "DPadUp",
+		Kick = "ButtonB", Infuse = "ButtonY", LockOn = "ButtonR3", SwitchTarget = "DPadRight", Menu = "DPadUp", Armory = "DPadLeft",
 	},
 }
 

@@ -72,11 +72,16 @@ for i=1,Life.Birds do
  local right=localPart("RightWing",Vector3.new(1.3,0.12,0.5),Life.Color)
  birds[i]={body,left,right}
 end
+local cachedCity=nil
 for i=1,Life.Flags do flags[i]=localPart("StreetPennant",Vector3.new(0.05,1.5,1.1),Life.Cloth) end
 RunService.Heartbeat:Connect(function(dt)
  lifeTime+=dt if lifeTime<Life.Step then return end lifeTime=0
  local root=player.Character and player.Character:FindFirstChild("HumanoidRootPart")
- local city=workspace:FindFirstChild("CityDressing",true)
+ -- Hallazgo 9 (integración 0.2): se cachea la ciudad; la búsqueda recursiva solo se repite si se perdió.
+ if not (cachedCity and cachedCity.Parent) then
+  if player:GetAttribute("InMatch") then cachedCity=nil else cachedCity=workspace:FindFirstChild("CityDressing",true) end
+ end
+ local city=cachedCity
  if city and not cityOrigin then
   local source=city:FindFirstChild("Fountain")
   if source and source:IsA("BasePart") then cityOrigin=source.Position-Vector3.new(20,2,-16) end

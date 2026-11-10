@@ -25,6 +25,7 @@ local MARKERS = { "Hit", "WindupEnd", "Release", "Slap" }
 local DUMMY_MODES = {
 	Idle = "Quieto", Block = "Bloquea", Parry = "Parrea", Dodge = "Esquiva",
 	Attack = "Ataca (M1)", Heavy = "Fuertes", Mixed = "Mixto",
+	DirOne = "Ataca por un lado", DirRandom = "Lados al azar",
 }
 
 ----------------------------------------------------------------------
@@ -174,6 +175,9 @@ local practiceBtn = button(r1, "Solo práctica: NO", 0.5, function() send("Pract
 local r2 = row()
 local modeBtn = button(r2, "Muñeco: Quieto", 0.5, function() send("DummyMode") end)
 local weaponBtn = button(r2, "Arma muñeco: Espada", 0.5, function() send("DummyWeapon") end)
+local rDir = row()
+local dirBtn = button(rDir, "Lado del muñeco: Izquierda", 1, function() send("DummyDir") end)
+local DIR_NAMES = { Up = "Arriba", Left = "Izquierda", Right = "Derecha" }
 local r3 = row()
 button(r3, "Reiniciar muñecos", 0.5, function() send("ResetDummies") end)
 button(r3, "Añadir muñeco", 0.5, function() send("SpawnDummy") end)
@@ -191,8 +195,9 @@ local function refreshButtons()
 	modeBtn.Text = "Muñeco: " .. (DUMMY_MODES[workspace:GetAttribute("DummyMode")] or "?")
 	local w = WeaponData.Data[workspace:GetAttribute("DummyWeapon")]
 	weaponBtn.Text = "Arma muñeco: " .. (w and w.name or "?")
+	dirBtn.Text = "Lado del muñeco: " .. (DIR_NAMES[workspace:GetAttribute("DummyDir")] or "?")
 end
-for _, a in { "DebugHitboxes", "DummyMode", "DummyWeapon" } do
+for _, a in { "DebugHitboxes", "DummyMode", "DummyWeapon", "DummyDir" } do
 	workspace:GetAttributeChangedSignal(a):Connect(refreshButtons)
 end
 player:GetAttributeChangedSignal("PracticeOnly"):Connect(refreshButtons)

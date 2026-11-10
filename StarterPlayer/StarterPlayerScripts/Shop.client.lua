@@ -241,7 +241,20 @@ end
 ----------------------------------------------------------------------
 -- Rotación diaria determinista para la sección «Destacado del Día» (D12)
 ----------------------------------------------------------------------
+-- I2 (integración 0.2): la lista oficial la calcula el servidor (`Shop` → `GetFeatured`, día de Argentina).
+-- El cálculo local queda solo como respaldo si el servidor no respondió.
+local serverFeatured, serverResetAt = nil, nil
+local function fetchServerFeatured()
+	if not remote then return end
+	local ok, success, data = pcall(function() return remote:InvokeServer("GetFeatured") end)
+	if ok and success and type(data) == "table" and type(data.ids) == "table" and #data.ids > 0 then
+		serverFeatured = data.ids
+		serverResetAt = tonumber(data.resetAt)
+	end
+end
+
 local function getDailyFeaturedIds()
+	if serverFeatured and (not serverResetAt or os.time() < serverResetAt) then return serverFeatured end
 	-- Si el servidor publica una lista en workspace:GetAttribute("ShopFeatured"), se usa esa;
 	-- si no, se calcula de forma determinista por día UTC (4 a 6 artículos).
 	local rawServer = workspace:GetAttribute("ShopFeatured")
@@ -289,7 +302,7 @@ end
 
 local function formatDailyCountdown()
 	local now = os.time()
-	local rem = 86400 - (now % 86400)
+	local rem = serverResetAt and math.max(0, serverResetAt - now) or (86400 - ((now - 10800) % 86400)) -- 00:00 de Argentina (UTC-3)
 	local h = math.floor(rem / 3600)
 	local m = math.floor((rem % 3600) / 60)
 	local s = rem % 60
@@ -1434,6 +1447,7 @@ task.spawn(function()
 	local toggleMenu = player:WaitForChild("ToggleMenu", 15)
 	if toggleMenu and toggleMenu:IsA("BindableEvent") then
 		toggleMenu.Event:Connect(function()
+			if not opened and (not serverFeatured or (serverResetAt and os.time() >= serverResetAt)) then fetchServerFeatured() end
 			setOpen(not opened)
 		end)
 	end

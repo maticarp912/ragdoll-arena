@@ -2,10 +2,18 @@ local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local Roles = require(RS:WaitForChild("Roles"))
 local Data = require(script.Parent.PlayerData)
+local RunService = game:GetService("RunService")
+local CombatConfig = require(RS:WaitForChild("CombatConfig"))
 local Service = {}
 local resolved, attempted = {}, {}
 function Service.isOwner(player)
  return game.CreatorType == Enum.CreatorType.User and player.UserId == game.CreatorId
+end
+-- I4 (integración 0.2): Studio, la opción de depuración en vivo y la lista de IDs de CombatConfig
+-- siguen habilitando la depuración además del permiso del rol (Tester, Owner...).
+function Service.debugOverride(player)
+ return RunService:IsStudio() or CombatConfig.Debug.AllowInLiveGame == true
+  or table.find(CombatConfig.Debug.AllowedUserIds, player.UserId) ~= nil
 end
 function Service.refresh(player)
  local data = Data.get(player)
@@ -24,7 +32,7 @@ function Service.refresh(player)
  player:SetAttribute("AllCosmetics", role == "Owner")
  player:SetAttribute("AdminAllowed", Roles.Data[role].permissions.Admin == true)
  player:SetAttribute("ModerateAllowed", Roles.Data[role].permissions.Moderate == true)
- player:SetAttribute("DebugAllowed", Roles.Data[role].permissions.Debug == true)
+ player:SetAttribute("DebugAllowed", Roles.Data[role].permissions.Debug == true or Service.debugOverride(player))
  if data then Data.refresh(player) end
 end
 function Service.has(player, permission)

@@ -30,8 +30,8 @@ require(ServerScriptService:WaitForChild("AdminService"))
 local function phase(name, duration, group)
  local ends = workspace:GetServerTimeNow() + (duration or 0)
  workspace:SetAttribute("PhaseEnds", ends) workspace:SetAttribute("MatchPhase", name)
- for _, p in Players:GetPlayers() do if p:GetAttribute("InMatch") then p:SetAttribute("MatchPhase", name) end end
- for _, player in group or {} do player:SetAttribute("MatchPhase", name) end
+ for _, p in Players:GetPlayers() do if p:GetAttribute("InMatch") then p:SetAttribute("MatchPhase", name) p:SetAttribute("PhaseEnds", ends) end end
+ for _, player in group or {} do player:SetAttribute("MatchPhase", name) player:SetAttribute("PhaseEnds", ends) end
 end
 phase("Lobby")
 local CONFIG = ArenaConfig.Match

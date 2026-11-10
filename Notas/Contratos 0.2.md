@@ -19,7 +19,7 @@ Valores en `CombatConfig.Directional` (con `Enabled`).
 - Remoto `Input` (C25) y teclas del direccional en `InputMap.DirectionalDefaults`.
 
 ## C17. Fases de la partida y previa (produce Codex; consumen Claude y Gemini)
-- Atributos en `workspace`: `MatchPhase` (Lobby, Prematch, Cinematic, Round, RoundEnd, Summary) y `PhaseEnds` (hora del servidor).
+- Atributos en `workspace`: `MatchPhase` (Lobby, Prematch, Cinematic, Round, RoundEnd, Summary) y `PhaseEnds` (hora del servidor). **También en cada jugador de la partida** (integración, 10/11/2026): los clientes leen primero `player:GetAttribute("MatchPhase")` y `PhaseEnds`; `workspace` es respaldo.
 - La previa dura al menos 10 s (en `Economy` o un módulo de datos de partida). Durante `Prematch` cada jugador elige arma, skin e infusión con el remoto de equipar existente (C20); al pasar a `Cinematic` se bloquea la elección.
 - `Cinematic` dura lo que diga `CinematicTime` (propuesta 4,5 s). Claude dibuja la cámara (`Cinematic.client`); Gemini, los carteles (`Prematch.client`).
 - Orden de eliminación: el servidor guarda quién cayó y cuándo; si caen todos, gana el equipo del último en caer.

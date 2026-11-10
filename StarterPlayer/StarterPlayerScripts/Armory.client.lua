@@ -145,7 +145,7 @@ end
 local function invokeArmory(action, id)
 	if busy or not remote then return end
 	-- En partida solo se permite cambiar equipamiento durante la antesala ("Prematch")
-	local phase = workspace:GetAttribute("MatchPhase")
+	local phase = (player:GetAttribute("MatchPhase") or workspace:GetAttribute("MatchPhase"))
 	if player:GetAttribute("InMatch") and phase ~= "Prematch" then
 		setStatus(L.t("locked"), true)
 		UiTheme.playSound("UI_Error")
@@ -982,7 +982,7 @@ end
 function setOpen(value)
 	if opened == value then return end
 	if value then
-		local phase = workspace:GetAttribute("MatchPhase")
+		local phase = (player:GetAttribute("MatchPhase") or workspace:GetAttribute("MatchPhase"))
 		if player:GetAttribute("InMatch") and phase ~= "Prematch" then
 			return
 		end
@@ -1047,12 +1047,14 @@ player:GetAttributeChangedSignal("SettingsOpen"):Connect(function()
 	end
 end)
 
-workspace:GetAttributeChangedSignal("MatchPhase"):Connect(function()
-	local phase = workspace:GetAttribute("MatchPhase")
+local function closeIfLocked()
+	local phase = (player:GetAttribute("MatchPhase") or workspace:GetAttribute("MatchPhase"))
 	if opened and player:GetAttribute("InMatch") and phase ~= "Prematch" then
 		setOpen(false)
 	end
-end)
+end
+workspace:GetAttributeChangedSignal("MatchPhase"):Connect(closeIfLocked)
+player:GetAttributeChangedSignal("MatchPhase"):Connect(closeIfLocked)
 
 UIS.InputChanged:Connect(function(input)
 	if not opened then return end
@@ -1085,12 +1087,6 @@ UIS.InputBegan:Connect(function(input, processed)
 			setOpen(false)
 		end
 		return
-	end
-	if not processed and input.KeyCode == Enum.KeyCode.B then
-		local phase = workspace:GetAttribute("MatchPhase")
-		if not player:GetAttribute("InMatch") or phase == "Prematch" then
-			setOpen(not opened)
-		end
 	end
 end)
 

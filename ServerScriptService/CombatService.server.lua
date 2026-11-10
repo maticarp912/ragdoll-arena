@@ -133,8 +133,12 @@ end)
 ----------------------------------------------------------------------
 -- Sin bloqueo de ratón con Shift (Shift es la esquiva)
 ----------------------------------------------------------------------
+local RoleService = require(ServerScriptService:WaitForChild("RoleService"))
+
+-- I4 (integración 0.2): el permiso de depuración sale del rol (RoleService) además de Studio y la lista.
 local function canDebug(player)
 	if RunService:IsStudio() then return true end
+	if RoleService.has(player, "Debug") then return true end
 	if CombatConfig.Debug.AllowInLiveGame then return true end
 	if player.UserId == game.CreatorId then return true end
 	return table.find(CombatConfig.Debug.AllowedUserIds, player.UserId) ~= nil
@@ -142,7 +146,8 @@ end
 
 local function onPlayer(player)
 	player.DevEnableMouseLock = false
-	player:SetAttribute("DebugAllowed", canDebug(player))
+	-- DebugAllowed lo publica RoleService (rol + Studio + lista); acá solo se suma, nunca se apaga.
+	if canDebug(player) then player:SetAttribute("DebugAllowed", true) end
 end
 Players.PlayerAdded:Connect(onPlayer)
 for _, p in Players:GetPlayers() do onPlayer(p) end

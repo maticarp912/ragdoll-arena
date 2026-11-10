@@ -839,6 +839,12 @@ local function onAction(action, began)
 		end
 	elseif action == "Menu" then
 		if began then toggleMenu:Fire() end
+	elseif action == "Armory" then
+		-- I3 (integración 0.2): tecla propia; la armería decide si se puede abrir (ciudad o previa)
+		if began then
+			local ev = player:FindFirstChild("ToggleArmory")
+			if ev then ev:Fire() end
+		end
 	end
 end
 
@@ -863,7 +869,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
 	local action = actionOf(input)
 	if not action then return end
 	-- Con el menú abierto solo funciona la tecla del menú
-	if player:GetAttribute("MenuOpen") and action ~= "Menu" then return end
+	if player:GetAttribute("MenuOpen") and action ~= "Menu" and action ~= "Armory" then return end
 	if isFreeMouse2(input) then
 		m2Press = { action = action, at = os.clock(), pos = UserInputService:GetMouseLocation() }
 		return
@@ -890,7 +896,7 @@ end)
 
 -- Botones táctiles (TouchUI de Gemini, contrato C12): mismas acciones que teclado y mando
 InputBridge.Action:Connect(function(action, isDown)
-	if player:GetAttribute("MenuOpen") and action ~= "Menu" then return end
+	if player:GetAttribute("MenuOpen") and action ~= "Menu" and action ~= "Armory" then return end
 	if isDown then
 		onAction(action, true)
 	elseif action == "Block" or action == "Heavy" or action == "Kick" then

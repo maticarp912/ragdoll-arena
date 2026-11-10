@@ -25,3 +25,4 @@ Leyenda: ✅ comprobado en Studio · 🟡 implementado, sin probar jugando · �
 
 | 10/11/2026 14:11 (Argentina, UTC-3) | Ejecutar la asignación adjunta 0.2 Ronda 1 - Codex | [[Reporte 0.2 Codex]] y [[Contratos 0.2]] | Código entregado; Studio e integración pendientes |
 | 10/11/2026 | Revisar los reportes de la ronda 1 | [[Integración 0.2]] | ✅ revisados; 5 desajustes para la integración |
+| 10/11/2026 | Integrar la ronda 1 | [[Integración 0.2]] | ✅ código integrado (I1 a I5 y pedidos); ⬜ pruebas en Studio en sesión nueva |

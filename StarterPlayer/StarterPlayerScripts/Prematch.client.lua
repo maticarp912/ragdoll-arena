@@ -1,7 +1,7 @@
 -- LocalScript: StarterPlayer/StarterPlayerScripts/Prematch
 -- Antesala del Duelo y Presentación Cinematográfica de Combatientes (Versión 0.2 — D11, D13, D16, C17).
--- Lee `workspace:GetAttribute("MatchPhase")` ("Idle" | "Prematch" | "Cinematic" | "Fighting" | "Postmatch")
--- y `workspace:GetAttribute("PhaseEnds")` (`workspace:GetServerTimeNow() + s`).
+-- Lee la fase del jugador (`player:GetAttribute("MatchPhase")`, C17: Lobby | Prematch | Cinematic | Round | RoundEnd | Summary), con `workspace` como respaldo,
+-- y `PhaseEnds` (hora del servidor) del jugador o de `workspace`.
 --   - En "Prematch": muestra la cuenta atrás y selección rápida de arma, skin e infusión (más botón para abrir la Armería completa).
 --   - En "Cinematic": muestra los carteles dark-fantasy con nombre, nivel, rol y arma de cada combatiente de la partida.
 
@@ -149,7 +149,7 @@ end
 
 local function invokeQuickLoadout(action, id)
 	if busy or not shopRemote then return end
-	if workspace:GetAttribute("MatchPhase") ~= "Prematch" then return end
+	if (player:GetAttribute("MatchPhase") or workspace:GetAttribute("MatchPhase")) ~= "Prematch" then return end
 	busy = true
 	local ok, success = pcall(function()
 		return shopRemote:InvokeServer(action, id)
@@ -462,9 +462,9 @@ end
 -- Sincronización con MatchPhase y PhaseEnds (Contrato C17)
 ----------------------------------------------------------------------
 local function refreshPhaseState()
-	local phase = workspace:GetAttribute("MatchPhase") or "Idle"
+	local phase = (player:GetAttribute("MatchPhase") or workspace:GetAttribute("MatchPhase")) or "Idle"
 	local inMatch = player:GetAttribute("InMatch") == true
-	local endsAt = tonumber(workspace:GetAttribute("PhaseEnds")) or 0
+	local endsAt = tonumber((player:GetAttribute("PhaseEnds") or workspace:GetAttribute("PhaseEnds"))) or 0
 	local nowServer = workspace:GetServerTimeNow()
 	local rem = math.max(0, endsAt - nowServer)
 
@@ -486,6 +486,8 @@ local function refreshPhaseState()
 end
 
 workspace:GetAttributeChangedSignal("MatchPhase"):Connect(refreshPhaseState)
+player:GetAttributeChangedSignal("MatchPhase"):Connect(refreshPhaseState)
+player:GetAttributeChangedSignal("PhaseEnds"):Connect(refreshPhaseState)
 workspace:GetAttributeChangedSignal("PhaseEnds"):Connect(refreshPhaseState)
 player:GetAttributeChangedSignal("InMatch"):Connect(refreshPhaseState)
 
@@ -513,7 +515,7 @@ RunService.RenderStepped:Connect(function()
 	end
 
 	if prematchRoot.Visible then
-		local endsAt = tonumber(workspace:GetAttribute("PhaseEnds")) or 0
+		local endsAt = tonumber((player:GetAttribute("PhaseEnds") or workspace:GetAttribute("PhaseEnds"))) or 0
 		local rem = math.max(0, endsAt - workspace:GetServerTimeNow())
 		if endsAt <= 0 then
 			rem = math.max(0, phaseDuration - (os.clock() - phaseStartClock))
