@@ -2,7 +2,7 @@
 
 Pedido del usuario: entrar en desarrollo, repartir parejo según la mejor virtud de cada IA, sin escatimar calidad, hasta pulir rumbo a la 1.0.
 **Regla de esta etapa: se escribe todo el código sin probar en Studio.** Nadie usa la pantalla ni abre Studio. La integración y las pruebas se hacen después, en una sesión aparte de Claude.
-Antes de arrancar, el usuario responde [[Decisiones pendientes 0.2]]. Las tareas que dependen de una decisión lo dicen (D1, D2…).
+Decisiones del usuario: **respondidas el 10/11/2026** en [[Decisiones pendientes 0.2]] (D1 a D22). Las tareas citan la decisión que aplican.
 
 ## Roles: cada IA en lo que mejor hace
 | IA | Virtud | Rol en la 0.2 | Modelo |
@@ -40,9 +40,10 @@ Antes de arrancar, el usuario responde [[Decisiones pendientes 0.2]]. Las tareas
 ### Ronda 2: lo que depende de la ronda 1
 | IA | Tarea |
 |---|---|
-| Codex | Ruleta diaria y semanal, cajas de suerte y multiplicadores (servidor); almas según D5; panel de administración (interfaz funcional) |
-| Gemini (Flash) | HUD nuevo (vida abajo al centro, infusión encima), celular (botones, textos, zonas seguras, editor de botones), interfaz de la ruleta y de subir de nivel |
-| Claude | Cinemática antes del combate (cámara y poses) sobre la previa de Codex; patio de práctica con muñecos por dirección; táctil del direccional si da el tiempo |
+| Codex | **Sistema de recompensas completo** (servidor y datos) según [[Recompensas y retención 0.2]]: ruleta, cajas, garantías, racha, semanal, niveles, maestría, colección, «Primeros pasos», anti-AFK; renombrar monedas a almas (D5); panel de administración (interfaz funcional) |
+| Gemini (Flash, High) | HUD nuevo (vida abajo al centro, infusión encima), celular (botones, textos, zonas seguras, editor de botones), y toda la interfaz de [[Recompensas y retención 0.2]] (ruleta, cajas, racha, progreso pospartida, bienvenida, colección, avisos) |
+| Gemini (Argon) | Tanda 2 de skins en Blender (D6), si queda cuota |
+| Claude | Cinemática antes del combate (cámara y poses) sobre la previa de Codex; tutorial de 3 pasos en el patio; efectos y sonido de almas, nivel y rareza; táctil del direccional si da el tiempo |
 
 ### Ronda 3: revisión y pulido
 - **Codex (Sol, Medium):** revisión de seguridad de todos los remotos nuevos y de la migración de datos, con reporte.

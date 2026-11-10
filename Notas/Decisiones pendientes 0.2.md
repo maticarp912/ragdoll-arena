@@ -1,38 +1,38 @@
-# Decisiones pendientes 0.2 — 10/11/2026 (Argentina, UTC-3)
+# Decisiones 0.2 — respondidas el 10/11/2026 (Argentina, UTC-3)
 
-Lo que tiene que decidir el usuario antes de programar. Cada punto trae la **recomendación de Claude**: si estás de acuerdo, respondé «ok».
-**Para Codex:** escribí las respuestas del usuario en la columna «Respuesta», con fecha y hora, sin cambiar las preguntas. Si el usuario responde «ok», copiá la recomendación. No decidas por él.
+El usuario respondió a Claude: «apruebo todo», con los cambios de abajo. **Todas las decisiones están cerradas**; la D6 sigue la propuesta de Claude (el usuario la planteó como pregunta: si no está de acuerdo, se corrige acá).
+Si una respuesta cambia, se edita acá con fecha y hora, sin borrar la anterior.
 
 ## Combate
-| # | Pregunta | Recomendación de Claude | Respuesta |
-|---|---|---|---|
-| D1 | ¿Aprobás la tabla de conflictos del direccional? ([[Arquitectura Combate Direccional]], sección 0) | Sí, completa: defensa en Q/L2; F = patada (tocar) y levantar (mantener) sobre un derribado; fijado permanente en partida con T/R3 para cambiar; la postura queda; derribado inmune a las armas; +25 % de alcance; parry común de 0,15 s; táctil después; se mantiene el combo de 3 golpes. | |
-| D2 | En PC, ¿cómo se elige la dirección? | **Mouse** (un gesto corto elige arriba, izquierda o derecha y queda), como en el mando con el stick derecho. Opción B: teclas directas (Q izquierda, clic arriba, E derecha). | |
-| D3 | ¿Aprobás los números de [[Equilibrio de armas]] («Propuesta de números para la 0.2»)? | Sí. Se ajustan después con la telemetría. | |
-| D4 | Combos por dirección: ¿cómo funcionan? | Combo de 3 golpes; cada golpe sale por la postura de ese momento. Si los 3 son del mismo lado, el tercero es un remate más fuerte. Si cambiás de lado en el medio, el combo sigue pero sin remate (es más difícil de leer). | |
-| D5 | Almas tipo Dark Souls: ¿qué son? | **Renombrar las monedas a «almas»** (mismo saldo, sin migrar perfiles), con un sonido y efecto de absorber almas al ganar. **Sin pérdida al morir.** Evita tener dos monedas. | |
+| # | Pregunta | Respuesta del usuario |
+|---|---|---|
+| D1 | Tabla de conflictos del direccional ([[Arquitectura Combate Direccional]], sección 0) | ✅ Aprobada completa: defensa Q/L2; F = patada (tocar) y levantar (mantener) sobre un derribado; fijado permanente en partida con T/R3; la postura queda; derribado inmune a las armas; +25 % de alcance; parry común de 0,15 s; táctil después; combo de 3 golpes. |
+| D2 | Dirección en PC | ✅ **Con el mouse: el movimiento de cámara elige la dirección del ataque** (gesto corto arriba, izquierda o derecha; la postura queda). En mando, el stick derecho. |
+| D3 | Números de [[Equilibrio de armas]] | ✅ Aprobados. |
+| D4 | Combos por dirección | ✅ **Si los tres golpes del combo conectan, el tercero es un remate (golpe fuerte), sin importar las direcciones.** Cada golpe sale por la postura de ese momento. Cambia la recomendación de Claude (no hace falta repetir lado). |
+| D5 | Almas | ✅ Las monedas pasan a llamarse «almas» (mismo saldo, sin migrar), con efecto y sonido de absorber al ganar. Sin pérdida al morir. |
 
 ## Skins, tienda y armería
-| # | Pregunta | Recomendación de Claude | Respuesta |
-|---|---|---|---|
-| D6 | Skins nuevas: ¿piezas por código o mallas de Blender? | **Mallas de Blender** para las skins top (las de la ruleta y las legendarias): son las únicas que pueden parecerse a la espada de referencia. Las subís vos a Roblox (Gemini deja los archivos y la lista). Las demás, mejoradas por código. | |
-| D7 | Roles: ¿quiénes y qué puede hacer cada uno? | Pasá los UserId de PapuDoNacimento (Owner), Mateito (Tester) y de quien quieras como Admin o Mod. **Owner y Admin:** todo el panel. **Mod:** expulsar y silenciar, sin dar cosas. **Tester:** menú de depuración. **VIP:** etiqueta. **Nuevo:** menos de 3 horas jugadas. | |
-| D8 | Panel de administración: ¿puede darse cosas a sí mismo? | El Owner ya tiene todo. Un Admin **no** se puede dar a sí mismo ni dar roles iguales o mayores al suyo. Todo queda registrado. | |
-| D9 | Niveles | Nivel máximo 100; XP por partida, victoria, eliminación y misión; cada 5 niveles, monedas, y cada 10, una caja. Codex propone la curva. | |
-| D10 | **La ruleta no existe en el código** (solo hay misiones y tienda). ¿Qué es la «ruleta»? | Una ruleta nueva, gratis **1 tirada por día** (reinicio a las 00:00 de Argentina), con monedas, XP, multiplicadores y skins. El premio grande rota cada lunes. **Las cajas de suerte** se compran con monedas y usan la misma tabla de premios. Las probabilidades se muestran. Duplicado = monedas. | |
-| D11 | Previa de 10 s: ¿se puede cambiar de arma entre rondas? | Solo antes de la primera ronda (como hoy: el arma no cambia en la partida). Si nadie elige, queda lo equipado. | |
-| D12 | Tienda estilo Fortnite: ¿rota? | Sí: una sección «Destacado» que cambia cada día (4 a 6 objetos) y el catálogo completo debajo. | |
-| D13 | Armería | Se abre desde la ciudad y en la previa: arma, skin, infusión y aura, con el personaje girando en 3D. | |
-| D14 | HUD | Como tu captura: vida grande abajo al centro, infusión encima, resistencia y guardia chicas a los costados. | |
-| D15 | ¿Qué skins entran en la ruleta? | La espada de referencia como premio grande de la primera semana, más una de espadón y una de maza que proponga Gemini. | |
+| # | Pregunta | Respuesta del usuario |
+|---|---|---|
+| D6 | Skins: ¿por código o en Blender? | 🟡 El usuario preguntó si hacerlas en Blender subiendo la resolución de todas. **Propuesta de Claude, adoptada salvo que el usuario diga lo contrario:** **todas las skins pasan a Blender**, en dos tandas. Tanda 1 (piloto): las 3 de la ruleta + 1 por arma, para validar el proceso de subida y cómo se ven. Tanda 2: el resto. Cada skin conserva su versión por código como respaldo hasta que se suba la malla. Gemini genera las mallas y texturas por script; **el usuario las sube** a Roblox (importador 3D de Studio, se pueden subir varias juntas) y pega los IDs en la lista que deja Gemini. Límites: mallas livianas para celular (pocos miles de triángulos por skin) y texturas de 1024 como máximo. |
+| D7 | Roles | ✅ **Owner: PapuDoNacimento**, se detecta solo porque es el creador del juego (`game.CreatorId`, como ya hace el menú de depuración). **Tester: Mateito = usuario `mateodoupa`**: guardar el nombre en `Roles.lua` y resolver el UserId en el servidor (`GetUserIdFromNameAsync`, con caché); si el usuario pasa después el número de ID, se usa ese. Admin y Mod: ninguno por ahora. Permisos como la recomendación: Owner y Admin todo el panel; Mod expulsar y silenciar; Tester depuración; VIP etiqueta; Nuevo menos de 3 h. |
+| D8 | Panel: darse cosas a sí mismo | ✅ El Owner ya tiene todo; un Admin no se da cosas ni roles iguales o mayores. Todo registrado. |
+| D9 | Niveles | ✅ Máximo 100; XP por partida, victoria, eliminación y misión; premios cada 5 y cada 10 niveles. Codex propone la curva. |
+| D10 | Ruleta y cajas | ✅ **Ampliado:** hacer la ruleta, las cajas de suerte y **todo el sistema de recompensas**: gancho para jugadores nuevos y motivos para volver a entrar. Diseño en [[Recompensas y retención 0.2]]. |
+| D11 | Cambiar de arma entre rondas | ✅ Solo en la previa, antes de la primera ronda. |
+| D12 | Tienda que rota | ✅ «Destacado» diario (4 a 6 objetos) + catálogo completo. |
+| D13 | Armería | ✅ Desde la ciudad y en la previa; arma, skin, infusión y aura con el personaje en 3D. |
+| D14 | HUD | ✅ Vida grande abajo al centro, infusión encima, resistencia y guardia a los costados. |
+| D15 | Skins de la ruleta | ✅ La espada de referencia (premio grande de la primera semana), una de espadón y una de maza. |
 
 ## Resto
-| # | Pregunta | Recomendación de Claude | Respuesta |
-|---|---|---|---|
-| D16 | Cinemática antes del combate | 4 a 5 s dentro de los 10 s de la previa: la cámara recorre la arena y muestra a cada jugador con su pose y su cartel. No se puede saltear (es corta). | |
-| D17 | Editor de botones táctiles | Mover y escalar cada botón, guardado en el perfil. Entra en la 0.2. | |
-| D18 | Clasificatorias con Elo | **Para la 0.3.** Primero estabilizar el direccional. | |
-| D19 | Arena de la Mano | Fuera de la 0.2; se rehace en la 0.3. | |
-| D20 | Robux | Nada en la 0.2: todo con monedas. | |
-| D21 | Rojo (cambios en vivo en Studio) | Sí, en la sesión de integración: hay que instalar el plugin de Rojo en Studio (lo hacés vos). | |
-| D22 | Hachas como sexta arma | Para después de la 1.0. | |
+| # | Pregunta | Respuesta del usuario |
+|---|---|---|
+| D16 | Cinemática | ✅ 4 a 5 s dentro de la previa, sin saltear. |
+| D17 | Editor de botones táctiles | ✅ Entra en la 0.2. |
+| D18 | Elo | ✅ Para la 0.3. |
+| D19 | Arena de la Mano | ✅ Para la 0.3. |
+| D20 | Robux | ✅ Nada en la 0.2. |
+| D21 | Rojo | ✅ En la sesión de integración; el usuario instala el plugin. |
+| D22 | Hachas | ✅ Después de la 1.0. |

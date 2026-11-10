@@ -9,7 +9,8 @@ Bóveda de Obsidian del proyecto. Juego de Roblox PvP 1v1/2v2 con ragdoll, estil
 |---|---|
 | [[Indicaciones para las IA]] | Reglas de trabajo, qué leer y reparto. |
 | [[Plan de desarrollo 0.2]] | Roles, modelos, archivos de cada IA y rondas. Prompts: [[0.2 Ronda 1 - Claude]], [[0.2 Ronda 1 - Codex]], [[0.2 Ronda 1 - Gemini]]. |
-| [[Decisiones pendientes 0.2]] | Lo que falta que decida el usuario. |
+| [[Decisiones pendientes 0.2]] | Decisiones del usuario para la 0.2 (D1 a D22, respondidas). |
+| [[Recompensas y retención 0.2]] | Ruleta, cajas, racha, niveles y gancho de jugadores nuevos. |
 | [[Contratos 0.2]] | Conexiones nuevas entre IA (C16 a C24). |
 | [[Versión 0.2]] | **Lista única** de lo que entra en la 0.2, con responsable y estado. |
 | [[Peticiones del usuario]] | Registro breve de cada pedido, con fecha. |
