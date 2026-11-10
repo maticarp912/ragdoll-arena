@@ -58,7 +58,12 @@ Leyenda: ✅ comprobado en Studio · 🟡 implementado · 🔧 en curso · ⬜ p
 | Botón B del mando | Que cierre los menús. Probar con un mando real. | Claude | 🟡 |
 | Animaciones de dagas y estoque | Siguen siendo procedurales. Pasarlas a captura de movimiento como las demás. | Claude | ⬜ |
 | Sangrado de las dagas | La Doble Estocada dice «sangrado», pero el efecto no está hecho. | Claude | ⬜ |
-| Equilibrio | Hoy la maza es la más débil en daño y el estoque en la punta la más letal. Revisar con datos de la beta. | Claude | ⬜ |
+| Equilibrio | Matriz y cambios a probar en [[Equilibrio de armas]]:
+- estoque: fallar gasta más resistencia;
+- dagas: más tiempo entre el golpe 2 y el 3;
+- maza: barrido más ancho o seguimiento del rival.
+
+Revisar con datos de la beta. | Claude | ⬜ |
 | Arena de la Mano | Fuera de la rotación porque no se entiende como mano. Rehacerla. | Gemini (Argon) | ⬜ |
 | Revisión de Codex, ronda 6 | Pendientes: hallazgo 5 (sesión perdida), 7 (estadísticas al abandonar una partida), 8 (precios reales si vuelve Robux) y 9 (rendimiento de `CityLife` y de la caché de nombres). | Codex | ⬜ |
 | Cielo | Más estrellas usando imágenes de cielo (6 caras), si hace falta. | Claude | ⬜ |
