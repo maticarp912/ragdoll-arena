@@ -12,7 +12,7 @@ La carpeta `Archivo 0.1/` es historia de la etapa 8 y la beta: **no hace falta l
 
 ## Reglas de trabajo
 - Responder en español rioplatense.
-- **Fase actual: solo diseño y notas. No tocar código** hasta que el usuario lo apruebe.
+- **Fase actual (desde el 10/11/2026): desarrollo de la 0.2** según [[Plan de desarrollo 0.2]], después de que el usuario responda [[Decisiones pendientes 0.2]]. **Nadie abre Studio ni usa la pantalla** hasta la sesión de integración de Claude.
 - Cada entrada o corrección lleva fecha y hora de Argentina (DD/MM/AAAA HH:mm). Conservar el historial; no inventar horas antiguas.
 - Cada pedido nuevo va en [[Peticiones del usuario]] (una fila) y su detalle en [[Versión 0.2]]. No repetir el mismo texto en varias notas: enlazar.
 - Estados: ✅ comprobado en Studio · 🟡 implementado · 🔧 en curso · ⬜ pendiente · 👤 usuario. No marcar algo como hecho por estar documentado.
@@ -22,7 +22,7 @@ La carpeta `Archivo 0.1/` es historia de la etapa 8 y la beta: **no hace falta l
 - Codex y Gemini los maneja el usuario desde sus apps; Claude no los ejecuta solo.
 - Antes de entregar código: `node tools/check_lua.js .` y el escáner LihFolk sin errores ni avisos (regla C0). Commits: solo el integrador (regla C0b).
 
-## Reparto sugerido para la 0.2 (a confirmar)
+## Reparto de la 0.2 (detalle, modelos y archivos en [[Plan de desarrollo 0.2]])
 - **Claude:** combate y servidor, animaciones, efectos y sonido, integración y pruebas en Studio.
 - **Gemini:** interfaz y lo visual: triángulo del direccional, HUD nuevo, celular, tienda, armería, ruleta, acabado de skins.
 - **Codex:** datos y guardado, roles y administración, niveles, `InputMap`, revisión y pruebas.

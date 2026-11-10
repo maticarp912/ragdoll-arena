@@ -17,3 +17,4 @@ Leyenda: ✅ comprobado en Studio · 🟡 implementado, sin probar jugando · �
 | 10/11/2026 12:50 | Continuidad de conversaciones e ideas entre Claude, Gemini y Codex | [[Indicaciones para las IA]], Continuidad entre IA | Documentado; sincronización pendiente |
 | 10/11/2026 12:50 | Investigar retención por skins/recompensas y explorar almas tipo Dark Souls | [[Versión 0.2]], sección 12 | Investigación y propuestas; juego pendiente |
 | 10/11/2026 | ¿Sirve Higgsfield (gratis) para las cinemáticas? | [[Versión 0.2]], sección 9 | Respondido: sí para tráiler y promoción, no para la previa en partida |
+| 10/11/2026 | Pasar a desarrollo: reparto parejo por virtud, modelos y lista de decisiones; sin Studio hasta la integración | [[Plan de desarrollo 0.2]], [[Decisiones pendientes 0.2]] | ✅ plan y prompts; 👤 responder decisiones |
