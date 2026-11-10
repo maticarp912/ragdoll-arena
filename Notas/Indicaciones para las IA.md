@@ -1,0 +1,31 @@
+# Indicaciones para las IA (Claude, Gemini y Codex)
+
+Una sola nota para las tres: **no hacer copias por IA**. Si algo cambia, se cambia acá. Actualizada: 10/11/2026.
+
+## Leer primero (en este orden, y nada más salvo que haga falta)
+1. Esta nota.
+2. [[Versión 0.2]]: todo lo que entra en la próxima versión, con responsable y estado.
+3. Solo si la tarea es de combate: [[Arquitectura Combate Direccional]] y [[Equilibrio de armas]].
+4. Solo si vas a tocar código: [[Contratos etapa 8]] y [[Referencia LihFolk]].
+
+La carpeta `Archivo 0.1/` es historia de la etapa 8 y la beta: **no hace falta leerla**. Obsidian (`Notas/`) y GitHub (`maticarp912/ragdoll-arena`, rama `main`) son las fuentes actualizadas.
+
+## Reglas de trabajo
+- Responder en español rioplatense.
+- **Fase actual: solo diseño y notas. No tocar código** hasta que el usuario lo apruebe.
+- Cada entrada o corrección lleva fecha y hora de Argentina (DD/MM/AAAA HH:mm). Conservar el historial; no inventar horas antiguas.
+- Cada pedido nuevo va en [[Peticiones del usuario]] (una fila) y su detalle en [[Versión 0.2]]. No repetir el mismo texto en varias notas: enlazar.
+- Estados: ✅ comprobado en Studio · 🟡 implementado · 🔧 en curso · ⬜ pendiente · 👤 usuario. No marcar algo como hecho por estar documentado.
+- Siempre separar: implementado / comprobado en Studio / pendiente.
+- Los valores numéricos van en módulos de datos (`CombatConfig`, `WeaponData`, `UiTheme`, `Economy`…).
+- No atribuir al usuario decisiones que no tomó: las propuestas de cada IA se marcan como propuestas.
+- Codex y Gemini los maneja el usuario desde sus apps; Claude no los ejecuta solo.
+- Antes de entregar código: `node tools/check_lua.js .` y el escáner LihFolk sin errores ni avisos (regla C0). Commits: solo el integrador (regla C0b).
+
+## Reparto sugerido para la 0.2 (a confirmar)
+- **Claude:** combate y servidor, animaciones, efectos y sonido, integración y pruebas en Studio.
+- **Gemini:** interfaz y lo visual: triángulo del direccional, HUD nuevo, celular, tienda, armería, ruleta, acabado de skins.
+- **Codex:** datos y guardado, roles y administración, niveles, `InputMap`, revisión y pruebas.
+
+## Orden sugerido para los pedidos del 10/11 12:28 (propuesta de Codex, no prioridad confirmada)
+Revisar la arquitectura y el código actuales antes de implementar. Separar primero armería y tienda reutilizando catálogo e inventario; armar una vista previa compartida de arma, skin e infusión; validar una skin con el acabado objetivo antes de extenderlo al catálogo; adaptar la ruleta a sus ciclos diario y semanal.

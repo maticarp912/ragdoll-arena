@@ -1,6 +1,6 @@
 # Versión 0.2 (pedidos del 9/11, después de publicar la beta)
 
-Contexto: [[Peticiones del usuario]], [[Reparto etapa 8]], [[Equilibrio de armas]], [[Referencia LihFolk]].
+Contexto: [[Indicaciones para las IA]], [[Peticiones del usuario]], [[Equilibrio de armas]]. Lo que seguía abierto de la beta está en la sección 8 (historia en `Archivo 0.1/`).
 La beta 0.1 está publicada: «[BETA] Dark Fantasy Plataforme 2v2 1v1 PVP», de PapuDoNacimento. Se probó con el hermano (Mateito) en celular.
 Leyenda: ✅ comprobado en Studio · 🟡 implementado · 🔧 en curso · ⬜ pendiente · 👤 usuario.
 
@@ -77,6 +77,11 @@ Números propuestos en [[Equilibrio de armas]] («Propuesta de números para la 
 | Cielo | Más estrellas usando imágenes de cielo (6 caras), si hace falta. | Claude | ⬜ |
 | Rojo | Cambios en vivo en Studio sin regenerar el place. | Claude | ⬜ |
 | Robux | Productos y precios reales, más adelante. | 👤 + Codex | ⬜ |
+| Ciudad estilo pueblo RPG | Estilo general y caminos de `referencias/02_lobby_pueblo_noche` (la utilería de Codex ya está). | Claude | ⬜ |
+| Tableros de clasificación en la ciudad | El servidor y el dibujo existen; falta ubicarlos en la plaza. | Claude | ⬜ |
+| Espadones con las animaciones | Probar agarre, estela y que no atraviesen el cuerpo. | Claude | ⬜ |
+| Sonidos | El usuario escucha los SFX jugando y dice qué ajustar. | 👤 + Claude | ⬜ |
+| Hachas como sexta arma | Idea de la etapa 8, para otra versión. | — | ⬜ |
 
 ## 9. Ideas del usuario
 | Pedido | Detalle | Resp. sugerido | Estado |
@@ -84,7 +89,7 @@ Números propuestos en [[Equilibrio de armas]] («Propuesta de números para la 
 | Cinemáticas antes del combate | Presentación de los jugadores al entrar a la arena: cámara recorriendo la arena, nombres, armas y pose de entrada. | Claude (cámara y poses) + Gemini (carteles) | ⬜ |
 | Previa de 10 s antes de cada partida | Al menos 10 s antes de que arranque, con una pantalla para elegir **arma, skin e infusión**. Hoy no se puede cambiar de arma en partida. | Codex (servidor) + Gemini (interfaz) | ⬜ |
 | Patear al rival derribado | Mantener la mecánica de levantar y agregar una patada para tirar al rival derribado fuera de la arena. | Claude | ⬜ |
-| Combate direccional | Ataques y bloqueos arriba, izquierda y derecha, parry perfecto, patada de ring-out, hit-stop y Elo para las clasificatorias. Diseño completo y preguntas abiertas en [[Diseño Combate PvP Direccional Roblox]]. Especificación de Gemini (10/11): [[Especificación Gemini combate direccional]]. Arquitectura y conflictos a decidir: [[Arquitectura Combate Direccional]]. Cambio grande: decidir antes si entra en la 0.2 o en la 0.3. | Claude | ⬜ diseño |
+| Combate direccional | Ataques y bloqueos arriba, izquierda y derecha, parry perfecto, patada de ring-out, hit-stop y Elo para las clasificatorias. Diseño completo y preguntas abiertas en [[Diseño Combate PvP Direccional Roblox]]. Especificación de Gemini (10/11): [[Especificación Gemini combate direccional]]. Arquitectura y conflictos a decidir: [[Arquitectura Combate Direccional]]. Confirmado como eje de la 0.2 (sección 10). | Claude | ⬜ diseño |
 | Clasificatorias con Elo | Parte del diseño direccional. Hoy RANKED dice «Próximamente». | Codex | ⬜ |
 
 ## Orden sugerido
@@ -94,20 +99,22 @@ Números propuestos en [[Equilibrio de armas]] («Propuesta de números para la 
 4. Roles, Owner y panel de administración.
 5. Niveles y cajas de suerte.
 
+
+## 10. Combate direccional: decisiones del usuario (9/11)
+- Es el eje de la 0.2.
+- Se diseña primero para **mando y teclado/mouse**; celular con mando entra en ese grupo (Mateito). El táctil se adapta después.
+- Ningún mapa de botones está aprobado todavía. Propuestas de Codex (postura persistente, parry común, prototipo con espada y muñeco) en [[Diseño Combate PvP Direccional Roblox]]; conflictos a decidir en [[Arquitectura Combate Direccional]].
+
+## 11. Correcciones del 10/11/2026 12:28
+Referencia visual: [[Referencias/espada-concepto.png]] (concepto 2D hecho a partir del dibujo del usuario; no es modelo 3D).
+| Pedido | Detalle | Resp. sugerido | Estado |
+|---|---|---|---|
+| Combos según dirección | Series de combos por dirección dentro del direccional. Sin definir: secuencias, transiciones, cantidad de golpes, cancelaciones, resistencia. | Claude | ⬜ |
+| Todas las skins al acabado de la espada | Más detalle, acabado y brillo; formas menos cuadradas y más filosas. El dibujo del usuario es la referencia principal (Pinterest, secundaria). Conservar la identidad de cada skin; revisar silueta, materiales y lectura en juego. | Gemini | ⬜ |
+| Ruleta diaria y premio semanal | La espada y un par de skins más en la **misma** ruleta de monedas y XP. Tiradas diarias; skin o premio grande que rota cada semana. Sin definir: tiradas por día, reinicio, probabilidades, duplicados, calendario. | Codex (servidor) + Gemini (interfaz) | ⬜ |
+| Tienda nueva | Rediseñar la actual reutilizando lo que hay, presentación al estilo Fortnite con vistas previas (sin copiar su identidad). Vende skins, multiplicadores y monedas. | Gemini | ⬜ |
+| Armería separada | Elegir arma, skin e infusión con vista previa antes de salir. | Gemini + Codex | ⬜ |
+
 ## Registro
-- 9/11: nota creada con los pedidos de la beta 0.1.
-
-## 10. Mesa de diseño direccional — propuestas nuevas, sin implementación (9/11)
-Decisión ya confirmada por el usuario: el direccional es el eje de la 0.2. Detalle actualizado en [[Diseño Combate PvP Direccional Roblox]], sección Mesa de diseño 0.2.
-- Propuesta: postura persistente de tres direcciones separada de atacar/bloquear, manteniendo controles conocidos del mando; celular con mando usa exactamente el mismo esquema.
-- F bloqueo, C patada, E agarrar y Q fijar como mapa candidato PC; comparar mouse frente a ataques directos Q/M1/E antes de decidir. Selector táctil con sectores y gesto; sin depender de puntería en botones chicos.
-- Priorizar arreglo de cámara en celular antes del prototipo. Resolver explícitamente quién usa el stick derecho en fijado, sin fijado y al lanzar.
-- Probar una ventana de parry común, sin ventaja automática por dispositivo; cambiar de guardia no renueva parry.
-- Primer prototipo con espada y muñeco en práctica; no activarlo en partidas públicas hasta jugarlo con Mateito en teléfono con mando y con táctil.
-- Propuesta de aprendizaje: ejercicio de una dirección, después tres, indicador propio y aviso enemigo con formas además de color. Registrar errores de selección/cámara, no solo victorias.
-- Revisar imbloqueable de Maza y bypass del Estoque para que leer la dirección siga teniendo sentido. Dejar números y Elo para después de validar controles.
-**Implementado:** ninguna mecánica nueva en esta sesión; solo notas. **Comprobado en Studio:** nada nuevo del direccional. **Pendiente:** confirmar esquema con el usuario, diseñar/probar prototipo y cerrar las preguntas abiertas. No modifica el estado histórico de la beta 0.1.
-
-## Prioridad de plataformas confirmada por el usuario (9/11)
-El combate direccional se diseña principalmente para **mando y teclado/mouse**. El celular táctil se adapta después como soporte secundario. Celular con mando sigue dentro del objetivo principal: requiere cámara estable y avisos/HUD legibles en pantalla chica. No se considera aprobado todavía ningún mapa de botones particular. Ver [[Diseño Combate PvP Direccional Roblox]].
-**Implementado:** solo actualización de diseño. **Comprobado en Studio:** nada nuevo. **Pendiente:** cerrar controles principales, prototipar y probar con Mateito; adaptar táctil después.
+- 09/11/2026: nota creada con los pedidos de la beta 0.1.
+- 10/11/2026: sumadas las correcciones de las 12:28 y los pendientes abiertos de la 0.1; resumidas las secciones repetidas del direccional.

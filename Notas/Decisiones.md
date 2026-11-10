@@ -1,6 +1,6 @@
 # Decisiones de diseño
 
-Resumen vivo. El documento completo es `RESUMEN_PROYECTO.md` (en la carpeta del juego), pero estas decisiones posteriores mandan.
+Resumen vivo. `RESUMEN_PROYECTO.md` (carpeta del juego) es el documento original; estas decisiones mandan sobre él.
 
 ## Juego
 - PvP **1v1 y 2v2**, físicas ragdoll, rig **R15**, **sin salto**, estilo **dark fantasy**.
@@ -11,7 +11,7 @@ Resumen vivo. El documento completo es `RESUMEN_PROYECTO.md` (en la carpeta del 
 - Arena: plataforma flotante que **se derrumba por piezas**.
 
 ## Combate
-- M1 combo, E fuerte (M2 alias), F guardia/parry, Shift/Espacio dash, R patada/agarrar/rescatar, Q infusión, T/Y fijar objetivo.
+- Controles de la beta 0.1 (reasignables en `InputMap`): M1 combo, M2 fuerte, F guardia/parry, Espacio dash, E agarrar/interactuar, C patada, R infusión, Q fijar objetivo, T cambiar objetivo, B menú. El direccional de la 0.2 propone otros (sin aprobar): [[Arquitectura Combate Direccional]].
 - Barras: Vida, Stamina, Guardia, Stun, Infusión.
 - **Parry** = desvío y ventaja breve (no dejar al atacante indefenso demasiado tiempo).
 - **Guardia** = aguante bloqueando. **Rotura de guardia** = estado temporal en el que acumulas Stun más fácil.
@@ -22,11 +22,10 @@ Resumen vivo. El documento completo es `RESUMEN_PROYECTO.md` (en la carpeta del 
 - Al cargar a alguien: apuntado con el mouse centrado.
 
 ## Monetización
-- Skins **solo cosméticas**. Robux acelera tiempo y variedad, nunca da poder.
+- Skins **solo cosméticas**. Desde la beta todo se compra con monedas del juego; Robux más adelante, sin dar poder.
 
 ## Idiomas
 - Español, inglés y portugués de Brasil. Respaldo: inglés. Se detecta el idioma y se puede cambiar en Ajustes.
 
 ## Trabajo
-- Codex lo maneja el usuario desde ChatGPT. Claude deja tareas y mensajes listos para copiar.
-- Siempre separar: implementado / comprobado en Studio / pendiente de probar.
+Reglas de trabajo entre las IA: [[Indicaciones para las IA]].

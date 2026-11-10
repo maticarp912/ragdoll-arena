@@ -24,40 +24,10 @@ Propuesta del usuario (9/11) para [[Versión 0.2]]. **Es solo diseño: no se toc
 - Efectos visuales locales, con validación estricta de distancia y raycast en el servidor.
 - Clasificatorias con sistema Elo.
 
-## Preguntas abiertas (anotadas por Claude, para decidir antes de implementar)
-1. **F tiene dos usos:** bloqueo superior y patada. ¿Cómo se distinguen? Algunas opciones:
-   - mantener F = bloquear y tocar F = patear;
-   - patear solo si el rival está derribado.
-2. **E y Q chocan con los controles actuales.** Hoy esas teclas ya hacen otras cosas (ver `InputMap`). Habría que reasignar agarrar, infusión y lo que esté en esas teclas.
-3. **¿Cómo se hace en celular y con mando?**
-   - Celular: tres botones de ataque, o un botón con deslizamiento hacia arriba, izquierda o derecha.
-   - Mando: dirección con el stick derecho más gatillo.
-4. **Hay que decir de dónde viene cada golpe.** El aviso de ataque fuerte (punto rojo) tendría que indicar también la dirección, para que se pueda leer y defender.
-5. **Combo actual de 3 golpes.** ¿Se reemplaza por golpes direccionales, o cada dirección tiene su propio combo?
-6. **Equilibrio:** la ventana de 0,12 a 0,15 s es muy exigente con la latencia de celular. Considerar una ventana más amplia en celular, o compensar el ping.
-
-## Decisión del usuario (9/11)
-El combate direccional **entra como eje de la 0.2**. Para el usuario es lo que diferencia al juego del resto del género.
-
-## Plan propuesto por Claude (por etapas, sin romper lo que ya funciona)
-1. **Prototipo apagado por defecto.** Se activa con `CombatConfig.Directional.Enabled`, primero solo en el patio de práctica. Los muñecos atacan y bloquean por dirección, para entrenar.
-2. **Lectura de la dirección:** cada ataque muestra de dónde viene (flecha o arco de color sobre el rival) antes de impactar. Sin esto no se puede defender.
-3. **Controles en las tres plataformas** (propuesta, a confirmar):
-   - **PC:** clic izquierdo + la dirección del mouse en el momento del clic. O Q, clic y E como en el diseño original, reasignando lo que hoy usa Q y E.
-   - **Celular:** un botón de ataque que se desliza hacia arriba, izquierda o derecha, y otro igual para bloquear.
-   - **Mando:** stick derecho para la dirección, gatillo derecho para atacar y gatillo izquierdo para bloquear.
-4. **Parry con margen para el ping:**
-   - ventana de 0,15 s en PC y de 0,2 s en celular (los valores van en `CombatConfig`);
-   - el servidor juzga usando el momento en que el cliente apretó, con un límite máximo.
-5. **Patada (F):**
-   - tocar F = patada;
-   - contra un rival derribado = patada de ring-out.
-   - Si se usa mantener F para el bloqueo superior, las dos acciones no se pisan.
-6. **Equilibrio:** cada arma conserva su identidad.
-   - **Dagas:** cambian de dirección más rápido.
-   - **Maza:** su golpe superior es imbloqueable.
-   - **Estoque:** solo ataca de frente, con más alcance.
-7. **Probar en la beta con el hermano antes de activarlo en partidas.**
+## Preguntas abiertas, decisiones y plan
+- Las preguntas abiertas de Claude (doble uso de F, choque de E y Q, celular y mando, aviso de dirección, combo de 3 golpes, ventana de parry y ping) quedaron respondidas como propuestas en la tabla de conflictos de [[Arquitectura Combate Direccional]] (sección 0), que espera la aprobación del usuario.
+- El plan por etapas de Claude fue reemplazado por el orden de implementación de esa misma nota (sección 5).
+- Decisiones del usuario (9/11): el direccional es el eje de la 0.2; primero mando y teclado/mouse, táctil después. Resumen en [[Versión 0.2]], sección 10.
 
 ## Mesa de diseño 0.2 — controles, propuesta de Codex (9/11)
 
@@ -116,12 +86,3 @@ Elegís arriba, izquierda o derecha y el personaje conserva esa selección al so
 Primero patio de práctica, desactivado en partidas públicas: espada contra muñeco que anuncia una sola dirección; después tres al azar. Medir errores de selección, parry por dirección, tiempo hasta entender controles, cámara que se pierde y ring-outs por patada. Comparar mando en PC, EL MISMO mando en teléfono y táctil; probar también modo sin objetivo, cambio de objetivo y desconexión del mando mientras se bloquea.
 **Primera decisión a pedir:** en PC, ¿preferís postura con mouse + M1/F o ataques directos Q/M1/E? Ninguno está aprobado todavía. Segunda decisión: comportamiento de cámara/selector fuera del fijado. Postergar Elo hasta estabilizar estas reglas, sin quitarlo de la lista de ideas de la 0.2.
 
-## Decisión del usuario — plataformas principales (9/11)
-**Confirmado:** el enfoque principal del combate direccional es mando y teclado/mouse. El táctil se adapta después, buscando que sea usable sin condicionar todo el diseño a la cantidad de botones en pantalla. No significa eliminar el soporte táctil ni aprobar un esquema concreto de controles.
-- Celular CON mando pertenece al objetivo principal de mando: conservar los mismos controles que en PC/consola y probar cámara, tamaño de HUD y lectura de avisos en teléfono real con Mateito.
-- Celular SIN mando: adaptación secundaria, con esquema simplificado de entrada si hace falta. Propuesta de Codex: simplificar gestos/disposición, manteniendo las reglas de daño, guardia y parry comunes. Esta igualdad de reglas sigue como propuesta, no decisión adicional del usuario.
-- Orden de diseño propuesto: cerrar mando y teclado/mouse; validar con práctica; adaptar táctil. La elección PC mouse frente a Q/M1/E y la cámara/selector sin fijado siguen abiertas.
-**Implementado:** solo documentación de la decisión. **Comprobado en Studio:** ninguna prueba nueva del direccional. **Pendiente:** definir controles, prototipo y pruebas en PC y teléfono con mando; luego táctil.
-
-## 10/11
-El usuario trajo una especificación de Gemini: [[Especificación Gemini combate direccional]]. Claude escribió la arquitectura y la tabla de conflictos con la beta y con la Mesa de Codex: [[Arquitectura Combate Direccional]].

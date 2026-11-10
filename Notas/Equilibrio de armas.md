@@ -49,13 +49,8 @@ Sirve para hablar de diseño: cómo gana cada arma. Los números de referencia s
    - si entra el combate direccional: un poco de seguimiento del rival en el golpe lateral;
    - si no: un barrido más ancho en el golpe 3.
 
-## Diseño 0.2 direccional — aclaraciones pendientes (9/11)
-Propuestas de diseño, NO cambios a WeaponData ni pruebas en Studio. Ver [[Diseño Combate PvP Direccional Roblox]]. Conservar identidad por arma, pero probar Espada primero antes de trasladar todos los números de la beta.
-- La idea de Maza superior imbloqueable se propone limitar a su especial/fuerte con aviso propio; no aplicar por defecto a todos los básicos superiores.
-- Estoque: comparar tres guardias con estocadas estrechas; su especial de penetración necesita ser distinguible y no invalidar todas las coberturas.
-- Dagas: agilidad de cambio no equivale a ataque sin anticipación; estudiar lectura con ping. Espadón mantiene alcance/empuje y compromiso.
-- No aumentar velocidad de defensa ni ventana de parry por ser celular; propuesta de misma regla y compensación acotada, pendiente de validar con mando conectado al teléfono.
-**Implementado:** sin cambios. **Comprobado en Studio:** sin pruebas nuevas. **Pendiente:** aprobación, prototipo y mediciones por arma/dispositivo.
+## Identidad de cada arma en el direccional
+Propuestas de Codex (maza: solo el fuerte superior imbloqueable; estoque: atravesar solo como especial; dagas con preparación visible): ver [[Diseño Combate PvP Direccional Roblox]], «Armas: evitar excepciones que anulen el sistema».
 
 ## Propuesta de números para la 0.2 (Claude, 10/11) — pendiente de aprobar
 **Pedido del usuario:**
