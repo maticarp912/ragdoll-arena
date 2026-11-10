@@ -217,7 +217,7 @@ CombatConfig.Controls = {
 -- Estados replicados en el personaje (contrato C16): CombatState, Stance, AttackDir, StateEnds.
 ----------------------------------------------------------------------
 CombatConfig.Directional = {
-	Enabled = false,
+	Enabled = true,  -- 10/11/2026 20:40: activado por el usuario para la 0.2
 	Dirs = { "Up", "Left", "Right" },  -- únicas direcciones válidas (el servidor descarta cualquier otra)
 	DefaultStance = "Up",
 

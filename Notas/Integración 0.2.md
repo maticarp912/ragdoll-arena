@@ -43,3 +43,6 @@ Reportes: [[Reporte 0.2 Claude]], [[Reporte 0.2 Codex]], [[Reporte 0.2 Gemini]].
 ## Pruebas en Studio
 Prompt: [[0.2 Integración - pruebas en Studio]].
 **10/11/2026 15:22:** probado en Studio, resultados en [[Reporte 0.2 Integración]]. A, B, C y la mayor parte de D ✅. Arreglados: Destacado del servidor, clave `rotateHint`, campos del panel de administración, Owner de prueba en Studio y tamaño del triángulo. Pendiente: stick, fijado permanente con el direccional, ping simulado, Maza/Estoque y 2v2.
+
+## Combate direccional activado
+**10/11/2026 20:40:** el usuario pidió activarlo. `CombatConfig.Directional.Enabled = true` (antes la regla era dejarlo en false). Place regenerado. Falta probar en partida: stick del mando, fijado permanente (T / R3), margen de ping del parry, Maza (arriba imbloqueable), Estoque y 2v2.
