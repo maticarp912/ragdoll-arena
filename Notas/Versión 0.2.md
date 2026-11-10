@@ -51,6 +51,23 @@ Leyenda: ✅ comprobado en Studio · 🟡 implementado · 🔧 en curso · ⬜ p
 - 👤 La página del juego todavía muestra el ícono gris de Roblox. Hay que subir el ícono y la miniatura: el usuario ya tiene un arte «Dark Fantasy 1v1 · 2v2 PvP». Se suben en Creator Dashboard → la experiencia → Places/Thumbnails.
 - 👤 Pasar el UserId de Mateito para darle el rol Tester.
 
+## 8. Pendientes que vienen de la 0.1
+| Pendiente | Detalle | Resp. sugerido | Estado |
+|---|---|---|---|
+| Cámara de espectador en 2v2 | Probar con 4 jugadores. También el arreglo de «vivo» (`Eliminated` + estado Dead). | Claude | 🟡 |
+| Botón B del mando | Que cierre los menús. Probar con un mando real. | Claude | 🟡 |
+| Animaciones de dagas y estoque | Siguen siendo procedurales. Pasarlas a captura de movimiento como las demás. | Claude | ⬜ |
+| Sangrado de las dagas | La Doble Estocada dice «sangrado», pero el efecto no está hecho. | Claude | ⬜ |
+| Equilibrio | Hoy la maza es la más débil en daño y el estoque en la punta la más letal. Revisar con datos de la beta. | Claude | ⬜ |
+| Arena de la Mano | Fuera de la rotación porque no se entiende como mano. Rehacerla. | Gemini (Argon) | ⬜ |
+| Revisión de Codex, ronda 6 | Pendientes: hallazgo 5 (sesión perdida), 7 (estadísticas al abandonar una partida), 8 (precios reales si vuelve Robux) y 9 (rendimiento de `CityLife` y de la caché de nombres). | Codex | ⬜ |
+| Cielo | Más estrellas usando imágenes de cielo (6 caras), si hace falta. | Claude | ⬜ |
+| Rojo | Cambios en vivo en Studio sin regenerar el place. | Claude | ⬜ |
+| Robux | Productos y precios reales, más adelante. | 👤 + Codex | ⬜ |
+
+## 9. Ideas sueltas del usuario (agregar acá)
+- 
+
 ## Orden sugerido
 1. Bugs: el punto doble y la cámara en celular.
 2. HUD nuevo y soporte de celular.
