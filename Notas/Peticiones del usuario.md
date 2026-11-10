@@ -144,3 +144,8 @@ Pedido actual: seguir definiendo combate direccional y controles PC/táctil/mand
 
 ## Decisión 0.2 — prioridad de controles (9/11)
 Confirmado por el usuario: enfoque principal en mando y teclado/mouse; adaptar táctil como se pueda después. Teléfono con mando continúa siendo un caso principal, especialmente para Mateito. No se elimina el soporte táctil ni se aprueba todavía la asignación concreta de botones. Detalle en [[Versión 0.2]] y [[Diseño Combate PvP Direccional Roblox]]. Implementado: solo notas. Comprobado en Studio: sin pruebas nuevas. Pendiente: diseño final y prototipo.
+
+
+## Correcciones — 10/11/2026 12:28 (Argentina, UTC-3)
+Pedidos confirmados: combos según dirección; mejorar todas las skins al acabado de la espada de referencia; integrar esta y otras skins en la ruleta de monedas/XP, con tiradas diarias y premio principal semanal; rediseñar la tienda existente con vistas previas; separar armería (elegir armas, skins e infusión y previsualizar antes de salir) de tienda (comprar skins, multiplicadores y monedas). Detalle y referencia visual en [[Correcciones 2026-11-10 1228]]. Solo documentación; implementación y pruebas pendientes. Desde ahora, cada corrección lleva fecha y hora de Argentina; no asignar horas inventadas al historial.
+

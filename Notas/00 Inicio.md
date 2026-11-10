@@ -28,3 +28,7 @@ Están en la carpeta del juego, un nivel arriba: `RESUMEN_PROYECTO.md`, `ASSETS_
 - ✅ **Comprobado en Studio**: se vio funcionando jugando.
 - 🟡 **Implementado, sin comprobar**: el código existe y pasa el chequeo de sintaxis.
 - ⬜ **Pendiente**: aún no está hecho.
+
+## Correcciones con fecha y hora
+- [[Correcciones 2026-11-10 1228]] — combos, acabado de skins, ruleta, tienda y armería. Nuevas correcciones: DD/MM/AAAA HH:mm (Argentina, UTC-3).
+
