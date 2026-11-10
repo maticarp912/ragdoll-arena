@@ -14,3 +14,6 @@ Leyenda: ✅ comprobado en Studio · 🟡 implementado, sin probar jugando · �
 | 10/11/2026 12:28 | Combos según dirección; todas las skins al acabado de la espada de referencia; espada y skins nuevas en la misma ruleta (diaria y semanal); tienda nueva con vistas previas; armería separada de la tienda; fecha y hora en cada nota | [[Versión 0.2]] sección 11 | ⬜ |
 | 10/11/2026 15:36 | Las mismas indicaciones para Claude, Gemini y Codex | [[Indicaciones para las IA]] | ✅ |
 | 10/11/2026 | Optimizar el vault: quitar repeticiones y archivar lo terminado | [[00 Inicio]] | ✅ |
+| 10/11/2026 12:50 | Continuidad de conversaciones e ideas entre Claude, Gemini y Codex | [[Indicaciones para las IA]], Continuidad entre IA | Documentado; sincronización pendiente |
+| 10/11/2026 12:50 | Investigar retención por skins/recompensas y explorar almas tipo Dark Souls | [[Versión 0.2]], sección 12 | Investigación y propuestas; juego pendiente |
+| 10/11/2026 | ¿Sirve Higgsfield (gratis) para las cinemáticas? | [[Versión 0.2]], sección 9 | Respondido: sí para tráiler y promoción, no para la previa en partida |

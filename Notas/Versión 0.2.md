@@ -86,7 +86,7 @@ Números propuestos en [[Equilibrio de armas]] («Propuesta de números para la 
 ## 9. Ideas del usuario
 | Pedido | Detalle | Resp. sugerido | Estado |
 |---|---|---|---|
-| Cinemáticas antes del combate | Presentación de los jugadores al entrar a la arena: cámara recorriendo la arena, nombres, armas y pose de entrada. | Claude (cámara y poses) + Gemini (carteles) | ⬜ |
+| Cinemáticas antes del combate | Presentación de los jugadores al entrar a la arena: cámara recorriendo la arena, nombres, armas y pose de entrada. Se hace en el motor (cámara + animaciones), porque tiene que mostrar el avatar, el arma y la skin reales de cada jugador. Opinión de Claude (10/11/2026): Higgsfield u otro generador de video sirve para el tráiler, la página del juego y bocetos de planos, no para esta previa. | Claude (cámara y poses) + Gemini (carteles) | ⬜ |
 | Previa de 10 s antes de cada partida | Al menos 10 s antes de que arranque, con una pantalla para elegir **arma, skin e infusión**. Hoy no se puede cambiar de arma en partida. | Codex (servidor) + Gemini (interfaz) | ⬜ |
 | Patear al rival derribado | Mantener la mecánica de levantar y agregar una patada para tirar al rival derribado fuera de la arena. | Claude | ⬜ |
 | Combate direccional | Ataques y bloqueos arriba, izquierda y derecha, parry perfecto, patada de ring-out, hit-stop y Elo para las clasificatorias. Diseño completo y preguntas abiertas en [[Diseño Combate PvP Direccional Roblox]]. Especificación de Gemini (10/11): [[Especificación Gemini combate direccional]]. Arquitectura y conflictos a decidir: [[Arquitectura Combate Direccional]]. Confirmado como eje de la 0.2 (sección 10). | Claude | ⬜ diseño |
@@ -118,3 +118,36 @@ Referencia visual: [[Referencias/espada-concepto.png]] (concepto 2D hecho a part
 ## Registro
 - 09/11/2026: nota creada con los pedidos de la beta 0.1.
 - 10/11/2026: sumadas las correcciones de las 12:28 y los pendientes abiertos de la 0.1; resumidas las secciones repetidas del direccional.
+
+## 12. Retención y almas — 10/11/2026 12:50 (Argentina, UTC-3)
+**Pedido:** investigar cómo los juegos de Roblox motivan a volver por skins y recompensas. El usuario agregó que le gusta sumar algo como las almas de Dark Souls. Interés confirmado; mecánicas siguientes propuestas por Codex, no decisiones cerradas. Solo diseño.
+
+### Investigación
+- **Adopt Me:** actualización oficial del 11/09/2026: Bucks y una estrella por ingreso diario, canjeable por premios. Patrón observado: visita diaria y meta acumulable. Fuente: https://www.playadopt.me/news/new-star-rewards . No demuestra su impacto cuantitativo en retención.
+- **Jailbreak como ejemplo:** Roblox lo usa en su guía de temporadas con misiones, niveles y premio final. Recomienda mostrar recompensas 3D y facilitar ponerse al día. Fuente: https://create.roblox.com/docs/production/game-design/season-pass-design . Referencia de diseño, no auditoría del pase actual de Jailbreak.
+- **Primera sesión:** enseñar lo esencial, llegar pronto a jugar y mostrar progreso. Aplicación inferida: primer duelo y desbloqueo accesibles. Fuente: https://create.roblox.com/docs/production/game-design/onboarding .
+- **Medición:** retorno D1/D7/D30 por cohortes. Fuente: https://create.roblox.com/docs/production/analytics/retention . Copiar una mecánica no garantiza retención ni permite afirmar cambios neuroquímicos.
+
+### Propuesta para este PvP
+| Plazo | Motivo | Aplicación propuesta |
+|---|---|---|
+| Primera sesión | Identidad propia | Primer cosmético accesible y preview de la skin objetivo, tutorial breve. |
+| Cada partida | Avance incluso perdiendo | Recompensa y progreso hacia objetivo elegido; participación válida, no AFK. |
+| Día | Meta breve y variada | Misiones de completar duelos/aprender defensas, no únicamente victorias ni conductas que perjudiquen al equipo. |
+| Semana | Novedad deseada | Misma ruleta monedas/XP ya pedida, premio semanal y preview 3D; ruta garantizada adicional hacia cosméticos. |
+| Largo plazo | Dominio e identidad | Maestría por arma, títulos, acabados y efectos cosméticos; sin poder por skin. |
+
+La ruleta aporta sorpresa; la progresión principal conviene que sea comprensible y acumulable. Propuesta: duplicados aportan a progreso cosmético sin sumar otra moneda obligatoria; colección/contrato persistente para skins anteriores. No borrar esfuerzo por faltar un día. Cantidades, probabilidades y cadencias pendientes. Celebrar logros reales, sin casi-premios falsos.
+
+### Almas: idea del usuario, función pendiente
+- Confirmado: le gusta sumar algo parecido a las almas de Dark Souls. No aprobó copiar todo el sistema.
+- **Opción recomendada por Codex:** almas como identidad dark fantasy del recurso de progresión; evaluar renombrar monedas existentes antes de añadir un saldo redundante. Destino: skins/apariencia, no daño.
+- **Alternativa:** monedas para tienda y almas para maestría/forja cosmética, solo si la separación tiene una utilidad clara.
+- Ejemplo propuesto: terminás un duelo, ganás almas, ves avanzar la forja de la skin elegida y la previsualizás en armería. La ruleta semanal sigue como extra.
+- Pregunta central: ¿ambientación/recurso y progreso, o también pérdida/recuperación al morir? No implementar pérdida, robo o recuperación por defecto. En PvP afectaría especialmente a nuevos; evaluar aparte, quizá como modo opcional.
+- No migrar perfiles ni reemplazar monedas hasta decidir su función. Costes y cantidades pendientes.
+
+### Alcance y validación propuestos
+Primera versión pequeña: preview del objetivo + progreso pospartida + misión breve + ruleta semanal existente. Resolver almas/monedas primero. Evaluar un pase completo después: exige producción sostenida de arte.
+Medir llegada al primer duelo/desbloqueo, partidas completas, cosméticos reclamados/usados, retorno D1/D7/D30, abandono y progreso de principiantes. Comparar cohortes con línea base y pocas modificaciones por vez; pocos jugadores no dan conclusiones firmes. Combate, cámara y rendimiento siguen siendo centrales.
+**Implementado:** solo documentación. **Comprobado en Studio:** nada nuevo. **Pendiente:** definir almas, aprobar alcance, balancear, implementar y medir. Reparto sugerido: Claude integración/combate, Codex economía/guardado/medición, Gemini previews/interfaz.

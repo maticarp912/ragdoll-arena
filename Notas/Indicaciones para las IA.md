@@ -29,3 +29,19 @@ La carpeta `Archivo 0.1/` es historia de la etapa 8 y la beta: **no hace falta l
 
 ## Orden sugerido para los pedidos del 10/11 12:28 (propuesta de Codex, no prioridad confirmada)
 Revisar la arquitectura y el código actuales antes de implementar. Separar primero armería y tienda reutilizando catálogo e inventario; armar una vista previa compartida de arma, skin e infusión; validar una skin con el acabado objetivo antes de extenderlo al catálogo; adaptar la ruleta a sus ciclos diario y semanal.
+
+## Continuidad entre IA — 10/11/2026 12:50 (Argentina, UTC-3)
+Pedido confirmado: continuar conversaciones entre Claude, Gemini y Codex, conservando ideas en discusión.
+- Frase: **Continuar desde Obsidian**. Opcional: **Vengo de Codex/Claude/Gemini** y el tema. No es requisito usar la frase para guardar contexto.
+- En cada intercambio sustantivo, antes de responder registrar pedido breve en [[Peticiones del usuario]], detalle en [[Versión 0.2]] y actualizar el contexto actual de abajo. Incluir decisiones, motivos, propuestas, alternativas descartadas relevantes, preguntas y próximo paso. No copiar transcripciones ni crear notas por IA.
+- Conservar historial fechado en diseño y un único contexto actual. Al retomar, leerlo y seguir las secciones enlazadas.
+- Las IA no tienen acceso automático a chats privados de otras apps: la continuidad depende de los archivos. Sin acceso, decirlo y entregar resumen para pegar, sin fingir lectura o guardado.
+- Solo Claude hace commits/push según C0b. Codex/Gemini dejan cambios locales e indican qué sincronizar. Desde otra máquina, verificar sincronización.
+
+### Contexto actual — Codex, 10/11/2026 12:50 (Argentina, UTC-3)
+Tema: retención, skins, recompensas y almas; [[Versión 0.2]], sección 12.
+Usuario: quiere motivos para reentrar y le gusta sumar algo como las almas de Dark Souls.
+Confirmado: explorar almas y continuidad entre IA. Propuestas de Codex: meta cosmética visible, progreso garantizado, misiones breves, maestría y ruleta existente como extra.
+Sin decidir: almas reemplazan monedas o tienen otra utilidad; pérdida/recuperación al morir; costes y cantidades. No asumir pérdida o robo en PvP.
+Próximo paso: definir función de almas frente a monedas y diseñar un primer circuito pequeño.
+Hecho: investigación y protocolo documentados. Código/Studio: sin cambios ni pruebas nuevas. Pendiente: Claude revisar y sincronizar notas en GitHub.
