@@ -65,8 +65,14 @@ Leyenda: ✅ comprobado en Studio · 🟡 implementado · 🔧 en curso · ⬜ p
 | Rojo | Cambios en vivo en Studio sin regenerar el place. | Claude | ⬜ |
 | Robux | Productos y precios reales, más adelante. | 👤 + Codex | ⬜ |
 
-## 9. Ideas sueltas del usuario (agregar acá)
-- 
+## 9. Ideas del usuario
+| Pedido | Detalle | Resp. sugerido | Estado |
+|---|---|---|---|
+| Cinemáticas antes del combate | Presentación de los jugadores al entrar a la arena: cámara recorriendo la arena, nombres, armas y pose de entrada. | Claude (cámara y poses) + Gemini (carteles) | ⬜ |
+| Previa de 10 s antes de cada partida | Al menos 10 s antes de que arranque, con una pantalla para elegir **arma, skin e infusión**. Hoy no se puede cambiar de arma en partida. | Codex (servidor) + Gemini (interfaz) | ⬜ |
+| Patear al rival derribado | Mantener la mecánica de levantar y agregar una patada para tirar al rival derribado fuera de la arena. | Claude | ⬜ |
+| Combate direccional | Ataques y bloqueos arriba, izquierda y derecha, parry perfecto, patada de ring-out, hit-stop y Elo para las clasificatorias. Diseño completo y preguntas abiertas en [[Diseño Combate PvP Direccional Roblox]]. Cambio grande: decidir antes si entra en la 0.2 o en la 0.3. | Claude | ⬜ diseño |
+| Clasificatorias con Elo | Parte del diseño direccional. Hoy RANKED dice «Próximamente». | Codex | ⬜ |
 
 ## Orden sugerido
 1. Bugs: el punto doble y la cámara en celular.
