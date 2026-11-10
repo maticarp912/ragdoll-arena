@@ -1,8 +1,10 @@
 -- LocalScript: StarterPlayer/StarterPlayerScripts/HUD
--- HUD de combate y estado de partida rediseñado (Fase 3, responsable: Gemini, etapa 8).
--- Conserva todos los contratos y lecturas (C2 StatusKey/StatusParams, C5 barras de Vida, Stamina,
--- Guardia, Stun e Infusión con icono que late, retratos de esquina y música) y añade el KillFeed (C9),
--- zonas seguras (GuiService:GetGuiInset) y escala de interfaz (OptUiScale, C10).
+-- HUD de combate y estado de partida rediseñado (Versión 0.2 — D14, C2, C5, C9, C10, C19, C23).
+-- Disposición D14:
+--   • Abajo al centro: Barra grande de Vida (HP) con estela de daño y destello de impacto (C23).
+--   • Encima de Vida: Barra de Infusión (InfusionCharge) con icono elemental animado y aviso de lista.
+--   • A los costados: Barra de Estamina (izquierda) y Barra de Guardia (derecha) con destellos de bloqueo/rotura (C23).
+--   • Esquinas superiores: Retrato propio (con nivel y multiplicadores C19), retratos rivales y KillFeed (C9).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -13,7 +15,6 @@ local HttpService = game:GetService("HttpService")
 local SoundService = game:GetService("SoundService")
 local UserInputService = game:GetService("UserInputService")
 
-local Theme = require(ReplicatedStorage:WaitForChild("Theme", 10))
 local UiTheme = require(ReplicatedStorage:WaitForChild("UiTheme", 10))
 local UiAssets = require(ReplicatedStorage:WaitForChild("UiAssets", 10))
 local L = require(ReplicatedStorage:WaitForChild("Localization", 10))
@@ -68,9 +69,6 @@ local statusLabel = UiTheme.label({
 	alignX = Enum.TextXAlignment.Center,
 })
 
--- Contrato C2 (etapa 8): el servidor escribe StatusParams (JSON) y luego StatusKey (clave de idioma).
--- Los parámetros terminados en "Key" se traducen: { teamKey = "team.Red" } rellena {team}.
--- Si StatusKey está vacío se muestra Status tal cual (texto antiguo).
 local function updateStatus()
 	local key = workspace:GetAttribute("StatusKey")
 	if type(key) == "string" and key ~= "" then
@@ -89,17 +87,17 @@ L.Changed:Connect(updateStatus)
 updateStatus()
 
 ----------------------------------------------------------------------
--- 2. Panel de barras propias (abajo centrado, inspirado en 07_postura_combate_y_hud.webp)
---    Deja libre la izquierda (joystick móvil) y la derecha (botones táctiles).
+-- 2. Panel de barras propias (D14: abajo al centro; Vida grande en el centro,
+--    Infusión arriba, Estamina a la izquierda y Guardia a la derecha)
 ----------------------------------------------------------------------
 local holder = UiTheme.panel({
 	name = "PlayerBars",
 	parent = gui,
-	anchor = Vector2.new(1, 1),
-	position = UDim2.new(1, -20, 1, -20),
-	size = UDim2.fromOffset(204, 184),
+	anchor = Vector2.new(0.5, 1),
+	position = UDim2.new(0.5, 0, 1, -14),
+	size = UDim2.fromOffset(496, 98),
 	bg = C.BgPanel,
-	transparency = 0.14,
+	transparency = 0.12,
 	borderColor = C.Gold,
 	ornaments = true,
 	ornamentSize = 10,
@@ -107,146 +105,393 @@ local holder = UiTheme.panel({
 })
 local holderScale = Instance.new("UIScale")
 holderScale.Parent = holder
-
-UiTheme.padding(holder, 8, 10, 8, 10)
-
--- Cabecera: icono y nombre del arma a la izquierda, puntos de vida a la derecha
-local header = Instance.new("Frame")
-header.Name = "Header"
-header.Size = UDim2.new(1, 0, 0, 22)
-header.BackgroundTransparency = 1
-header.Parent = holder
-
-local weaponIcon = UiAssets.icon(header, "attack", 16, C.GoldBright)
-weaponIcon.AnchorPoint = Vector2.new(0, 0.5)
-weaponIcon.Position = UDim2.new(0, 0, 0.5, 0)
-
-local weaponLabel = UiTheme.label({
-	name = "WeaponName",
-	parent = header,
-	position = UDim2.fromOffset(20, 0),
-	size = UDim2.new(0.55, -20, 1, 0),
-	text = "",
-	font = "Title",
-	textSize = UiTheme.TextSizes.MD,
-	color = C.GoldBright,
-	alignX = Enum.TextXAlignment.Left,
-	truncate = Enum.TextTruncate.AtEnd,
-})
-
-local hpNumber = UiTheme.label({
-	name = "HpNumbers",
-	parent = header,
-	anchor = Vector2.new(1, 0),
-	position = UDim2.fromScale(1, 0),
-	size = UDim2.fromScale(0.45, 1),
-	text = "",
-	font = "Number",
-	textSize = UiTheme.TextSizes.XS,
-	color = C.TextPrimary,
-	alignX = Enum.TextXAlignment.Right,
-})
-
--- Contenedor de las 5 columnas verticales lado a lado (Punto 7: barras verticales una al lado de la otra)
-local columnsContainer = Instance.new("Frame")
-columnsContainer.Name = "Columns"
-columnsContainer.Position = UDim2.fromOffset(0, 26)
-columnsContainer.Size = UDim2.new(1, 0, 1, -26)
-columnsContainer.BackgroundTransparency = 1
-columnsContainer.Parent = holder
-
-local colLayout = Instance.new("UIListLayout")
-colLayout.FillDirection = Enum.FillDirection.Horizontal
-colLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-colLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-colLayout.Padding = UDim.new(0, 6)
-colLayout.SortOrder = Enum.SortOrder.LayoutOrder
-colLayout.Parent = columnsContainer
+local holderStroke = holder:FindFirstChildOfClass("UIStroke")
 
 local icons = {}
 local rowLabels = {}
 
-local function barColumn(order, name, colWidth, colHeight, color, withTrail)
-	local col = Instance.new("Frame")
-	col.Name = "Col_" .. name
-	col.LayoutOrder = order
-	col.Size = UDim2.fromOffset(colWidth, colHeight)
-	col.BackgroundTransparency = 1
-	col.Parent = columnsContainer
-
-	local iconRoot, iconUpdate = UiAssets.icon(col, name == "infusion" and "Fire" or name, 18, color)
-	iconRoot.AnchorPoint = Vector2.new(0.5, 0)
-	iconRoot.Position = UDim2.new(0.5, 0, 0, 0)
-	icons[name] = { root = iconRoot, update = iconUpdate, row = col, size = 18 }
-
-	local barH = colHeight - 40
+-- Función auxiliar para crear barras horizontales con estela y capa de destello (C23)
+local function createHorizBar(parent, name, pos, anchor, size, fillColor, borderColor, withTrail)
 	local bg = Instance.new("Frame")
 	bg.Name = "BarBg_" .. name
-	bg.AnchorPoint = Vector2.new(0.5, 0)
-	bg.Position = UDim2.new(0.5, 0, 0, 22)
-	bg.Size = UDim2.new(1, 0, 0, barH)
+	bg.AnchorPoint = anchor
+	bg.Position = pos
+	bg.Size = size
 	bg.BackgroundColor3 = C.BgBarBack
 	bg.BorderSizePixel = 0
 	bg.ClipsDescendants = true
-	bg.Parent = col
+	bg.Parent = parent
 	UiTheme.corner(bg, UiTheme.Radius.SM)
-	UiTheme.stroke(bg, C.BorderSubtle, 1, 0.4)
+	local st = UiTheme.stroke(bg, borderColor or C.BorderDefault, 1.4, 0.2)
 
 	local trail = nil
 	if withTrail then
 		trail = Instance.new("Frame")
 		trail.Name = "Trail"
-		trail.AnchorPoint = Vector2.new(0, 1)
-		trail.Position = UDim2.fromScale(0, 1)
 		trail.Size = UDim2.fromScale(1, 1)
 		trail.BackgroundColor3 = C.HealthTrail
 		trail.BorderSizePixel = 0
+		trail.ZIndex = 2
 		trail.Parent = bg
 		UiTheme.corner(trail, UiTheme.Radius.SM)
 	end
 
 	local fill = Instance.new("Frame")
 	fill.Name = "Fill"
-	fill.AnchorPoint = Vector2.new(0, 1)
-	fill.Position = UDim2.fromScale(0, 1)
 	fill.Size = UDim2.fromScale(1, 1)
-	fill.BackgroundColor3 = color
+	fill.BackgroundColor3 = fillColor
 	fill.BorderSizePixel = 0
-	fill.ZIndex = 2
+	fill.ZIndex = 3
 	fill.Parent = bg
 	UiTheme.corner(fill, UiTheme.Radius.SM)
 
-	local valLbl = UiTheme.label({
-		name = "ValLabel",
-		parent = col,
-		anchor = Vector2.new(0.5, 1),
-		position = UDim2.new(0.5, 0, 1, 0),
-		size = UDim2.new(1, 6, 0, 16),
-		text = "",
-		font = "Number",
-		textSize = UiTheme.TextSizes.XS,
-		color = C.TextSecondary,
-		alignX = Enum.TextXAlignment.Center,
-		scaled = true,
+	local shine = Instance.new("UIGradient")
+	shine.Rotation = 90
+	shine.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(230, 230, 230)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(165, 165, 165)),
 	})
-	rowLabels[name] = valLbl
+	shine.Parent = fill
 
-	return fill, bg, valLbl, trail
+	local flash = Instance.new("Frame")
+	flash.Name = "FeelFlash"
+	flash.Size = UDim2.fromScale(1, 1)
+	flash.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	flash.BackgroundTransparency = 1
+	flash.BorderSizePixel = 0
+	flash.ZIndex = 5
+	flash.Parent = bg
+	UiTheme.corner(flash, UiTheme.Radius.SM)
+
+	return bg, fill, trail, flash, st
 end
 
-local BAR_COL_H = 138
-local hpFill, hpBg, _, hpTrail = barColumn(1, "health", 36, BAR_COL_H, C.Health, true)
+-- 2A. Cabecera superior del cluster: Arma equipada a la izquierda, Barra de Infusión en el centro, Stun a la derecha
+local weaponHolder = Instance.new("Frame")
+weaponHolder.Name = "WeaponHeader"
+weaponHolder.Position = UDim2.fromOffset(12, 8)
+weaponHolder.Size = UDim2.fromOffset(112, 22)
+weaponHolder.BackgroundTransparency = 1
+weaponHolder.Parent = holder
+
+local weaponIcon = UiAssets.icon(weaponHolder, "attack", 16, C.GoldBright)
+weaponIcon.AnchorPoint = Vector2.new(0, 0.5)
+weaponIcon.Position = UDim2.new(0, 0, 0.5, 0)
+
+local weaponLabel = UiTheme.label({
+	name = "WeaponName",
+	parent = weaponHolder,
+	position = UDim2.fromOffset(20, 0),
+	size = UDim2.new(1, -20, 1, 0),
+	text = "",
+	font = "Title",
+	textSize = UiTheme.TextSizes.SM,
+	color = C.GoldBright,
+	alignX = Enum.TextXAlignment.Left,
+	truncate = Enum.TextTruncate.AtEnd,
+})
+
+-- Barra de Infusión centrada arriba de la Vida
+local infRow = Instance.new("Frame")
+infRow.Name = "InfusionRow"
+infRow.AnchorPoint = Vector2.new(0.5, 0)
+infRow.Position = UDim2.new(0.5, 0, 0, 8)
+infRow.Size = UDim2.fromOffset(238, 22)
+infRow.BackgroundTransparency = 1
+infRow.Parent = holder
+
+local infIconHolder = Instance.new("Frame")
+infIconHolder.Name = "InfIconHolder"
+infIconHolder.Position = UDim2.fromOffset(0, 0)
+infIconHolder.Size = UDim2.fromOffset(24, 22)
+infIconHolder.BackgroundTransparency = 1
+infIconHolder.Parent = infRow
+
+local infIconRoot, infIconUpdate = UiAssets.icon(infIconHolder, "Fire", 20, C.InfusionCharge)
+icons.infusion = { root = infIconRoot, update = infIconUpdate, row = infIconHolder, size = 20, id = "Fire" }
+
+local infBg, infFill, _, infFlash, infStroke = createHorizBar(
+	infRow,
+	"infusion",
+	UDim2.fromOffset(28, 2),
+	Vector2.new(0, 0),
+	UDim2.fromOffset(210, 18),
+	C.InfusionCharge,
+	C.GoldDim,
+	false
+)
+
+local infText = UiTheme.label({
+	name = "InfusionName",
+	parent = infBg,
+	position = UDim2.fromOffset(8, 0),
+	size = UDim2.new(0.48, -8, 1, 0),
+	text = "",
+	font = "Bold",
+	textSize = UiTheme.TextSizes.XS,
+	color = C.TextPrimary,
+	alignX = Enum.TextXAlignment.Left,
+	zIndex = 6,
+})
+
+local infState = UiTheme.label({
+	name = "InfusionState",
+	parent = infBg,
+	anchor = Vector2.new(1, 0),
+	position = UDim2.new(1, -8, 0, 0),
+	size = UDim2.new(0.55, -8, 1, 0),
+	text = "",
+	font = "Number",
+	textSize = UiTheme.TextSizes.XS,
+	color = C.GoldBright,
+	alignX = Enum.TextXAlignment.Right,
+	zIndex = 6,
+})
+rowLabels.infusion = infState
+
+-- Barra compacta de Aturdimiento (Stun) arriba a la derecha del cluster
+local stunHolder = Instance.new("Frame")
+stunHolder.Name = "StunHolder"
+stunHolder.AnchorPoint = Vector2.new(1, 0)
+stunHolder.Position = UDim2.new(1, -12, 0, 9)
+stunHolder.Size = UDim2.fromOffset(108, 20)
+stunHolder.BackgroundTransparency = 1
+stunHolder.Parent = holder
+
+local stunIconRoot, stunIconUpdate = UiAssets.icon(stunHolder, "stun", 15, C.Stun)
+stunIconRoot.AnchorPoint = Vector2.new(0, 0.5)
+stunIconRoot.Position = UDim2.new(0, 0, 0.5, 0)
+icons.stun = { root = stunIconRoot, update = stunIconUpdate, row = stunHolder, size = 15 }
+
+local stunBg, stunFill = createHorizBar(
+	stunHolder,
+	"stun",
+	UDim2.fromOffset(20, 4),
+	Vector2.new(0, 0),
+	UDim2.fromOffset(88, 12),
+	C.Stun,
+	C.BorderSubtle,
+	false
+)
+
+-- 2B. Barra grande de Vida (HP) abajo al centro
+local hpBasePos = UDim2.new(0.5, 0, 1, -12)
+local hpBg, hpFill, hpTrail, hpFlash, hpStroke = createHorizBar(
+	holder,
+	"health",
+	hpBasePos,
+	Vector2.new(0.5, 1),
+	UDim2.fromOffset(238, 30),
+	C.Health,
+	C.Gold,
+	true
+)
+
+local hpIconRoot, hpIconUpdate = UiAssets.icon(hpBg, "health", 16, C.TextPrimary)
+hpIconRoot.AnchorPoint = Vector2.new(0, 0.5)
+hpIconRoot.Position = UDim2.new(0, 8, 0.5, 0)
+hpIconRoot.ZIndex = 6
+icons.health = { root = hpIconRoot, update = hpIconUpdate, row = hpBg, size = 16 }
+
+local hpTitleLbl = UiTheme.label({
+	name = "HpCaption",
+	parent = hpBg,
+	position = UDim2.fromOffset(28, 0),
+	size = UDim2.fromOffset(80, 30),
+	text = L.t("health"),
+	font = "Header",
+	textSize = UiTheme.TextSizes.SM,
+	color = C.TextPrimary,
+	alignX = Enum.TextXAlignment.Left,
+	zIndex = 6,
+})
+rowLabels.health = hpTitleLbl
+
+local hpNumber = UiTheme.label({
+	name = "HpNumbers",
+	parent = hpBg,
+	anchor = Vector2.new(1, 0),
+	position = UDim2.new(1, -10, 0, 0),
+	size = UDim2.fromOffset(118, 30),
+	text = "100 / 100",
+	font = "Number",
+	textSize = UiTheme.TextSizes.SM,
+	color = C.TextPrimary,
+	alignX = Enum.TextXAlignment.Right,
+	zIndex = 6,
+})
+
 local damageTween = nil
 local damageVersion = 0
 
-local stamFill, stamBg, stamNumber = barColumn(2, "stamina", 30, BAR_COL_H, C.Stamina, false)
-local guardFill = barColumn(3, "guard", 26, BAR_COL_H, C.Guard, false)
-local stunFill = barColumn(4, "stun", 26, BAR_COL_H, C.Stun, false)
-local infFill, infBg, infState = barColumn(5, "infusion", 36, BAR_COL_H, C.InfusionCharge, false)
-local infText = infState
+-- 2C. Costado izquierdo: Barra de Estamina (Stamina)
+local stamHeader = Instance.new("Frame")
+stamHeader.Position = UDim2.fromOffset(12, 36)
+stamHeader.Size = UDim2.fromOffset(108, 16)
+stamHeader.BackgroundTransparency = 1
+stamHeader.Parent = holder
+
+local stamIconRoot, stamIconUpdate = UiAssets.icon(stamHeader, "stamina", 14, C.Stamina)
+stamIconRoot.AnchorPoint = Vector2.new(0, 0.5)
+stamIconRoot.Position = UDim2.new(0, 0, 0.5, 0)
+icons.stamina = { root = stamIconRoot, update = stamIconUpdate, row = stamHeader, size = 14 }
+
+local stamCaption = UiTheme.label({
+	parent = stamHeader,
+	position = UDim2.fromOffset(18, 0),
+	size = UDim2.new(1, -50, 1, 0),
+	text = L.t("stamina"),
+	font = "Bold",
+	textSize = UiTheme.TextSizes.XS,
+	color = C.TextSecondary,
+	truncate = Enum.TextTruncate.AtEnd,
+})
+rowLabels.stamina = stamCaption
+
+local stamNumber = UiTheme.label({
+	parent = stamHeader,
+	anchor = Vector2.new(1, 0),
+	position = UDim2.fromScale(1, 0),
+	size = UDim2.fromOffset(34, 16),
+	text = "100",
+	font = "Number",
+	textSize = UiTheme.TextSizes.XS,
+	color = C.TextPrimary,
+	alignX = Enum.TextXAlignment.Right,
+})
+
+local stamBg, stamFill, _, stamFlash = createHorizBar(
+	holder,
+	"stamina",
+	UDim2.new(0, 12, 1, -12),
+	Vector2.new(0, 1),
+	UDim2.fromOffset(108, 22),
+	C.Stamina,
+	C.BorderDefault,
+	false
+)
+
+-- 2D. Costado derecho: Barra de Guardia (Guard)
+local guardHeader = Instance.new("Frame")
+guardHeader.AnchorPoint = Vector2.new(1, 0)
+guardHeader.Position = UDim2.new(1, -12, 0, 36)
+guardHeader.Size = UDim2.fromOffset(108, 16)
+guardHeader.BackgroundTransparency = 1
+guardHeader.Parent = holder
+
+local guardIconRoot, guardIconUpdate = UiAssets.icon(guardHeader, "guard", 14, C.Guard)
+guardIconRoot.AnchorPoint = Vector2.new(0, 0.5)
+guardIconRoot.Position = UDim2.new(0, 0, 0.5, 0)
+icons.guard = { root = guardIconRoot, update = guardIconUpdate, row = guardHeader, size = 14 }
+
+local guardCaption = UiTheme.label({
+	parent = guardHeader,
+	position = UDim2.fromOffset(18, 0),
+	size = UDim2.new(1, -50, 1, 0),
+	text = L.t("guard"),
+	font = "Bold",
+	textSize = UiTheme.TextSizes.XS,
+	color = C.TextSecondary,
+	truncate = Enum.TextTruncate.AtEnd,
+})
+rowLabels.guard = guardCaption
+
+local guardNumber = UiTheme.label({
+	parent = guardHeader,
+	anchor = Vector2.new(1, 0),
+	position = UDim2.fromScale(1, 0),
+	size = UDim2.fromOffset(34, 16),
+	text = "100",
+	font = "Number",
+	textSize = UiTheme.TextSizes.XS,
+	color = C.TextPrimary,
+	alignX = Enum.TextXAlignment.Right,
+})
+
+local guardBasePos = UDim2.new(1, -12, 1, -12)
+local guardBg, guardFill, _, guardFlash, guardStroke = createHorizBar(
+	holder,
+	"guard",
+	guardBasePos,
+	Vector2.new(1, 1),
+	UDim2.fromOffset(108, 22),
+	C.Guard,
+	C.BorderDefault,
+	false
+)
 
 ----------------------------------------------------------------------
--- 3. Retratos de esquina (propio a la izquierda, rivales a la derecha)
+-- 2E. Contrato C23: Destellos de barra al recibir Remotes.Effect ("Feel")
+----------------------------------------------------------------------
+local lastCombatTime = -math.huge
+local function noteCombat()
+	lastCombatTime = os.clock()
+end
+
+local function pulseBarFlash(flashFrame, strokeObj, baseStrokeColor, flashColor, duration)
+	if not flashFrame then return end
+	flashFrame.BackgroundColor3 = flashColor
+	flashFrame.BackgroundTransparency = 0.15
+	TweenService:Create(flashFrame, TweenInfo.new(duration or 0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		BackgroundTransparency = 1,
+	}):Play()
+	if strokeObj then
+		strokeObj.Color = flashColor
+		TweenService:Create(strokeObj, TweenInfo.new(duration or 0.32), {
+			Color = baseStrokeColor,
+		}):Play()
+	end
+end
+
+local function handleCombatFeel(kind, role, info)
+	if kind ~= "Feel" then return end
+	noteCombat()
+	if role == "Take" then
+		-- Destello carmesí/blanco y sacudida breve en la barra grande de Vida
+		pulseBarFlash(hpFlash, hpStroke, C.Gold, Color3.fromRGB(255, 220, 220), 0.26)
+		hpBg.Position = UDim2.new(0.5, math.random(-5, 5), 1, -12 + math.random(-3, 3))
+		TweenService:Create(hpBg, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Position = hpBasePos,
+		}):Play()
+	elseif role == "Block" or role == "Blocked" then
+		-- Destello azul/dorado en la barra de Guardia y actualización instantánea si viene info.guard
+		if type(info) == "table" and type(info.guard) == "number" then
+			local gFrac = math.clamp(info.guard, 0, 1)
+			guardFill.Size = UDim2.fromScale(gFrac, 1)
+			guardNumber.Text = tostring(math.floor(gFrac * 100 + 0.5))
+		end
+		pulseBarFlash(guardFlash, guardStroke, C.BorderDefault, C.GoldBright, 0.24)
+	elseif role == "GuardBroken" then
+		-- Estallido rojo en la barra de Guardia al romperse
+		pulseBarFlash(guardFlash, guardStroke, C.Danger, C.Danger, 0.45)
+		guardBg.Position = UDim2.new(1, -12 + math.random(-6, 6), 1, -12 + math.random(-3, 3))
+		TweenService:Create(guardBg, TweenInfo.new(0.24, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Position = guardBasePos,
+		}):Play()
+	elseif role == "Parry" then
+		-- Destello dorado heroico en Guardia e Infusión al lograr un Parry
+		pulseBarFlash(guardFlash, guardStroke, C.GoldBright, C.GoldBright, 0.32)
+		pulseBarFlash(infFlash, infStroke, C.GoldDim, C.GoldBright, 0.32)
+	elseif role == "Deal" or role == "GuardBreak" then
+		-- Pulso sutil en la barra de infusión al acertar golpes
+		if holderStroke then
+			holderStroke.Color = C.GoldBright
+			TweenService:Create(holderStroke, TweenInfo.new(0.25), { Color = C.Gold }):Play()
+		end
+	end
+end
+
+task.spawn(function()
+	local remotes = ReplicatedStorage:WaitForChild("Remotes", 15)
+	local effectRemote = remotes and remotes:WaitForChild("Effect", 15)
+	if effectRemote and effectRemote:IsA("RemoteEvent") then
+		effectRemote.OnClientEvent:Connect(handleCombatFeel)
+	end
+end)
+
+----------------------------------------------------------------------
+-- 3. Retratos de esquina (propio a la izquierda + Nivel/Multiplicadores C19, rivales a la derecha)
 ----------------------------------------------------------------------
 local function portraitPanel(right, slot)
 	local frame = Instance.new("Frame")
@@ -254,7 +499,7 @@ local function portraitPanel(right, slot)
 	frame.BackgroundTransparency = 1
 	frame.AnchorPoint = Vector2.new(right and 1 or 0, 0)
 	frame.Position = UDim2.new(right and (1 - H.Side) or H.Side, 0, H.Top, (slot - 1) * H.EnemyStep)
-	frame.Size = UDim2.new(H.Width, 0, 0, H.Height)
+	frame.Size = UDim2.new(H.Width, 0, 0, H.Height + (right and 0 or 26))
 	frame.Parent = gui
 
 	local diamond = Instance.new("Frame")
@@ -290,6 +535,67 @@ end
 
 local ownFrame, ownImage, ownName = portraitPanel(false, 1)
 ownName.Text = player.DisplayName
+
+-- Insignia de Nivel, XP y Multiplicadores activos (Contrato C19) bajo el nombre propio
+local progBarHolder = Instance.new("Frame")
+progBarHolder.Name = "ProgressionSubBar"
+progBarHolder.Position = UDim2.fromOffset(H.Portrait + H.NameHeight, H.NameHeight + 2)
+progBarHolder.Size = UDim2.new(1, -H.Portrait - H.NameHeight, 0, 34)
+progBarHolder.BackgroundTransparency = 1
+progBarHolder.Parent = ownFrame
+
+local levelBadgeLbl = UiTheme.label({
+	parent = progBarHolder,
+	position = UDim2.fromOffset(0, 0),
+	size = UDim2.fromOffset(72, 16),
+	text = L.t("ui.hud.level", { level = 1 }),
+	font = "Bold",
+	textSize = UiTheme.TextSizes.XS,
+	color = C.GoldBright,
+})
+
+local boostBadgeLbl = UiTheme.label({
+	parent = progBarHolder,
+	position = UDim2.fromOffset(76, 0),
+	size = UDim2.new(1, -76, 0, 16),
+	text = "",
+	font = "Number",
+	textSize = UiTheme.TextSizes.XS,
+	color = C.Success,
+})
+
+local xpBarBg, xpBarFill = UiTheme.progressBar({
+	parent = progBarHolder,
+	position = UDim2.fromOffset(0, 18),
+	size = UDim2.fromOffset(148, 8),
+	fraction = 0,
+	fillColor = C.Gold,
+})
+xpBarBg.Name = "XPBar"
+
+local function updateOwnProgression()
+	local lvl = tonumber(player:GetAttribute("Level")) or 1
+	local xp = tonumber(player:GetAttribute("XP")) or 0
+	local xpNext = math.max(1, tonumber(player:GetAttribute("XPNext")) or 150)
+	levelBadgeLbl.Text = L.t("ui.hud.level", { level = lvl })
+	xpBarFill.Size = UDim2.fromScale(math.clamp(xp / xpNext, 0, 1), 1)
+
+	local multXp = tonumber(player:GetAttribute("MultXP")) or 1
+	local multCoins = tonumber(player:GetAttribute("MultCoins")) or 1
+	local parts = {}
+	if multXp > 1 then
+		table.insert(parts, L.t("ui.hud.boostXp", { mult = multXp }))
+	end
+	if multCoins > 1 then
+		table.insert(parts, L.t("ui.hud.boostSouls", { mult = multCoins }))
+	end
+	boostBadgeLbl.Text = table.concat(parts, " · ")
+end
+
+for _, attr in { "Level", "XP", "XPNext", "MultXP", "MultCoins", "MultRemaining" } do
+	player:GetAttributeChangedSignal(attr):Connect(updateOwnProgression)
+end
+updateOwnProgression()
 
 local function thumbnail(p, image)
 	task.spawn(function()
@@ -411,10 +717,6 @@ end)
 ----------------------------------------------------------------------
 holder.Visible = false
 holder.GroupTransparency = 1
-local lastCombatTime = -math.huge
-local function noteCombat()
-	lastCombatTime = os.clock()
-end
 
 local function updateLayout()
 	local cam = workspace.CurrentCamera
@@ -436,21 +738,21 @@ local function updateLayout()
 	end
 
 	local inMatch = player:GetAttribute("InMatch") == true
-	ownFrame.Visible = inMatch
+	ownFrame.Visible = not (player:GetAttribute("MenuOpen") == true)
 	statusBanner.Position = UDim2.new(0.5, 0, 0, safeTop)
 
-	-- Punto 7: En escritorio abajo a la derecha; en táctil móvil abajo a la izquierda para no tapar botones
+	-- D14: Abajo al centro tanto en PC como en móvil (deja libre el joystick izquierdo y los botones derechos)
 	local isTouch = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-	if isTouch then
-		holder.AnchorPoint = Vector2.new(0, 1)
-		holder.Position = UDim2.new(0, 16, 1, -20)
-	else
-		holder.AnchorPoint = Vector2.new(1, 1)
-		holder.Position = UDim2.new(1, -20, 1, -20)
+	holder.AnchorPoint = Vector2.new(0.5, 1)
+	holder.Position = UDim2.new(0.5, 0, 1, isTouch and -10 or -16)
+	if not inMatch and not isTouch then
+		-- En el lobby con la barra de cola visible, se eleva levemente para no superponerse con QueueBar
+		holder.Position = UDim2.new(0.5, 0, 1, -76)
 	end
 end
 
 player:GetAttributeChangedSignal("InMatch"):Connect(updateLayout)
+player:GetAttributeChangedSignal("MenuOpen"):Connect(updateLayout)
 player:GetAttributeChangedSignal("OptUiScale"):Connect(updateLayout)
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(updateLayout)
 updateLayout()
@@ -466,9 +768,7 @@ RunService.Heartbeat:Connect(function(dt)
 		updateLayout()
 	end
 
-	-- Visibilidad del HUD según combate (Punto 7: InMatch o combate en el patio de práctica)
 	local inMatch = player:GetAttribute("InMatch") == true
-	-- 9/11 (Claude): con un objetivo fijado (Controls: player.LockTarget) también se muestra el HUD completo
 	local lockTarget = player:FindFirstChild("LockTarget")
 	local locking = lockTarget ~= nil and lockTarget.Value ~= nil
 	local inCombat = inMatch or locking or (os.clock() - lastCombatTime < 8)
@@ -521,7 +821,7 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 	end
 
-	-- Barra e icono reversionado de infusión (late activa o llena; se ladea agotada)
+	-- Barra e icono de infusión (late activa o llena; se ladea agotada)
 	local char = player.Character
 	local infusionId = (char and char:GetAttribute("InfusionId")) or player:GetAttribute("InfusionId") or "Fire"
 	local def = Infusions.get(infusionId)
@@ -533,40 +833,49 @@ RunService.Heartbeat:Connect(function(dt)
 
 	if icons.infusion.id ~= infusionId then
 		icons.infusion.root:Destroy()
-		icons.infusion.root, icons.infusion.update = UiAssets.icon(icons.infusion.row, infusionId, 22, def.color)
+		icons.infusion.root, icons.infusion.update = UiAssets.icon(icons.infusion.row, infusionId, 20, def.color)
 		icons.infusion.id = infusionId
 	end
 
-	if char:GetAttribute("InfusionActive") then
-		infState.Text = L.t("active", { seconds = math.max(0, math.ceil((char:GetAttribute("InfusionEndsAt") or now) - now)) })
-	elseif (char:GetAttribute("InfusionLockUntil") or 0) > now then
-		infState.Text = L.t("exhausted", { seconds = math.ceil(char:GetAttribute("InfusionLockUntil") - now) })
+	local chargeVal = char:GetAttribute("InfusionCharge") or 0
+	local full = chargeVal >= CombatConfig.InfusionCharge.Max
+	local active = char:GetAttribute("InfusionActive") == true
+	local exhausted = (char:GetAttribute("InfusionLockUntil") or 0) > now
+
+	if active then
+		local endAt = char:GetAttribute("InfusionEndsAt") or char:GetAttribute("InfusionEnd") or now
+		infState.Text = L.t("active", { seconds = math.max(0, math.ceil(endAt - now)) })
+		infStroke.Color = C.GoldBright
+	elseif exhausted then
+		local lockUntil = char:GetAttribute("InfusionLockUntil") or char:GetAttribute("InfusionExhaustUntil") or now
+		infState.Text = L.t("exhausted", { seconds = math.ceil(lockUntil - now) })
+		infStroke.Color = C.BorderSubtle
+	elseif full then
+		infState.Text = L.t("ui.hud.infusionReady")
+		infStroke.Color = C.GoldBright
 	else
-		infState.Text = L.t("charge", { amount = math.floor(char:GetAttribute("InfusionCharge") or 0) })
+		infState.Text = L.t("charge", { amount = math.floor(chargeVal) })
+		infStroke.Color = C.GoldDim
 	end
 
 	weaponLabel.Text = L.t("weapon." .. (char:GetAttribute("WeaponId") or player:GetAttribute("WeaponId") or "Sword"))
 
 	local IA = H.InfusionIcon
-	local full = (char:GetAttribute("InfusionCharge") or 0) >= CombatConfig.InfusionCharge.Max
-	local active = char:GetAttribute("InfusionActive") == true
-	local exhausted = (char:GetAttribute("InfusionLockUntil") or 0) > now
 	icons.infusion.update(1, exhausted)
-
 	local root = icons.infusion.root
-	local basePx = 22
+	local basePx = 20
 	local pulse = (active and IA.ActiveAmp or (full and IA.FullAmp or 0)) * math.sin(os.clock() * (active and IA.ActiveSpeed or IA.FullSpeed))
 	local px = math.floor(basePx * (1 + pulse))
 	root.Size = UDim2.fromOffset(px, px)
-	root.Position = UDim2.fromOffset((basePx - px) / 2, 3 + (basePx - px) / 2)
+	root.Position = UDim2.fromOffset((basePx - px) / 2, 1 + (basePx - px) / 2)
 	root.Rotation = exhausted and IA.ExhaustTilt or (active and pulse * IA.ActiveWobble or 0)
 end)
 
 ----------------------------------------------------------------------
--- 7. Conexión de atributos del personaje local (Contrato C5)
+-- 7. Conexión de atributos del personaje local (Contrato C2 / C5)
 ----------------------------------------------------------------------
 local function setFill(fill, frac)
-	fill.Size = UDim2.fromScale(1, math.clamp(frac or 0, 0, 1))
+	fill.Size = UDim2.fromScale(math.clamp(frac or 0, 0, 1), 1)
 end
 
 local conns = {}
@@ -578,28 +887,31 @@ local function hook(char)
 	hpTrail.Size = UDim2.fromScale(1, 1)
 
 	lastCombatTime = -math.huge
- local hum = char:WaitForChild("Humanoid", 10)
+	local hum = char:WaitForChild("Humanoid", 10)
 	if not hum then return end
 	local previousHealth = hum.Health
- local function on(signal, fn)
+	local function on(signal, fn)
 		table.insert(conns, signal:Connect(fn))
 		fn()
 	end
 
-	table.insert(conns,char:GetAttributeChangedSignal("HitAt"):Connect(noteCombat))
+	table.insert(conns, char:GetAttributeChangedSignal("HitAt"):Connect(noteCombat))
 	on(hum.HealthChanged, function()
 		local frac = hum.Health / math.max(hum.MaxHealth, 1)
 		damageVersion += 1
 		local version = damageVersion
 		if damageTween then damageTween:Cancel() end
-		if hum.Health < previousHealth then noteCombat() end
+		if hum.Health < previousHealth then
+			noteCombat()
+			pulseBarFlash(hpFlash, hpStroke, C.Gold, Color3.fromRGB(255, 220, 220), 0.22)
+		end
 		previousHealth = hum.Health
-		if frac >= hpFill.Size.Y.Scale then
+		if frac >= hpFill.Size.X.Scale then
 			setFill(hpTrail, frac)
 		else
 			task.delay(H.DamageDelay, function()
 				if version ~= damageVersion or player.Character ~= char then return end
-				damageTween = TweenService:Create(hpTrail, TweenInfo.new(H.DamageTime), { Size = UDim2.fromScale(1, frac) })
+				damageTween = TweenService:Create(hpTrail, TweenInfo.new(H.DamageTime), { Size = UDim2.fromScale(frac, 1) })
 				damageTween:Play()
 			end)
 		end
@@ -622,17 +934,16 @@ local function hook(char)
 		local max = char:GetAttribute("StaminaMax") or CombatConfig.Stamina.Max
 		local cur = char:GetAttribute("Stamina") or max
 		if cur < max - 5 then noteCombat() end
-		setFill(stamFill, cur / math.max(max,1))
+		setFill(stamFill, cur / math.max(max, 1))
 		stamNumber.Text = ("%d"):format(math.floor(cur))
- end
- on(char:GetAttributeChangedSignal("Stamina"),updateStamina)
- on(char:GetAttributeChangedSignal("StaminaMax"),updateStamina)
+	end
+	on(char:GetAttributeChangedSignal("Stamina"), updateStamina)
+	on(char:GetAttributeChangedSignal("StaminaMax"), updateStamina)
 
 	on(char:GetAttributeChangedSignal("StaminaFailAt"), function()
 		if not char:GetAttribute("StaminaFailAt") then return end
 		noteCombat()
-		stamBg.BackgroundColor3 = C.Danger
-		TweenService:Create(stamBg, TweenInfo.new(0.35), { BackgroundColor3 = C.BgBarBack }):Play()
+		pulseBarFlash(stamFlash, nil, C.BorderDefault, C.Danger, 0.35)
 	end)
 
 	local function updateGuard()
@@ -642,6 +953,7 @@ local function hook(char)
 		if gcur < gmax - 5 or broken then noteCombat() end
 		setFill(guardFill, gcur / math.max(gmax, 1))
 		guardFill.BackgroundColor3 = broken and C.GuardBroken or C.Guard
+		guardNumber.Text = ("%d"):format(math.floor(gcur))
 		icons.guard.update(gcur / math.max(gmax, 1), broken)
 	end
 	on(char:GetAttributeChangedSignal("Guard"), updateGuard)
@@ -724,7 +1036,8 @@ updateMusic()
 
 L.Changed:Connect(function()
 	updateStatus()
-	for key, text in rowLabels do
-		text.Text = L.t(key)
-	end
+	updateOwnProgression()
+	hpTitleLbl.Text = L.t("health")
+	stamCaption.Text = L.t("stamina")
+	guardCaption.Text = L.t("guard")
 end)

@@ -41,7 +41,7 @@ local leftDock = Instance.new("Frame")
 leftDock.Name = "LeftLobbyDock"
 leftDock.AnchorPoint = Vector2.new(0, 0.5)
 leftDock.Position = UDim2.new(0, 16, 0.5, 0)
-leftDock.Size = UDim2.fromOffset(172, 206)
+leftDock.Size = UDim2.fromOffset(172, 294)
 leftDock.BackgroundTransparency = 1
 leftDock.Parent = gui
 local dockScale = Instance.new("UIScale")
@@ -49,12 +49,38 @@ dockScale.Parent = leftDock
 
 local dockLayout = Instance.new("UIListLayout")
 dockLayout.FillDirection = Enum.FillDirection.Vertical
-dockLayout.Padding = UDim.new(0, 10)
+dockLayout.Padding = UDim.new(0, 8)
 dockLayout.SortOrder = Enum.SortOrder.LayoutOrder
 dockLayout.Parent = leftDock
 
 local activeModal = nil -- "Missions" | "Leaderboards" | "Ranked" | nil
 local toggleModal
+
+local function makeAlertBadge(parentBtn, name)
+	local badge = Instance.new("Frame")
+	badge.Name = name or "ClaimBadge"
+	badge.AnchorPoint = Vector2.new(1, 0)
+	badge.Position = UDim2.new(1, -4, 0, 4)
+	badge.Size = UDim2.fromOffset(18, 18)
+	badge.BackgroundColor3 = C.Danger
+	badge.BorderSizePixel = 0
+	badge.Visible = false
+	badge.ZIndex = parentBtn.ZIndex + 4
+	badge.Parent = parentBtn
+	UiTheme.corner(badge, 9)
+	UiTheme.stroke(badge, C.GoldBright, 1, 0.1)
+	local lbl = UiTheme.label({
+		parent = badge,
+		size = UDim2.fromScale(1, 1),
+		text = "!",
+		font = "Bold",
+		textSize = 12,
+		color = C.TextPrimary,
+		alignX = Enum.TextXAlignment.Center,
+		zIndex = badge.ZIndex + 1,
+	})
+	return badge, lbl
+end
 
 local armoryBtn = UiTheme.button({
 	name = "ArmoryBtn",
@@ -94,10 +120,32 @@ local shopBtn = UiTheme.button({
 	end,
 })
 
+local rewardsBtn = UiTheme.button({
+	name = "RewardsBtn",
+	parent = leftDock,
+	layoutOrder = 3,
+	size = UDim2.fromOffset(168, 42),
+	text = L.t("ui.lobby.dock.rewards"),
+	icon = "trophy",
+	iconSize = 20,
+	font = "Header",
+	textSize = UiTheme.TextSizes.MD,
+	variant = "gold",
+	onClick = function()
+		local event = player:FindFirstChild("ToggleRewards")
+		if event and event:IsA("BindableEvent") then
+			event:Fire()
+		else
+			player:SetAttribute("RewardsOpen", not player:GetAttribute("RewardsOpen"))
+		end
+	end,
+})
+local rewardsBadge = makeAlertBadge(rewardsBtn, "RewardsBadge")
+
 local settingsBtn = UiTheme.button({
 	name = "SettingsBtn",
 	parent = leftDock,
-	layoutOrder = 3,
+	layoutOrder = 4,
 	size = UDim2.fromOffset(168, 42),
 	text = L.t("settings"),
 	icon = "settings",
@@ -113,7 +161,7 @@ local settingsBtn = UiTheme.button({
 local missionsBtn = UiTheme.button({
 	name = "MissionsBtn",
 	parent = leftDock,
-	layoutOrder = 4,
+	layoutOrder = 5,
 	size = UDim2.fromOffset(168, 42),
 	text = L.t("ui.lobby.missions"),
 	icon = "mission",
@@ -125,32 +173,12 @@ local missionsBtn = UiTheme.button({
 		toggleModal("Missions")
 	end,
 })
-
--- Insignia de misiones listas para reclamar
-local missionBadge = Instance.new("Frame")
-missionBadge.Name = "ClaimBadge"
-missionBadge.AnchorPoint = Vector2.new(1, 0)
-missionBadge.Position = UDim2.new(1, -4, 0, 4)
-missionBadge.Size = UDim2.fromOffset(18, 18)
-missionBadge.BackgroundColor3 = C.Success
-missionBadge.BorderSizePixel = 0
-missionBadge.Visible = false
-missionBadge.Parent = missionsBtn
-UiTheme.corner(missionBadge, 9)
-local missionBadgeText = UiTheme.label({
-	parent = missionBadge,
-	size = UDim2.fromScale(1, 1),
-	text = "!",
-	font = "Bold",
-	textSize = 11,
-	color = C.TextPrimary,
-	alignX = Enum.TextXAlignment.Center,
-})
+local missionBadge, missionBadgeText = makeAlertBadge(missionsBtn, "ClaimBadge")
 
 local boardsBtn = UiTheme.button({
 	name = "LeaderboardsBtn",
 	parent = leftDock,
-	layoutOrder = 5,
+	layoutOrder = 6,
 	size = UDim2.fromOffset(168, 42),
 	text = L.t("ui.lobby.leaderboards"),
 	icon = "trophy",
@@ -488,12 +516,12 @@ function renderModal()
 			})
 			barBg.ZIndex = 24
 
-			-- Recompensa en monedas
+			-- Recompensa en almas (D5, C24)
 			UiTheme.label({
 				parent = card,
 				position = UDim2.fromOffset(62, 68),
 				size = UDim2.fromOffset(220, 20),
-				text = L.t("Coins", { amount = m.reward or 0 }),
+				text = L.t("ui.souls", { amount = m.reward or 0 }),
 				font = "Number",
 				textSize = UiTheme.TextSizes.SM,
 				color = C.Coins,
@@ -755,9 +783,11 @@ local function refreshBar()
 	leaveBtn.Text = L.t("ui.queue.leave")
 	armoryBtn.Text = L.t("ui.lobby.dock.armory")
 	shopBtn.Text = L.t("ui.lobby.dock.shop")
+	rewardsBtn.Text = L.t("ui.lobby.dock.rewards")
 	settingsBtn.Text = L.t("settings")
 	missionsBtn.Text = L.t("ui.lobby.missions")
 	boardsBtn.Text = L.t("ui.lobby.leaderboards")
+	rewardsBadge.Visible = player:GetAttribute("RewardsAlert") == true
 
 	join1Btn.Visible = mode == nil
 	join2Btn.Visible = mode == nil

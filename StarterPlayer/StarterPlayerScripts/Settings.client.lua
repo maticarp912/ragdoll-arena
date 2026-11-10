@@ -462,7 +462,7 @@ function render(messageKey)
 		UiTheme.button({
 			parent = panel,
 			position = UDim2.fromOffset(22, 494),
-			size = UDim2.fromOffset(230, 40),
+			size = UDim2.fromOffset(214, 40),
 			text = L.t("reset"),
 			variant = "secondary",
 			onClick = function()
@@ -473,10 +473,23 @@ function render(messageKey)
 			end,
 		})
 
+		UiTheme.button({
+			name = "EditTouchLayoutBtn",
+			parent = panel,
+			position = UDim2.fromOffset(246, 494),
+			size = UDim2.fromOffset(230, 40),
+			text = L.t("ui.touch.editLayout"),
+			variant = "gold",
+			onClick = function()
+				setOpen(false)
+				player:SetAttribute("TouchEditMode", true)
+			end,
+		})
+
 		UiTheme.label({
 			parent = panel,
-			position = UDim2.fromOffset(268, 494),
-			size = UDim2.fromOffset(520, 40),
+			position = UDim2.fromOffset(488, 494),
+			size = UDim2.fromOffset(310, 40),
 			text = L.t("fixed"),
 			font = "Body",
 			textSize = UiTheme.TextSizes.SM,
@@ -506,8 +519,17 @@ function setOpen(value)
 	capturing = nil
 	panel.Visible = value
 	veil.Visible = value
+	if value then
+		player:SetAttribute("TouchEditMode", false)
+		player:SetAttribute("ShopOpen", false)
+		player:SetAttribute("ArmoryOpen", false)
+		player:SetAttribute("RewardsOpen", false)
+	end
 	player:SetAttribute("SettingsOpen", value)
-	player:SetAttribute("MenuOpen", value or player:GetAttribute("ShopOpen") == true)
+	player:SetAttribute("MenuOpen", value
+		or player:GetAttribute("ShopOpen") == true
+		or player:GetAttribute("ArmoryOpen") == true
+		or player:GetAttribute("RewardsOpen") == true)
 	UiTheme.playSound(value and "UI_MenuOpen" or "UI_MenuClose")
 
 	if value then
@@ -544,6 +566,18 @@ end)
 
 player:GetAttributeChangedSignal("ShopOpen"):Connect(function()
 	if player:GetAttribute("ShopOpen") and panel.Visible then
+		setOpen(false)
+	end
+end)
+
+player:GetAttributeChangedSignal("ArmoryOpen"):Connect(function()
+	if player:GetAttribute("ArmoryOpen") and panel.Visible then
+		setOpen(false)
+	end
+end)
+
+player:GetAttributeChangedSignal("RewardsOpen"):Connect(function()
+	if player:GetAttribute("RewardsOpen") and panel.Visible then
 		setOpen(false)
 	end
 end)

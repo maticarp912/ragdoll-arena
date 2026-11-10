@@ -12,6 +12,7 @@ local PlayerData = {}
 local HttpService = game:GetService("HttpService")
 local E = require(game:GetService("ReplicatedStorage"):WaitForChild("Economy"))
 local P = require(game:GetService("ReplicatedStorage"):WaitForChild("Progression"))
+local R = require(game:GetService("ReplicatedStorage"):WaitForChild("Rewards"))
 local tokens, loading = {}, {}
 local lost, leaseUntil = {}, {}
 local finalizing = {}
@@ -23,6 +24,26 @@ local writable, saving, closing = {}, {}, {}
 local function copy(value)
  if type(value) ~= "table" then return value end
  local result = {} for k, v in value do result[k] = copy(v) end return result
+end
+local function touchLayout(payload)
+ if type(payload) ~= "table" then return nil end
+ local cfg, result, count = E.TouchLayout, {}, 0
+ for id, row in payload do
+  count += 1
+  if count > cfg.MaxButtons or type(id) ~= "string" or not cfg.Actions[id] or type(row) ~= "table" then return nil end
+  local fields = 0
+  for key in row do
+   fields += 1
+   if fields > 3 or (key ~= "x" and key ~= "y" and key ~= "scale") then return nil end
+  end
+  for _, key in { "x", "y", "scale" } do
+   local n = row[key]
+   if type(n) ~= "number" or n ~= n or math.abs(n) == math.huge then return nil end
+  end
+  if row.x < cfg.MinX or row.x > cfg.MaxX or row.y < cfg.MinY or row.y > cfg.MaxY or row.scale < cfg.MinScale or row.scale > cfg.MaxScale then return nil end
+  result[id] = { x = row.x, y = row.y, scale = row.scale }
+ end
+ return result
 end
 
 -- GetDataStore lanza error si el lugar no está publicado: lo capturamos para que el juego
@@ -82,6 +103,7 @@ local function refresh(player: Player)
 	player:SetAttribute("WeaponId", data.WeaponId)
 	player:SetAttribute("InfusionId", data.InfusionId)
 	player:SetAttribute("Language", data.Language)
+ player:SetAttribute("TouchLayoutJson", HttpService:JSONEncode(data.TouchLayout))
  for _, stat in { "Wins", "Kills", "Knockdowns", "Matches" } do player:SetAttribute("Stat" .. stat, data.Stats[stat] or E.Zero) end
  local auras = {} for id, owned in (player:GetAttribute("AllCosmetics") and require(game:GetService("ReplicatedStorage").Auras).Data or data.OwnedAuras) do if owned then table.insert(auras, id) end end
  table.sort(auras) player:SetAttribute("OwnedAuras", table.concat(auras, ","))
@@ -167,6 +189,8 @@ function PlayerData.load(player: Player)
  else
   warn("[PlayerData] Studio profile is temporary; persistent purchases are disabled.")
  end
+ R.reconcile(data)
+ data.TouchLayout = touchLayout(data.TouchLayout) or {}
  leaseUntil[player] = writable[player] and saved.Session.expires or nil
  cache[player] = data player:SetAttribute("ProfileState", writable[player] and "Ready" or "Temporary") refresh(player)
 end
@@ -201,6 +225,8 @@ function PlayerData.save(player: Player, release)
    while finalizing[player] and not expired() do task.wait(E.RetryDelay) end
    return finalResults[player]==true
   end
+  -- Also run on BindToClose; finish abandoned matches before the final snapshot.
+  for _, hook in releaseHooks do hook(player) end
   finalizing[player]=true closing[player]=true
  end
  while saving[player] and not expired() do task.wait(E.RetryDelay) end
@@ -269,23 +295,18 @@ function PlayerData.equipAura(player, id)
  if not data or (id~="" and not PlayerData.owns(player, "OwnedAuras", id)) then return false end
  data.EquippedAura=id refresh(player) return true
 end
--- Cash purchases share the receipt/save mutex; publish ownership only after durable write.
+-- Earned-soul purchases apply price and ownership together, without yielding.
 function PlayerData.buyCosmetic(player, id, price, aura)
- while saving[player] do task.wait(E.RetryDelay) end
  local data = PlayerData.get(player)
  if not data or closing[player] then return false, "loading" end
+ if saving[player] then return false, "cx.shop.wait" end
  if player:GetAttribute("InMatch") then return false, "locked" end
  local field=aura and "OwnedAuras" or "OwnedSkins"
  if data[field][id] then return false, "alreadyOwned" end
  if data.Coins<price then return false, "noCoins" end
- saving[player]=true
- local pending=copy(data) pending.Coins-=price pending[field][id]=true
- local saved=persist(player,pending,false)
- local temporary=RunService:IsStudio() and not writable[player]
- if (saved or temporary) and PlayerData.get(player) == data then data.Coins-=price data[field][id]=true refresh(player) end
- saving[player]=nil
- if not saved and not temporary then return false, "cx.purchase.failed" end
- return true, saved and "acquired" or "cx.debug.temporary"
+ -- Earned currency uses the same atomic, non-yielding profile path as rewards.
+ data.Coins -= price data[field][id] = true refresh(player) PlayerData.saveSoon(player)
+ return true, "acquired"
 end
 
 function PlayerData.getOptions(player)
@@ -314,6 +335,15 @@ function PlayerData.owns(player, field, id)
  return data ~= nil and (player:GetAttribute("AllCosmetics") == true or data[field][id] == true)
 end
 function PlayerData.refresh(player) refresh(player) end
+function PlayerData.setTouchLayout(player, payload)
+ local data = PlayerData.get(player) local layout = touchLayout(payload)
+ if not data or not layout then return nil end
+ data.TouchLayout = layout refresh(player) PlayerData.saveSoon(player) return copy(layout)
+end
+function PlayerData.getTouchLayout(player)
+ local data = PlayerData.get(player) return data and copy(data.TouchLayout) or nil
+end
+function PlayerData.canMutate(player) return not closing[player] and not saving[player] and PlayerData.get(player) ~= nil end
 function PlayerData.isPersistent(player) return not lost[player] and writable[player] == true end
 function PlayerData.get(player: Player)
  if leaseUntil[player] and os.time() >= leaseUntil[player] and not lost[player] then
@@ -372,7 +402,6 @@ function PlayerData.setWeapon(player: Player, weaponId: string)
 end
 
 Players.PlayerRemoving:Connect(function(player)
- for _, hook in releaseHooks do hook(player) end
 	closing[player] = true
 	PlayerData.save(player, true)
 	cache[player], writable[player] = nil, nil

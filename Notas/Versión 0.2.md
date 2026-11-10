@@ -155,3 +155,6 @@ Medir llegada al primer duelo/desbloqueo, partidas completas, cosméticos reclam
 ## Entrega backend ronda 1 — 10/11/2026 14:12 (Argentina, UTC-3)
 🟡 Código de la ronda 1 de Codex integrado con aprobación explícita del usuario. Detalle único de alcance, contratos, limitaciones y pruebas en [[Reporte 0.2 Codex]]; nombres finales en [[Contratos 0.2]]. Revisión estática completa: 82 archivos OK y LihFolk 0 errores/avisos. No comprobado en Studio; faltan los puntos de integración de Claude/Gemini del reporte. Recompensas completas: ronda 2.
 
+## Entrega backend ronda 2 — 10/11/2026 18:20 (Argentina, UTC-3)
+Pedido: ejecutar la sección Codex de [[0.2 Ronda 2 - prompts]] y sus reglas comunes. 🟡 Servidor y datos de recompensas, compras reales de multiplicadores con almas y nuevas acciones administrativas implementados. Alcance, pruebas, decisiones técnicas y pendientes en la sección «Ronda 2» de [[Reporte 0.2 Codex]]; API definitiva y guardado táctil en [[Contratos 0.2]], C19/C10. Se preserva Coins y se denomina almas en LocaleCodex. Sin Studio, sin regenerar place y sin commit/push. Las conexiones pendientes del tutorial y las pantallas siguen en los archivos de Claude/Gemini, según el reparto.
+

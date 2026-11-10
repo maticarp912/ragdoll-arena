@@ -12,6 +12,9 @@
 --   "GuardBreak" attacker rompió la guardia de victim
 --   "Parry"      attacker = quien parreó, victim = el parreado
 --   "Throw"      attacker lanzó a victim
+--   "Kick"       (0.2) la patada de attacker conectó con victim. info.result = "hit" | "blocked" | "guardbreak" |
+--                "immune" | "pending" | "downed" (empujón a un derribado, sin daño). Solo informativo: el daño de la
+--                patada ya llega como "Damage"; no sumar las dos cosas.
 -- Los personajes pueden ser muñecos: Players:GetPlayerFromCharacter devuelve nil para ellos.
 -- En partida, el jugador tiene el atributo InMatch = true.
 

@@ -38,7 +38,12 @@ Pedido confirmado: continuar conversaciones entre Claude, Gemini y Codex, conser
 - Las IA no tienen acceso automático a chats privados de otras apps: la continuidad depende de los archivos. Sin acceso, decirlo y entregar resumen para pegar, sin fingir lectura o guardado.
 - Solo Claude hace commits/push según C0b. Codex/Gemini dejan cambios locales e indican qué sincronizar. Desde otra máquina, verificar sincronización.
 
-### Contexto actual — Codex, 10/11/2026 14:11 (Argentina, UTC-3)
+### Contexto previo — Codex, 10/11/2026 14:11 (Argentina, UTC-3)
 Tema actual: desarrollo 0.2 ronda 1 backend según [[0.2 Ronda 1 - Codex]]. Decisiones D1-D22 ya aprobadas en [[Decisiones pendientes 0.2]]; almas son el mismo saldo Coins, sin pérdida al morir (D5). El contexto anterior de dudas de diseño queda superado por esas decisiones.
 Entrega y pruebas pendientes: [[Reporte 0.2 Codex]]. APIs finales C17-C22: [[Contratos 0.2]]. Implementados archivos de backend, sin abrir Studio ni modificar place ni hacer commit. Falta integrar el permiso Debug de Tester en CombatService (Claude), overhead/cinemática (Claude) y previews/UI (Gemini); pruebas enumeradas en reporte. Rewards completo se hace en ronda 2.
 Próximo paso: Claude revisar, integrar los pedidos y sincronizar GitHub; luego sesión de pruebas separada. No confundir revisión estática con comprobación en Studio.
+
+### Contexto actual — Codex, 10/11/2026 18:20 (Argentina, UTC-3)
+Pedido actual: sección Codex de [[0.2 Ronda 2 - prompts]], conforme al plan y [[Recompensas y retención 0.2]]. 🟡 Backend implementado: Rewards/RewardService, ruleta y sus tres skins, cajas/garantías, racha/semanal/regreso, bienvenida y primeros pasos, maestría/colección, anti-AFK, almas y compras de multiplicadores, concesiones administrativas con auditoría. Schema 2 aditivo; saldo Coins y stores preservados. APIs en [[Contratos 0.2]], C19, C20, C21 y C10/D17.
+Detalle único de pruebas y pendientes: [[Reporte 0.2 Codex]], «Ronda 2». Sin abrir Studio, usar pantalla, regenerar place ni hacer operaciones de Git distintas de status/diff. Se detectaron cambios concurrentes de otras ejecuciones y se conservaron; revisar la copia completa al integrar.
+Próximo paso: Gemini conectar Rewards, BuyBoost/GetBoosts, visibilidad de saldo de depuración y guardado táctil; Claude producir pruebas del tutorial desde servidor y revisar los eventos de premios. Luego ejecutar las pruebas de Studio y de perfiles/migración enumeradas en el reporte. Nada de esta ronda se marca comprobado en Studio.

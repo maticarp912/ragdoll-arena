@@ -90,3 +90,21 @@ Notas: [[Contratos 0.2]] (C16 y C23 con nombres finales, C25 nuevo), [[Versión 
   - `TouchUI` tiene que llamar `InputBridge.press("Kick", false)` al soltar el botón de patada: con el direccional, soltar = patear al derribado. Hoy C12 dice que solo Guardia se mantiene.
   - El HUD nuevo puede escuchar `Effect` tipo `"Feel"` (C23) para el destello de las barras.
   - Ajustes: los controles muestran el esquema que corresponda solo (usa `InputMap.merge`).
+
+## Ronda 2 — 10/11/2026 18:40 (Argentina)
+Prompts: [[0.2 Ronda 2 - prompts]]. Codex y Gemini corrieron por sus CLI (Codex: Sol, esfuerzo alto; Gemini: terminó su tanda aunque la consola mostraba errores 503). `check_lua` OK (88 archivos) y LihFolk 0/0. **Nada de la ronda 2 se probó en Studio todavía.**
+
+### Implementado por Claude (🟡 sin probar en Studio)
+- **Cinemática** (`Cinematic.client`, nuevo, D16/C17): arranca solo con `MatchPhase = Cinematic` y un `PhaseEnds` válido (ignora la primera fase sin duración). Tres planos: vista general en órbita, tu equipo de frente y los rivales de frente. Tiene franjas de cine y la cámara vuelve sola. Valores en `PolishConfig.Cinematic`. Las poses de entrada quedan pendientes.
+- **Almas y nivel** (`Vfx.client`): al subir `leaderstats.Coins`, luces que se absorben en el pecho (ignora la carga del saldo al entrar). Al subir `Level`, anillo dorado y columna de luz. Sonidos ya existentes en `Assets`.
+- **Tutorial del patio** (`Tutorial.client` y `TutorialService.server`, nuevos): 3 pasos (pegarle 3 veces a un muñeco, ponerse en guardia, patearlo). Los certifica el servidor y los paga `RewardService.tutorial` (pedido de Codex). El cliente solo muestra el progreso.
+- **C6:** evento nuevo `Kick` (informativo; el daño sigue llegando como `Damage`). `strike` devuelve también las víctimas.
+
+### Arreglos de integración entre IA
+- Editor táctil (Gemini) conectado al guardado de Codex (`Settings` → `SetTouchLayout`, con espera de 1,5 s). Reaplica el diseño guardado cuando llega del perfil.
+- La tienda compra multiplicadores con `BuyBoost` (cobro real) en vez de `LocalBoost`.
+- El pedido de Codex sobre depuración por rol ya estaba resuelto (I4).
+
+### Pendiente
+- Probar en Studio toda la ronda 2: recompensas (ruleta, cajas, racha, primeros pasos, colección, maestría), HUD nuevo, editor táctil, resumen pospartida, cinemática con 2 clientes, tutorial, multiplicadores, migración del perfil a Schema 2 (Codex pide snapshot antes y no usar stores vivos).
+- Poses de entrada en la cinemática.

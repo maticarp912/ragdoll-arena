@@ -221,4 +221,12 @@ return {
  ["overhead.role.Tester"] = "Tester",
  ["overhead.role.VIP"] = "VIP",
  ["overhead.role.New"] = "Nuevo",
+ -- 0.2 ronda 2 (Claude): tutorial del patio
+ ["tutorial.title"] = "Primeros pasos en el patio",
+ ["tutorial.lock"] = "Fijá un muñeco con {key}",
+ ["tutorial.hit"] = "Pegale 3 veces con {key} ({n}/3)",
+ ["tutorial.block"] = "Mantené {key} para ponerte en guardia",
+ ["tutorial.kick"] = "Pateá al muñeco con {key}",
+ ["tutorial.done"] = "¡Listo! Ya podés buscar partida",
+ ["tutorial.dummyHint"] = "Cada paso del tutorial da 100 almas",
 }

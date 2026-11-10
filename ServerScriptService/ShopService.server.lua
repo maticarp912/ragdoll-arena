@@ -24,6 +24,8 @@ local RunService = game:GetService("RunService")
 local InputMap = require(ReplicatedStorage:WaitForChild("InputMap"))
 local RoleService = require(ServerScriptService:WaitForChild("RoleService"))
 local CombatConfig = require(ReplicatedStorage:WaitForChild("CombatConfig"))
+local Rewards = require(ReplicatedStorage:WaitForChild("Rewards"))
+local RewardService = require(ServerScriptService:WaitForChild("RewardService"))
 
 -- Herramientas de prueba (monedas gratis) solo en Studio o para quien tenga permiso
 local function canDebug(player)
@@ -33,11 +35,21 @@ local function canDebug(player)
 end
 
 -- Controles reasignables (teclado y mando)
+local settingsAt = {}
+local settingsActions = { GetTouchLayout = true, SetTouchLayout = true, GetOptions = true, SetOptions = true, SetLanguage = true, GetBinds = true, SetBinds = true, ResetBinds = true }
+Players.PlayerRemoving:Connect(function(player) settingsAt[player] = nil end)
 SettingsRF.OnServerInvoke = function(player, action, payload)
-	if type(action) ~= "string" then return nil end
+ local now = os.clock()
+ local bucket = type(action) == "string" and settingsActions[action] and action or "Other"
+ local times = settingsAt[player] or {} settingsAt[player] = times
+ if times[bucket] and now - times[bucket] < E.ShopInterval then return nil end
+ times[bucket] = now
+	if type(action) ~= "string" or #action > Rewards.MaxIdLength then return nil end
 	local data = PlayerData.get(player)
 	if not data then return nil end
-	if action == "GetOptions" then return PlayerData.getOptions(player)
+	if action == "GetTouchLayout" then return PlayerData.getTouchLayout(player)
+ elseif action == "SetTouchLayout" then return PlayerData.setTouchLayout(player, payload)
+ elseif action == "GetOptions" then return PlayerData.getOptions(player)
  elseif action == "SetOptions" then
   local options = PlayerData.setOptions(player, payload)
   if options then PlayerData.saveSoon(player) end
@@ -71,7 +83,7 @@ local shopAt, shopBusy = {}, {}
 Players.PlayerRemoving:Connect(function(player) shopAt[player]=nil shopBusy[player]=nil end)
 local function shopAction(player, action, id)
 	-- Integración 0.2: GetFeatured no lleva id (la tienda lo pide sin argumento y antes se rechazaba)
-	if type(action) ~= "string" or (type(id) ~= "string" and action ~= "GetFeatured") then
+	if type(action) ~= "string" or (type(id) ~= "string" and action ~= "GetFeatured" and action ~= "GetBoosts") then
 		return false, { key = "invalid" }
 	end
 	if player:GetAttribute("InMatch") and player:GetAttribute("MatchPhase") ~= "Prematch" and (action == "SelectWeapon" or action == "SelectInfusion" or action == "Equip") then
@@ -79,6 +91,8 @@ local function shopAction(player, action, id)
  end
  local data = PlayerData.get(player)
 	if not data then return false, { key = "loading" } end
+ if action == "GetBoosts" then return true, { items = Rewards.Boosts, order = Rewards.BoostOrder, debugSouls = canDebug(player), collectionAuras = Rewards.Collection } end
+ if action == "BuyBoost" then return RewardService.buyBoost(player, id) end
  if action == "GetFeatured" then
   local ids = {} for skinId, skin in Skins.Data do if skinId ~= "Default" and not skin.comingSoon and not skin.roulette then table.insert(ids, skinId) end end
   table.sort(ids) local result = {} local day = math.floor((os.time() - E.DayOffset) / E.DaySeconds)
@@ -99,13 +113,12 @@ local function shopAction(player, action, id)
    PlayerData.saveSoon(player) return true, { key = "cx.aura.equipped" }
   end
   if PlayerData.owns(player, "OwnedAuras", id) then return false, { key = "alreadyOwned" } end
+  if Rewards.exclusiveAura(id) then return false, { key = "cx.reward.collectionOnly" } end
   if aura.currency == "Coins" then
    local ok,key=PlayerData.buyCosmetic(player,id,aura.price,true)
    return ok, { key = key }
   elseif aura.currency == "Robux" then
-   if aura.productId <= E.Zero then return false, { key = "soon" } end
-   MarketplaceService:PromptProductPurchase(player,aura.productId)
-   return true, { key = "robloxConfirm" }
+   return false, { key = "soon" }
   end
   return false, { key = "invalid" }
  elseif action == "DebugResetPurchases" then
@@ -144,11 +157,15 @@ local function shopAction(player, action, id)
 		return true, { key = "infusion." .. id }
 
 	elseif action == "Equip" then
-  if data.EquippedSkin==id then return true end
+		if data.EquippedSkin==id then
+   if id ~= "Default" then RewardService.progress(player, "Equip", 1) end
+   return true
+  end
 		local skin = Skins.Data[id]
 		if not skin or skin.comingSoon then return false, { key = "soon" } end
 		if skin.weapon and skin.weapon ~= data.WeaponId then return false, { key = "otherWeapon" } end
 		if not PlayerData.equipSkin(player, id) then return false, { key = "notOwned" } end
+  if id ~= "Default" then RewardService.progress(player, "Equip", 1) end
   PlayerData.saveSoon(player)
 		refreshWeapon(player)
 		return true
@@ -165,11 +182,7 @@ local function shopAction(player, action, id)
 			local ok,key=PlayerData.buyCosmetic(player,id,skin.price,false)
    return ok, { key = key }
 		elseif skin.currency == "Robux" then
-			if not skin.productId or skin.productId <= N.Zero then
-				return false, { key = "soon" }
-			end
-			MarketplaceService:PromptProductPurchase(player, skin.productId)
-			return true, { key = "robloxConfirm" }
+   return false, { key = "soon" }
 		end
 		return false, { key = "invalid" }
 	end
@@ -181,7 +194,7 @@ ShopRF.OnServerInvoke = function(player, action, id)
  local now=os.clock()
  if shopBusy[player] or (shopAt[player] and now-shopAt[player]<E.ShopInterval) then return false, {key="cx.shop.wait"} end
  shopAt[player]=now
- if type(action)~="string" or type(id)~="string" then return false,{key="invalid"} end
+ if type(action)~="string" or #action > 32 or (type(id)~="string" and action ~= "GetFeatured" and action ~= "GetBoosts") or (type(id)=="string" and #id > 64) then return false,{key="invalid"} end
  shopBusy[player]=true
  local success,ok,message=pcall(shopAction,player,action,id)
  shopBusy[player]=nil

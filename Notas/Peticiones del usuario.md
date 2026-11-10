@@ -28,4 +28,6 @@ Leyenda: ✅ comprobado en Studio · 🟡 implementado, sin probar jugando · �
 | 10/11/2026 | Integrar la ronda 1 | [[Integración 0.2]] | ✅ código integrado (I1 a I5 y pedidos); ⬜ pruebas en Studio en sesión nueva |
 | 10/11/2026 | Skins de la ruleta: solo ruleta (D23) | [[Integración 0.2]] | 🟡 implementado, sin probar |
 | 10/11/2026 15:22 | Integración de la ronda 1 en Studio (el usuario jugó la 1v1; Claude probó el resto) | [[Reporte 0.2 Integración]] | ✅ mayormente; pendientes listados |
-| 10/11/2026 15:15 | Seguir solo, aplicar todo directo y continuar con la ronda 2 usando Codex y Gemini por sus CLI | [[Plan de desarrollo 0.2]] | 🔧 en curso |
+| 10/11/2026 15:15 | Seguir solo, aplicar todo directo y continuar con la ronda 2 usando Codex y Gemini por sus CLI | [[Reporte 0.2 Claude]] (ronda 2), [[Reporte 0.2 Codex]], [[Reporte 0.2 Gemini]] | 🟡 ronda 2 escrita por las tres; falta probar en Studio |
+| 10/11/2026 18:20 (Argentina, UTC-3) | Cumplir la sección Codex y las reglas comunes de los prompts de ronda 2 | [[Versión 0.2]], entrega backend ronda 2; [[Reporte 0.2 Codex]] | 🟡 implementado; integración y Studio pendientes |
+| 10/11/2026 18:40 | Revisar la ronda 2 y qué falta para la 0.2; Gemini sin cuota hasta la semana próxima, Codex pasa las armas a Blender | [[0.2 Blender tanda 2 - Codex]] | ✅ revisado; prompt de Blender listo |

@@ -7,6 +7,8 @@ local Remotes = require(script.Parent.Remotes)
 local Changed = Remotes.get("MissionsChanged")
 local RF = Remotes.get("Missions", "RemoteFunction")
 local Progression = require(script.Parent.ProgressionService)
+local Rewards = require(script.Parent.RewardService)
+local Telemetry = require(script.Parent.Telemetry)
 local claimAt = {}
 Players.PlayerRemoving:Connect(function(p) claimAt[p] = nil end)
 local Service = {}
@@ -30,7 +32,7 @@ function Service.get(player)
  local list = {}
  for _, id in selection(d.day) do
   local m = Catalog.Data[id]
-  table.insert(list, { id = id, nameKey = "cx.mission." .. id, params = { goal = m.goal }, progress = d.progress[id] or E.Zero, goal = m.goal, reward = m.reward, claimed = d.claimed[id] == true })
+  table.insert(list, { id = id, nameKey = "cx.mission." .. id, params = { goal = m.goal }, progress = d.progress[id] or E.Zero, goal = m.goal, reward = m.reward, spins = Catalog.SpinReward, claimed = d.claimed[id] == true })
  end
  return { resetAt = (d.day + E.One) * E.DaySeconds + E.DayOffset, list = list }
 end
@@ -54,6 +56,7 @@ RF.OnServerInvoke = function(player, action, id)
  if type(action) ~= "string" then return false, { key = "invalid" } end
  if action == "Get" then return Service.get(player) end
  if action ~= "Claim" or type(id) ~= "string" then return false, { key = "invalid" } end
+ if not Data.canMutate(player) then return false, { key = "cx.shop.wait" } end
  local d = daily(player)
  if not d or not table.find(selection(d.day), id) then return false, { key = "invalid" } end
  local m = Catalog.Data[id]
@@ -64,9 +67,12 @@ RF.OnServerInvoke = function(player, action, id)
  data.Stats.Coins = (data.Stats.Coins or E.Zero) + m.reward
  Data.addCoins(player, m.reward)
  Progression.source(player, "Mission")
+ Rewards.admin(player, "Spins", Catalog.SpinReward)
+ Rewards.progress(player, "Level", 0)
+ Telemetry.emit(player, "RewardClaim", 1, nil, nil, "Mission")
  Changed:FireClient(player)
  Data.saveSoon(player)
- return true, { key = "cx.mission.claimed", params = { amount = m.reward } }
+ return true, { key = "cx.mission.claimed", params = { amount = m.reward, spins = Catalog.SpinReward } }
 end
 task.spawn(function()
  local lastDay = math.floor((os.time() - E.DayOffset) / E.DaySeconds)

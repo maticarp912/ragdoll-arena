@@ -456,3 +456,105 @@ Effect.OnClientEvent:Connect(function(kind, role, info)
 	end
 	if cfg.Punch then cameraPunch(cfg.Punch * (heavy and 1.6 or 1)) end
 end)
+
+----------------------------------------------------------------------
+-- 0.2 ronda 2: almas (D5) y subida de nivel. Solo en tu pantalla, sobre tu personaje.
+--   Almas: cuando sube leaderstats.Coins, unas luces pálidas llegan desde alrededor y se absorben en el pecho.
+--   Nivel: cuando sube el atributo Level, anillo dorado que se abre y una columna de luz.
+----------------------------------------------------------------------
+local POL = require(ReplicatedStorage:WaitForChild("PolishConfig"))
+local SOULS, LEVELUP = POL.Souls, POL.LevelUp
+
+local function neonPart(size, color, shape)
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	p.Material = Enum.Material.Neon
+	p.Color = color
+	p.Size = size
+	if shape then p.Shape = shape end
+	p.Parent = fxFolder
+	return p
+end
+
+local function absorbSouls(amount)
+	local char = player.Character
+	local torso = char and (char:FindFirstChild("UpperTorso") or char:FindFirstChild("HumanoidRootPart"))
+	if not torso or not SOULS then return end
+	local n = math.clamp(math.floor(amount / SOULS.PerWisp), SOULS.MinWisps, SOULS.MaxWisps)
+	sound2D(SOULS.Sound, SOULS.Volume, 1)
+	for i = 1, n do
+		task.delay((i - 1) * SOULS.Stagger, function()
+			if not torso.Parent then return end
+			local a = math.random() * math.pi * 2
+			local start = torso.Position + Vector3.new(math.cos(a) * SOULS.Radius, (math.random() - 0.3) * SOULS.Height, math.sin(a) * SOULS.Radius)
+			local w = neonPart(Vector3.one * SOULS.Size, SOULS.Color, Enum.PartType.Ball)
+			w.Position = start
+			w.Transparency = 0.15
+			local light = Instance.new("PointLight")
+			light.Color = SOULS.Color
+			light.Range = 5
+			light.Brightness = 1.2
+			light.Parent = w
+			local tw = TweenService:Create(w, TweenInfo.new(SOULS.Travel, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+				{ Position = torso.Position, Size = Vector3.one * SOULS.Size * 0.4 })
+			tw:Play()
+			tw.Completed:Connect(function()
+				w:Destroy()
+				if torso.Parent then
+					local holder = anchorAt(torso.Position, Vector3.yAxis, 1)
+					burst(holder, 4, { color = SOULS.Core, color2 = SOULS.Color, size = seq(0.35, 0), light = 1,
+						life = NumberRange.new(0.15, 0.3), speed = NumberRange.new(2, 5), spread = Vector2.new(180, 180) })
+				end
+			end)
+			Debris:AddItem(w, SOULS.Travel + 0.5)
+		end)
+	end
+end
+
+local function levelUpFx()
+	local char = player.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	if not root or not LEVELUP then return end
+	sound2D(LEVELUP.Sound, LEVELUP.Volume, 1.1)
+	local base = root.Position - Vector3.new(0, 2.8, 0)
+	local ring = neonPart(Vector3.new(0.2, 1, 1), LEVELUP.Color, Enum.PartType.Cylinder)
+	ring.CFrame = CFrame.new(base) * CFrame.Angles(0, 0, math.rad(90))
+	ring.Transparency = 0.2
+	TweenService:Create(ring, TweenInfo.new(LEVELUP.RingTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ Size = Vector3.new(0.2, LEVELUP.RingSize, LEVELUP.RingSize), Transparency = 1 }):Play()
+	Debris:AddItem(ring, LEVELUP.RingTime + 0.1)
+	local pillar = neonPart(Vector3.new(1.2, 0.5, 1.2), LEVELUP.Color, Enum.PartType.Cylinder)
+	pillar.CFrame = CFrame.new(base) * CFrame.Angles(0, 0, math.rad(90))
+	pillar.Transparency = 0.35
+	TweenService:Create(pillar, TweenInfo.new(LEVELUP.PillarTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Size = Vector3.new(LEVELUP.PillarHeight, 0.4, 0.4),
+		CFrame = CFrame.new(base + Vector3.yAxis * LEVELUP.PillarHeight / 2) * CFrame.Angles(0, 0, math.rad(90)),
+		Transparency = 1,
+	}):Play()
+	Debris:AddItem(pillar, LEVELUP.PillarTime + 0.1)
+	flashLight(anchorAt(root.Position + Vector3.yAxis * 3, Vector3.yAxis, 1.2), LEVELUP.Color, 3, 16, 0.6)
+end
+
+task.spawn(function()
+	local stats = player:WaitForChild("leaderstats", 30)
+	local coins = stats and stats:WaitForChild("Coins", 30)
+	if not coins then return end
+	local last = coins.Value
+	local readyAt = os.clock() + 8 -- al entrar se carga el saldo guardado: eso no es ganar almas
+	coins.Changed:Connect(function(v)
+		local gained = v - last
+		last = v
+		if gained > 0 and os.clock() >= readyAt then absorbSouls(gained) end
+	end)
+end)
+
+local lastLevel = player:GetAttribute("Level")
+player:GetAttributeChangedSignal("Level"):Connect(function()
+	local lv = player:GetAttribute("Level")
+	if type(lv) == "number" and type(lastLevel) == "number" and lv > lastLevel then levelUpFx() end
+	lastLevel = lv
+end)

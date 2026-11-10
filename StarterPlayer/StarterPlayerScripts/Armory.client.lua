@@ -193,7 +193,7 @@ local function makeWeaponPreview(parent, wid, sid, rect)
 	local world = Instance.new("WorldModel")
 	world.Parent = vp
 	local camera = Instance.new("Camera")
-	camera.FieldOfView = 34
+	camera.FieldOfView = 28
 	camera.Parent = vp
 	vp.CurrentCamera = camera
 
@@ -201,8 +201,8 @@ local function makeWeaponPreview(parent, wid, sid, rect)
 	model.Parent = world
 	local cfBox, size = model:GetBoundingBox()
 	local center = model.PrimaryPart and (model.PrimaryPart.CFrame:Inverse() * cfBox.Position) or Vector3.zero
-	local base = CFrame.Angles(0, math.pi / 2, math.rad(14)) * CFrame.new(-center)
-	local dist = math.max(size.X, size.Y, size.Z) * 1.15
+	local base = CFrame.Angles(0, math.pi / 2, math.rad(26)) * CFrame.new(-center)
+	local dist = math.max(size.X, size.Y, size.Z) * 0.88
 	model:PivotTo(base)
 	camera.CFrame = CFrame.lookAt(Vector3.new(0, 0, dist), Vector3.zero)
 
@@ -212,6 +212,7 @@ local function makeWeaponPreview(parent, wid, sid, rect)
 		camera = camera,
 		base = base,
 		distance = dist,
+		phase = #spins * 0.45,
 		yaw = 0,
 		pitch = 0,
 		zoom = 1,
@@ -856,7 +857,7 @@ function render()
 		vp = charVp,
 		model = avatarModel,
 		camera = cam3D,
-		base = CFrame.new(0, 0.25, 0),
+		base = CFrame.new(0, 0.55, 0),
 		distance = 8.4,
 		yaw = -0.35,
 		pitch = 0.08,
@@ -875,16 +876,29 @@ function render()
 		end
 	end)
 
+	local rotatePill = Instance.new("Frame")
+	rotatePill.Name = "RotateHintPill"
+	rotatePill.AnchorPoint = Vector2.new(0.5, 1)
+	rotatePill.Position = UDim2.new(0.5, 0, 1, -8)
+	rotatePill.Size = UDim2.new(1, -24, 0, 22)
+	rotatePill.BackgroundColor3 = C.BgAbyss
+	rotatePill.BackgroundTransparency = 0.14
+	rotatePill.BorderSizePixel = 0
+	rotatePill.ZIndex = 12
+	rotatePill.Parent = charVp
+	UiTheme.corner(rotatePill, UiTheme.Radius.Pill)
+	UiTheme.stroke(rotatePill, C.GoldDim, 1, 0.25)
+
 	UiTheme.label({
-		parent = charVp,
-		anchor = Vector2.new(0.5, 1),
-		position = UDim2.new(0.5, 0, 1, -6),
-		size = UDim2.new(1, -16, 0, 16),
+		name = "RotateHintLabel",
+		parent = rotatePill,
+		size = UDim2.fromScale(1, 1),
 		text = L.t("ui.armory.rotateHint"),
-		font = "Body",
+		font = "Bold",
 		textSize = UiTheme.TextSizes.XS,
-		color = C.TextMuted,
+		color = C.GoldBright,
 		alignX = Enum.TextXAlignment.Center,
+		zIndex = 13,
 	})
 
 	-- Resumen inferior del equipo activo + pieza seleccionada
@@ -988,12 +1002,16 @@ function setOpen(value)
 		end
 		player:SetAttribute("SettingsOpen", false)
 		player:SetAttribute("ShopOpen", false)
+		player:SetAttribute("RewardsOpen", false)
 	end
 	opened = value
 	transition += 1
 	local version = transition
 	player:SetAttribute("ArmoryOpen", value)
-	player:SetAttribute("MenuOpen", value or player:GetAttribute("ShopOpen") == true or player:GetAttribute("SettingsOpen") == true)
+	player:SetAttribute("MenuOpen", value
+		or player:GetAttribute("ShopOpen") == true
+		or player:GetAttribute("SettingsOpen") == true
+		or player:GetAttribute("RewardsOpen") == true)
 	UiTheme.playSound(value and "UI_MenuOpen" or "UI_MenuClose")
 
 	if value then
@@ -1043,6 +1061,12 @@ end)
 
 player:GetAttributeChangedSignal("SettingsOpen"):Connect(function()
 	if player:GetAttribute("SettingsOpen") and opened then
+		setOpen(false)
+	end
+end)
+
+player:GetAttributeChangedSignal("RewardsOpen"):Connect(function()
+	if player:GetAttribute("RewardsOpen") and opened then
 		setOpen(false)
 	end
 end)
@@ -1110,7 +1134,10 @@ RunService.RenderStepped:Connect(function(dt)
 		if not v.vp.Parent then
 			table.remove(spins, i)
 		else
-			v.yaw += dt * 0.45
+			-- Oscilación suave de perfil amplio para que las armas nunca queden de punta ni chicas
+			v.phase = (v.phase or 0) + dt * 1.35
+			v.yaw = math.sin(v.phase) * 0.36
+			v.pitch = math.cos(v.phase * 0.7) * 0.12
 			v.model:PivotTo(CFrame.Angles(v.pitch, v.yaw, 0) * v.base)
 			v.camera.CFrame = CFrame.lookAt(Vector3.new(0, 0, v.distance * v.zoom), Vector3.zero)
 		end

@@ -54,4 +54,21 @@ return {
   Owner = Color3.fromRGB(255, 196, 64), Admin = Color3.fromRGB(255, 80, 70), Mod = Color3.fromRGB(90, 170, 255),
   Tester = Color3.fromRGB(120, 230, 140), VIP = Color3.fromRGB(220, 130, 255), New = Color3.fromRGB(200, 200, 200),
  } },
+ -- 0.2 ronda 2 (Claude): cámara de la cinemática antes del combate (Cinematic.client, D16, C17)
+ Cinematic = {
+  MinTime = 1.5,           -- si PhaseEnds deja menos que esto, no se arma la cinemática (fase de bloqueo sin duración)
+  Shots = { 0.36, 0.32, 0.32 }, -- fracción del tiempo: vista general, tu equipo, rivales
+  OrbitRadius = 34, OrbitMin = 26, OrbitHeight = 16, OrbitTurn = 50, -- grados que gira la vista general
+  CloseDistance = 7.5, CloseEnd = 5.2, CloseHeight = 1.6, CloseSide = 2.2, LookHeight = 1.3,
+  Fov = 55, FovClose = 42,
+  Bars = 0.09, BarsTime = 0.35, -- franjas negras de cine (fracción de la altura de pantalla)
+  Range = 260,             -- solo cuenta luchadores a esta distancia (otra partida en otra arena no entra)
+ },
+ -- 0.2 ronda 2 (Claude): almas que se absorben al ganar (D5) y subida de nivel. Lo usa Vfx.client.
+ Souls = { PerWisp = 10, MinWisps = 3, MaxWisps = 14, Radius = 7, Height = 3.5, Stagger = 0.06, Travel = 0.55,
+  Size = 0.45, Color = Color3.fromRGB(170, 230, 255), Core = Color3.fromRGB(255, 255, 255), Sound = "UI_CoinGain", Volume = 0.45 },
+ LevelUp = { RingSize = 12, RingTime = 0.7, PillarHeight = 22, PillarTime = 0.9, Color = Color3.fromRGB(255, 205, 90),
+  Sound = "Match_Win", Volume = 0.5 },
+ -- 0.2 ronda 2 (Claude): tutorial de 3 pasos en el patio (Tutorial.client)
+ Tutorial = { DummyRange = 45, MaxMatches = 0, Width = 340, RowHeight = 24, Top = 0.16, DoneHold = 4, Check = Color3.fromRGB(120, 230, 140) },
 }

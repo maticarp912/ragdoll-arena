@@ -9,6 +9,7 @@ local Auras = require(RS:WaitForChild("Auras"))
 local RoleService = require(script.Parent.RoleService)
 local Data = require(script.Parent.PlayerData)
 local Progression = require(script.Parent.ProgressionService)
+local Rewards = require(script.Parent.RewardService)
 local RF = require(script.Parent.Remotes).get("Admin", "RemoteFunction")
 local last, budgets = {}, {}
 local audit = {}
@@ -35,6 +36,7 @@ RF.OnServerInvoke = function(player, action, targetId, value)
  local role = player:GetAttribute("Role")
  local targetRole = target and target:GetAttribute("Role")
  if not target or not Roles.Data[targetRole] or not Data.get(player) or not Data.get(target) then return response(false) end
+ if not Data.canMutate(target) then return response(false) end
  local owner = RoleService.isOwner(player)
  if not owner and (target == player or Roles.Data[targetRole].priority >= Roles.Data[role].priority) then
   log(player, target, action, nil, false) return response(false)
@@ -48,6 +50,8 @@ RF.OnServerInvoke = function(player, action, targetId, value)
  if action == "Coins" then
   if type(value) ~= "number" or value ~= value or value % 1 ~= 0 or value < 1 or value > Roles.Admin.MaxCoins or b.coins + value > Roles.Admin.HourCoins then return response(false) end
   b.coins += value Data.addCoins(target, value) ok = true
+ elseif action == "Box" or action == "BoxRelic" or action == "BoxSouls" or action == "Spins" or action == "Streak" then
+  ok = Rewards.admin(target, action, value)
  elseif action == "Level" then
   ok = Progression.setLevel(target, value)
  elseif action == "Weapon" or action == "Skin" or action == "Aura" then

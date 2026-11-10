@@ -85,7 +85,7 @@ end
 -- Aplica el golpe a todos los rivales de la caja. Para si el atacante fue parreado.
 -- sweetSpot (Estoque): los rivales en el extremo del alcance reciben más daño
 local function strike(char, reach, width, hit, sweetSpot)
-	local results = {}
+	local results, victims = {}, {}
 	local root = char:FindFirstChild("HumanoidRootPart")
 	for _, victim in Combat.hitbox(char, reach, width) do
 		local h = hit
@@ -97,9 +97,10 @@ local function strike(char, reach, width, hit, sweetSpot)
 		end
 		local r = Combat.deal(char, victim, h)
 		table.insert(results, r)
+		table.insert(victims, victim)
 		if r == "parry" then break end
 	end
-	return results
+	return results, victims
 end
 
 ----------------------------------------------------------------------
@@ -327,13 +328,17 @@ function Actions.kick(char)
 		if not Combat.valid(char, token) then return end
 		Combat.setPhase(char, "Recovery")
 		char:SetAttribute("HitAt", 0)
-		local results = strike(char, K.Reach, K.Width, {
+		local results, victims = strike(char, K.Reach, K.Width, {
 			kind = "Kick",
 			damage = K.Damage,
 			stun = K.Stun,
 			knockback = K.Knockback,
 			parryable = K.Parryable,
 		})
+		-- C6: aviso de patada que conectó (tutorial y misiones; no es daño, no se cuenta dos veces)
+		for i, v in victims do
+			if results[i] ~= "dodged" and results[i] ~= "none" then CombatEvents.fire("Kick", char, v, { result = results[i] }) end
+		end
 		if #results > 0 then
 			Fx.soundAt("Kick_Hit", char)
 		elseif DK then
@@ -382,6 +387,7 @@ function Actions.kickDowned(char, victim)
 		if d.Magnitude > CFG.Grab.Range + 2 then return end
 		d = d.Magnitude > 0.01 and d.Unit or root.CFrame.LookVector
 		CombatEvents.noteAttacker(victim, char) -- si cae al vacío, la eliminación es de quien pateó
+		CombatEvents.fire("Kick", char, victim, { result = "downed" })
 		Combat.push(victim, d * DK.DownedPushSpeed + Vector3.new(0, DK.DownedPushUp, 0))
 		Fx.soundAt("Kick_Hit", victim)
 		Fx.dust(vbody.Position - Vector3.new(0, 1, 0), 0.6)

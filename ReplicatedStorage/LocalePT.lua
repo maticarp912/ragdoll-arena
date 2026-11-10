@@ -221,4 +221,12 @@ return {
  ["overhead.role.Tester"] = "Tester",
  ["overhead.role.VIP"] = "VIP",
  ["overhead.role.New"] = "Novato",
+ -- 0.2 ronda 2 (Claude): tutorial del patio
+ ["tutorial.title"] = "Primeiros passos no pátio",
+ ["tutorial.lock"] = "Trave a mira num boneco com {key}",
+ ["tutorial.hit"] = "Acerte 3 vezes com {key} ({n}/3)",
+ ["tutorial.block"] = "Segure {key} para se defender",
+ ["tutorial.kick"] = "Chute o boneco com {key}",
+ ["tutorial.done"] = "Pronto! Já pode procurar partida",
+ ["tutorial.dummyHint"] = "Cada passo do tutorial dá 100 almas",
 }

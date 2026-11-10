@@ -132,3 +132,96 @@ Mientras `MeshId = 0`, `WeaponBuilder` utiliza automáticamente el modelo proced
   - Cuando `MatchPhase == "Prematch"`, permitir en `ShopService.server.lua` que `SelectWeapon`, `SelectInfusion` y `Equip` funcionen aunque `player:GetAttribute("InMatch")` sea `true` (actualmente `ShopService.server.lua` línea 75 bloquea `SelectWeapon`, `SelectInfusion` y `Equip` si `InMatch == true`; basta con permitirlo cuando `workspace:GetAttribute("MatchPhase") == "Prematch"` según el Contrato C17 y D11).
 - **A Codex (Ronda 2 — Contratos C18 y C19)**:
   - Cuando estén listos los remotos `Remotes.Rewards` y `Remotes.Roulette` (con los IDs de las 3 nuevas skins de ruleta `CrimsonEclipse`, `BloodMoonCleaver` y `CataclysmMaw`), armaré `StarterPlayer/StarterPlayerScripts/Rewards.client.lua` en la Ronda 2.
+
+
+---
+
+## 0.2 Ronda 2 — 10/11/2026 18:24 (UTC-3, hora de Argentina)
+
+---
+
+### 1. Implementado (comprobado con herramientas)
+
+- **1. HUD de combate nuevo (`StarterPlayer/StarterPlayerScripts/HUD.client.lua`, D14, C2, C19, C23)**:
+  - Rediseñado el cluster inferior centrado (`PlayerBars`, `496x98 px`, `AnchorPoint = Vector2.new(0.5, 1)`) dejando libres tanto el joystick izquierdo como los botones táctiles derechos:
+    - **Abajo al centro**: **Barra grande de Vida (`HP`)** (`238x30 px`) con borde dorado, icono de salud, estela de daño diferido (`hpTrail`), lectura numérica (`100 / 100`) y capa de destello (`hpFlash`).
+    - **Encima de Vida**: **Barra de Infusión (`InfusionCharge`)** (`210x18 px`) con el icono elemental animado a su izquierda (late llena o activa, se inclina agotada), texto de estado (`¡INFUSIÓN LISTA! [Q]`, `Activa · Xs`, `Agotada · Xs`, `{amount}%`), etiqueta del arma equipada a la izquierda y barra compacta de **Aturdimiento (`Stun`)** a la derecha.
+    - **A los costados**: **Barra de Estamina (`Stamina`)** a la izquierda (`108x22 px`) y **Barra de Guardia (`Guard`)** a la derecha (`108x22 px`) con lectura numérica y estado de guardia rota (`GuardBroken`).
+  - **Destellos de impacto y bloqueo (`Remotes.Effect` con `"Feel"`, Contrato C23)**:
+    - `role == "Take"`: destello blanco/carmesí y sacudida elástica en la barra grande de Vida (`HP`).
+    - `role == "Block"` / `"Blocked"`: destello dorado/azul en la barra de Guardia (`Guard`) y actualización inmediata con `info.guard`.
+    - `role == "GuardBroken"`: estallido rojo intenso y sacudida en la barra de Guardia.
+    - `role == "Parry"` / `"Deal"`: pulso dorado en Guardia e Infusión.
+  - **Progresión y Multiplicadores en el retrato propio (`OwnPortrait`, Contrato C19)**:
+    - Añadida subbarra bajo el nombre del jugador mostrando `NVL. {Level}`, barra de progreso `XP / XPNext` y pastilla de multiplicadores activos (`x{MultXP} XP · x{MultCoins} Almas`).
+
+- **2. Controles táctiles de celular y Editor de botones (`StarterPlayer/StarterPlayerScripts/TouchUI.client.lua` + `Settings.client.lua`, D17, C12)**:
+  - **Botones más grandes, mejor separados y con texto legible**:
+    - Ampliado el abanico táctil derecho (`360x330 px`) con tamaños aumentados (`Attack` 92 px, `Heavy`/`Block` 72 px, `Dodge` 70 px, `Kick`/`Interact`/`Infuse` 66 px, `LockOn` 58 px, `SwitchTarget` 56 px, `Menu` 52 px), pastilla oscura inferior (`CaptionPill`) con trazo para máxima legibilidad del texto y márgenes de zona segura (`GuiService:GetGuiInset()`).
+  - **Arreglo del botón de Patada (`KickRelease` en celular)**:
+    - Configurado `hold = true` en `Kick` y añadido seguimiento de `input:GetPropertyChangedSignal("UserInputState")` más respaldo global en `UserInputService.InputEnded` para que soltar el botón de Patada (incluso si el pulgar se desliza fuera del botón antes de levantarse) envíe siempre `InputBridge.press("Kick", false)` y dispare `KickRelease`.
+  - **Editor interactivo de botones táctiles (D17)**:
+    - Accesible desde `Ajustes → Controles → «Editar botones táctiles»` (`player:SetAttribute("TouchEditMode", true)`).
+    - Permite arrastrar cualquier botón táctil a una posición personalizada, tocar un botón para ajustar su escala individual (`75 %` a `140 %` con botones `−` y `+`), restablecer el diseño por defecto (`Restablecer`) y guardar (`TouchLayoutJson`).
+
+- **3. Interfaz completa de «Recompensas y retención 0.2» (`StarterPlayer/StarterPlayerScripts/Rewards.client.lua` + `MatchUI.client.lua` + `LobbyUI.client.lua`, C19, D5, D10, D15)**:
+  - **Nuevo script `StarterPlayer/StarterPlayerScripts/Rewards.client.lua`** conectado a `Remotes.Rewards` (`GetState`, `ChooseStarter`, `Spin`, `OpenBox`, `ClaimStreak`, `ClaimFirstSteps`, `ClaimWeekly`, `DismissReturn`), `Remotes.RewardsChanged` y `Remotes.RewardAnnouncement`, con respaldo local (`buildFallbackState`) por si el servidor aún está inicializando:
+    - **Bienvenida corta (máx. 2 pantallas) y elección de primera skin común**: pantalla de bienvenida seguida de 3 tarjetas con vista 3D (`Charcoal`, `Frost`, `Gold`) para consagrar y equipar gratis la primera skin cuando `state.starter.chosen == false`.
+    - **Pestaña 1 — Ruleta del Ocaso (8 sectores)**: rueda circular de 8 sectores con giro diario gratis, giro de iniciación, tickets acumulados y hasta 3 giros extra con Almas (250 / 500 / 1 000), animación de desaceleración cúbica con sonidos de clic que aterriza en el sector decidido por el servidor (`res.sector`), barra de garantía de 30 giros (`spinPity / 30`), visor 3D del Gran Premio Semanal (`CrimsonEclipse`) y botón **`"i  Probabilidades"`** con todas las probabilidades y reglas de duplicados.
+    - **Pestaña 2 — Cajas de Suerte (`Caja de Almas` 500 almas y `Caja de Reliquias` 1 500 almas)**: tarjetas dedicadas con contador de cajas en inventario, barra de garantía de 10 cajas para Épica o superior (`relicPity / 10`), aviso de conversión de duplicadas (40 % en Almas) y animación de apertura (cofre temblando + estallido de luz del color de rareza + revelación 3D del premio).
+    - **Pestaña 3 — Racha Diaria (7 días), Bienvenido de Vuelta y Cadena «Primeros Pasos»**: calendario de 7 días (50 a 200 Almas + Caja de Reliquias en el día 7, con nota de pausa sin volver a cero), banner de regreso (`+1 Giro Gratis`) y las 7 misiones iniciales de «Primeros pasos» con reclamo de Skin Épica garantizada (`ClaimFirstSteps`).
+    - **Pestaña 4 — Colección y Maestría por Arma**: selector de las 5 armas, álbum de skins con porcentaje completado y recompensa de Aura Exclusiva al 100 %, junto con el panel de Maestría de Arma (`Nvl. 1..20`, barra de XP y desbloqueos en niveles 5, 10 y 20).
+    - **Anuncio global de premio Legendario**: escucha `Remotes.RewardAnnouncement` y despliega un cartel dorado superior cuando alguien obtiene una skin Legendaria.
+  - **Avisos rojos (`"!"`) en el dock del Lobby (`StarterPlayer/StarterPlayerScripts/LobbyUI.client.lua`)**:
+    - Añadido el botón **Ruleta** (`RewardsBtn`) en el dock izquierdo con insignia roja `"!"` (`RewardsAlert`) cuando hay giro gratis, racha o misión de primeros pasos lista, e insignia roja `"!"` en **Misiones**.
+  - **Progreso pospartida y cambio de Monedas a Almas (`StarterPlayer/StarterPlayerScripts/MatchUI.client.lua` + `LocaleGemini.lua`, D5, C19, C24)**:
+    - `MatchUI.client.lua` lee `data.progression = { xp, xpBefore, xpAfter, levelBefore, level, xpNext }`, anima el llenado de la barra de XP, festeja con cartel dorado e insignia cuando `level > levelBefore`, anima orbes dorados de almas volando hacia el contador total y muestra toda la moneda como **Almas / Souls / Almas**.
+
+- **4. Arreglos en Armería y Tienda (`StarterPlayer/StarterPlayerScripts/Armory.client.lua` + `Shop.client.lua`)**:
+  - **Miniaturas de armas que nunca quedan de punta ni chicas**: ajustado el encuadre (`FieldOfView = 28`, inclinación diagonal `26°`, distancia `0.88x`) y reemplazado el giro continuo de 360° en miniaturas por una oscilación suave de perfil amplio (`yaw = math.sin(phase) * 0.36`, `pitch = math.cos(phase * 0.7) * 0.12`) para que las hojas se vean siempre grandes y de costado.
+  - **Texto «Arrastrá para girar» siempre visible**: colocado dentro de una pastilla oscura con borde dorado (`RotateHintPill`, `ZIndex = 12`) en la base del visor 3D del personaje y elevado levemente el pedestal (`base = CFrame.new(0, 0.55, 0)`) para que nunca quede tapado.
+
+---
+
+### 2. Sin probar en Studio
+
+- Animación en vivo del giro de la Ruleta y apertura de Cajas contra `RewardService` en sesión Play Solo.
+- Flujo del modal de Bienvenida en un perfil recién creado (`starter.chosen == false`).
+- Arrastre en vivo de botones táctiles con el emulador móvil de Studio en `TouchEditMode`.
+
+---
+
+### 3. Pendiente
+
+- Nada pendiente de la Ronda 2 de Gemini.
+
+---
+
+### 4. Archivos tocados en Ronda 2
+
+- `StarterPlayer/StarterPlayerScripts/HUD.client.lua`
+- `StarterPlayer/StarterPlayerScripts/TouchUI.client.lua`
+- `StarterPlayer/StarterPlayerScripts/Settings.client.lua`
+- `StarterPlayer/StarterPlayerScripts/Rewards.client.lua` *(nuevo)*
+- `StarterPlayer/StarterPlayerScripts/MatchUI.client.lua`
+- `StarterPlayer/StarterPlayerScripts/LobbyUI.client.lua`
+- `StarterPlayer/StarterPlayerScripts/Armory.client.lua`
+- `StarterPlayer/StarterPlayerScripts/Shop.client.lua`
+- `ReplicatedStorage/LocaleGemini.lua`
+- `Notas/Reporte 0.2 Gemini.md`
+
+---
+
+### 5. Pruebas para la integración (para Claude en Studio)
+
+1. **HUD nuevo y destellos C23**: entrar al patio o a una partida; verificar la barra grande de Vida abajo al centro, Infusión arriba y Estamina/Guardia a los costados, más los destellos al recibir daño (`Take`), bloquear (`Block`) o sufrir rotura de guardia (`GuardBroken`).
+2. **Celular y Editor táctil**: abrir `Ajustes → Controles → Editar botones táctiles`; arrastrar un botón, cambiar su tamaño con `−`/`+`, tocar `Guardar` y comprobar que persiste; probar mantener y soltar el botón `PATADA` sobre un muñeco derribado para confirmar `KickRelease`.
+3. **Recompensas y Retención (`Rewards.client.lua`)**: abrir el botón **Ruleta** del dock izquierdo (con insignia `"!"`), probar un giro de la Ruleta de 8 sectores, abrir el modal `"i Probabilidades"`, probar la apertura de `Caja de Almas` / `Caja de Reliquias`, reclamar el día de la **Racha diaria**, revisar la cadena **«Primeros pasos»** y recorrer **Colección y Maestría** por arma.
+4. **Resumen pospartida (`MatchUI.client.lua`)**: terminar una partida y verificar la animación de la barra de XP (`data.progression`), el cartel de subida de nivel y el desglose en **Almas**.
+5. **Armería (`Armory.client.lua`)**: abrir la Armería y verificar que las miniaturas de armas oscilan mostrando su perfil completo sin quedar de punta y que la pastilla `«Arrastrá para girar · Rueda / L2-R2 para acercar»` se lee limpia sobre el visor 3D.
+
+---
+
+### 6. Pedidos a otros
+
+- Ninguno; `Rewards.client.lua` y `MatchUI.client.lua` ya están alineados con las acciones y estructuras de `RewardService.lua`, `Rewards.lua` y `Progression.lua` de Codex.

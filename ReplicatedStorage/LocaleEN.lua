@@ -221,4 +221,12 @@ return {
  ["overhead.role.Tester"] = "Tester",
  ["overhead.role.VIP"] = "VIP",
  ["overhead.role.New"] = "New",
+ -- 0.2 ronda 2 (Claude): tutorial del patio
+ ["tutorial.title"] = "First steps in the yard",
+ ["tutorial.lock"] = "Lock onto a dummy with {key}",
+ ["tutorial.hit"] = "Hit it 3 times with {key} ({n}/3)",
+ ["tutorial.block"] = "Hold {key} to raise your guard",
+ ["tutorial.kick"] = "Kick the dummy with {key}",
+ ["tutorial.done"] = "Done! You can queue for a match now",
+ ["tutorial.dummyHint"] = "Each tutorial step gives 100 souls",
 }

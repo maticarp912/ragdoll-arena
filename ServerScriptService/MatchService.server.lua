@@ -22,6 +22,7 @@ require(ServerScriptService:WaitForChild("Remotes"))
 local ArenaConfig = require(ReplicatedStorage:WaitForChild("ArenaConfig"))
 local ArenaBuilder = require(ServerScriptService:WaitForChild("ArenaBuilder"))
 local Stats = require(ServerScriptService:WaitForChild("StatsService"))
+local CombatEvents = require(ServerScriptService:WaitForChild("CombatEvents"))
 local E = require(ReplicatedStorage:WaitForChild("Economy"))
 local RunService = game:GetService("RunService")
 local RoleService = require(ServerScriptService:WaitForChild("RoleService"))
@@ -366,7 +367,9 @@ local function runRound(roundNumber: number, modeName: string, teamsMap)
      if f.previousY and f.previousY >= voidY and f.previousY > root.Position.Y then
       at = f.previousAt + (now - f.previousAt) * (f.previousY - voidY) / (f.previousY - root.Position.Y)
      end
-     eliminate(f, at) f.hum.Health = 0
+     eliminate(f, at)
+     CombatEvents.fire("RingOut", CombatEvents.lastAttacker(f.char), f.char)
+     f.hum.Health = 0
     elseif f.hum.Health <= 0 or f.player:GetAttribute("Eliminated") then eliminate(f, now)
     else alive[f.team] += 1 health[f.team] += f.hum.Health end
    end

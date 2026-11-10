@@ -34,7 +34,7 @@ local value = text("TextBox", "cx.admin.value", 0.27)
 local apply = text("TextButton", "cx.admin.apply", 0.39)
 local search = text("TextButton", "cx.admin.search", 0.51)
 local output = text("TextLabel", "cx.admin.help", 0.64) output.Size = UDim2.fromScale(0.9, 0.31) output.TextWrapped = true
-local actions = { "Coins", "Weapon", "Skin", "Aura", "Level", "Role", "Kick", "Mute", "Unmute" }
+local actions = { "Coins", "Weapon", "Skin", "Aura", "Level", "BoxRelic", "BoxSouls", "Spins", "Streak", "Role", "Kick", "Mute", "Unmute" }
 local index, busy = 1, false
 local function refresh()
  local allowed = player:GetAttribute("ModerateAllowed") == true
@@ -62,7 +62,7 @@ apply.Activated:Connect(function()
  local id = tonumber(target.Text)
  if not id then for _, p in Players:GetPlayers() do if string.lower(p.Name) == string.lower(target.Text) then id = p.UserId break end end end
  local a = actions[index]
- invoke(a, id, (a == "Coins" or a == "Level") and tonumber(value.Text) or value.Text)
+ invoke(a, id, (a == "Coins" or a == "Level" or a == "BoxRelic" or a == "BoxSouls" or a == "Spins" or a == "Streak") and tonumber(value.Text) or value.Text)
 end)
 player:GetAttributeChangedSignal("ModerateAllowed"):Connect(refresh)
 L.Changed:Connect(function() target.PlaceholderText = L.t("cx.admin.target") value.PlaceholderText = L.t("cx.admin.value") toggle.Text = L.t("cx.admin.title") apply.Text = L.t("cx.admin.apply") search.Text = L.t("cx.admin.search") refresh() end)

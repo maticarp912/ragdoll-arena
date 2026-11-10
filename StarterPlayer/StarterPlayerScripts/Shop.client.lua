@@ -323,10 +323,10 @@ end
 local function priceText(item)
 	if not item then return "" end
 	if item.kind == "Souls" then
-		return "+" .. L.t("Coins", { amount = item.amount or 0 })
+		return "+" .. L.t("ui.souls", { amount = item.amount or 0 })
 	end
 	if item.currency == "Free" then return L.t("Free") end
-	if item.currency == "Coins" then return L.t("Coins", { amount = item.price or 0 }) end
+	if item.currency == "Coins" then return L.t("ui.souls", { amount = item.price or 0 }) end
 	return L.t("soon")
 end
 
@@ -402,7 +402,7 @@ local function preview(parent, wid, sid, rect, manual)
 	local world = Instance.new("WorldModel")
 	world.Parent = vp
 	local camera = Instance.new("Camera")
-	camera.FieldOfView = 34
+	camera.FieldOfView = manual and 34 or 28
 	camera.Parent = vp
 	vp.CurrentCamera = camera
 
@@ -410,10 +410,10 @@ local function preview(parent, wid, sid, rect, manual)
 	model.Parent = world
 	local cfBox, size = model:GetBoundingBox()
 	local center = model.PrimaryPart and (model.PrimaryPart.CFrame:Inverse() * cfBox.Position) or Vector3.zero
-	local horizontal = not manual and rect[3] > rect[4] * 1.15
-	local base = (horizontal and CFrame.Angles(0, math.pi / 2, math.rad(14)) or CFrame.Angles(math.rad(-16), math.pi / 4, 0))
+	local horizontal = not manual
+	local base = (horizontal and CFrame.Angles(0, math.pi / 2, math.rad(26)) or CFrame.Angles(math.rad(-16), math.pi / 4, 0))
 		* CFrame.new(-center)
-	local dist = math.max(size.X, size.Y, size.Z) * (horizontal and 1.12 or 1.25)
+	local dist = math.max(size.X, size.Y, size.Z) * (horizontal and 0.88 or 1.18)
 	model:PivotTo(base)
 	camera.CFrame = CFrame.lookAt(Vector3.new(0, 0, dist), Vector3.zero)
 
@@ -424,6 +424,7 @@ local function preview(parent, wid, sid, rect, manual)
 		base = base,
 		distance = dist,
 		horizontal = horizontal,
+		phase = #spins * 0.45,
 		yaw = 0,
 		pitch = 0,
 		zoom = 1,
@@ -812,7 +813,7 @@ local function inspect(id)
 					act("Equip", id)
 				end
 			elseif kind == "Boost" then
-				confirmPurchase(id, rec, "LocalBoost")
+				confirmPurchase(id, rec, "BuyBoost") -- integración 0.2: cobro real en el servidor (RewardService.buyBoost)
 			elseif kind == "Souls" then
 				act("DebugCoins", id)
 			end
@@ -892,7 +893,7 @@ function render()
 		parent = coinBox,
 		position = UDim2.fromOffset(34, 0),
 		size = UDim2.new(1, -42, 1, 0),
-		text = L.t("Coins", { amount = coinsVal and coinsVal.Value or 0 }),
+		text = L.t("ui.souls", { amount = coinsVal and coinsVal.Value or 0 }),
 		font = "Number",
 		textSize = UiTheme.TextSizes.SM,
 		color = C.Coins,
@@ -1385,8 +1386,12 @@ function setOpen(value)
 	if value then
 		player:SetAttribute("SettingsOpen", false)
 		player:SetAttribute("ArmoryOpen", false)
+		player:SetAttribute("RewardsOpen", false)
 	end
-	player:SetAttribute("MenuOpen", value or player:GetAttribute("SettingsOpen") == true or player:GetAttribute("ArmoryOpen") == true)
+	player:SetAttribute("MenuOpen", value
+		or player:GetAttribute("SettingsOpen") == true
+		or player:GetAttribute("ArmoryOpen") == true
+		or player:GetAttribute("RewardsOpen") == true)
 	UiTheme.playSound(value and "UI_MenuOpen" or "UI_MenuClose")
 
 	if value then
@@ -1428,6 +1433,12 @@ end)
 
 player:GetAttributeChangedSignal("ArmoryOpen"):Connect(function()
 	if player:GetAttribute("ArmoryOpen") and opened then
+		setOpen(false)
+	end
+end)
+
+player:GetAttributeChangedSignal("RewardsOpen"):Connect(function()
+	if player:GetAttribute("RewardsOpen") and opened then
 		setOpen(false)
 	end
 end)
@@ -1502,13 +1513,18 @@ RunService.RenderStepped:Connect(function(dt)
 					v.yaw += stick.X * dt * 2.0
 					v.pitch = math.clamp(v.pitch - stick.Y * dt, -0.65, 0.65)
 					v.zoom = math.clamp(v.zoom + zoomAxis * dt * 0.65, 0.55, 1.65)
+					if drag == nil and stick.Magnitude < 0.05 then
+						v.yaw += dt * 0.35
+					end
 				else
-					v.yaw += dt * 0.45
+					v.phase = (v.phase or 0) + dt * 1.35
+					v.yaw = math.sin(v.phase) * 0.36
+					v.pitch = math.cos(v.phase * 0.7) * 0.12
 				end
 				if v.flashUntil and os.clock() < v.flashUntil then
 					v.yaw += dt * 8
 				end
-				local rot = v.horizontal and CFrame.Angles(v.yaw, v.pitch, 0) or CFrame.Angles(v.pitch, v.yaw, 0)
+				local rot = CFrame.Angles(v.pitch, v.yaw, 0)
 				v.model:PivotTo(rot * v.base)
 				v.camera.CFrame = CFrame.lookAt(Vector3.new(0, 0, v.distance * v.zoom), Vector3.zero)
 			end

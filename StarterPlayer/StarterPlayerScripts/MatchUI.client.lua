@@ -1,7 +1,9 @@
 -- LocalScript: StarterPlayer/StarterPlayerScripts/MatchUI
--- Pantalla de resumen de fin de partida (Contrato C9: Remotes.MatchSummary, responsable: Gemini, etapa 8).
--- Muestra resultado (Victoria / Derrota), modo (1v1 / 2v2), eliminaciones, derribos, daño infligido,
--- desglose de monedas ganadas y de misiones, con navegación completa para mando y ratón.
+-- Pantalla de resumen de fin de partida (Contratos C9 y C19: Remotes.MatchSummary, responsable: Gemini).
+-- Mejoras 0.2 Ronda 2:
+--   • Barra animada de experiencia pospartida (data.progression: xp, xpBefore, xpAfter, levelBefore, level, xpNext).
+--   • Cartel e insignia festiva cuando el jugador sube de nivel (level > levelBefore).
+--   • Desglose de Almas (D5, C24) con animación de almas doradas volando hacia el contador total.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -36,13 +38,14 @@ veil.Selectable = false
 veil.Visible = false
 veil.Parent = gui
 
+local BASE_W, BASE_H = 600, 520
 local card = UiTheme.panel({
 	name = "SummaryCard",
 	parent = veil,
 	canvasGroup = true,
 	anchor = Vector2.new(0.5, 0.5),
 	position = UDim2.fromScale(0.5, 0.5),
-	size = UDim2.fromOffset(580, 440),
+	size = UDim2.fromOffset(BASE_W, BASE_H),
 	bg = C.BgPrimary,
 	borderColor = C.Gold,
 	borderThickness = UiTheme.Stroke.Heavy,
@@ -54,6 +57,35 @@ scale.Parent = card
 
 local lastSummary = nil
 local closeSummary
+
+local function spawnFlyingSouls(parentCard, targetPos)
+	for i = 1, 6 do
+		task.delay((i - 1) * 0.08, function()
+			if not parentCard.Parent or not veil.Visible then return end
+			local orb = Instance.new("Frame")
+			orb.Name = "SoulOrb_" .. i
+			orb.AnchorPoint = Vector2.new(0.5, 0.5)
+			orb.Position = UDim2.fromOffset(BASE_W * 0.5 + math.random(-90, 90), 210 + math.random(-20, 20))
+			orb.Size = UDim2.fromOffset(14, 14)
+			orb.BackgroundColor3 = C.GoldBright
+			orb.BorderSizePixel = 0
+			orb.ZIndex = 15
+			orb.Parent = parentCard
+			UiTheme.corner(orb, 7)
+			UiTheme.stroke(orb, C.Coins, 1.5, 0)
+
+			local tw = TweenService:Create(orb, TweenInfo.new(0.55, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+				Position = targetPos,
+				Size = UDim2.fromOffset(6, 6),
+				BackgroundTransparency = 0.2,
+			})
+			tw:Play()
+			task.delay(0.58, function()
+				if orb.Parent then orb:Destroy() end
+			end)
+		end)
+	end
+end
 
 local function renderSummary(data)
 	lastSummary = data
@@ -71,22 +103,22 @@ local function renderSummary(data)
 	-- Medallón superior (Trofeo en Victoria, Calavera en Derrota)
 	local crestHolder = Instance.new("Frame")
 	crestHolder.AnchorPoint = Vector2.new(0.5, 0)
-	crestHolder.Position = UDim2.new(0.5, 0, 0, 18)
-	crestHolder.Size = UDim2.fromOffset(64, 64)
+	crestHolder.Position = UDim2.new(0.5, 0, 0, 14)
+	crestHolder.Size = UDim2.fromOffset(58, 58)
 	crestHolder.BackgroundColor3 = C.BgAbyss
 	crestHolder.BorderSizePixel = 0
 	crestHolder.Parent = card
-	UiTheme.corner(crestHolder, 32)
+	UiTheme.corner(crestHolder, 29)
 	UiTheme.stroke(crestHolder, accent, 2, 0.05)
 
-	local crestIcon = UiAssets.icon(crestHolder, won and "trophy" or "skull", 42, accent)
+	local crestIcon = UiAssets.icon(crestHolder, won and "trophy" or "skull", 38, accent)
 	crestIcon.AnchorPoint = Vector2.new(0.5, 0.5)
 	crestIcon.Position = UDim2.fromScale(0.5, 0.5)
 
 	UiTheme.label({
 		parent = card,
-		position = UDim2.fromOffset(24, 88),
-		size = UDim2.new(1, -48, 0, 40),
+		position = UDim2.fromOffset(24, 76),
+		size = UDim2.new(1, -48, 0, 36),
 		text = L.t(won and "ui.match.victory" or "ui.match.defeat"),
 		font = "Title",
 		textSize = UiTheme.TextSizes.Hero,
@@ -96,8 +128,8 @@ local function renderSummary(data)
 
 	UiTheme.label({
 		parent = card,
-		position = UDim2.fromOffset(24, 128),
-		size = UDim2.new(1, -48, 0, 22),
+		position = UDim2.fromOffset(24, 112),
+		size = UDim2.new(1, -48, 0, 20),
 		text = L.t("ui.match.mode", { mode = tostring(data.mode or "1v1") }),
 		font = "Header",
 		textSize = UiTheme.TextSizes.MD,
@@ -107,8 +139,8 @@ local function renderSummary(data)
 
 	-- Tres tarjetas de estadísticas de combate: Eliminaciones, Derribos, Daño
 	local statsRow = Instance.new("Frame")
-	statsRow.Position = UDim2.fromOffset(28, 162)
-	statsRow.Size = UDim2.new(1, -56, 0, 92)
+	statsRow.Position = UDim2.fromOffset(28, 140)
+	statsRow.Size = UDim2.new(1, -56, 0, 84)
 	statsRow.BackgroundTransparency = 1
 	statsRow.Parent = card
 
@@ -117,23 +149,23 @@ local function renderSummary(data)
 		{ icon = "knockdown", label = L.t("ui.match.knockdowns"), value = tostring(math.floor(data.knockdowns or 0)), color = C.Warning },
 		{ icon = "heavy", label = L.t("ui.match.damage"), value = tostring(math.floor(data.damage or 0)), color = C.GoldBright },
 	}
-	local boxW = math.floor((580 - 56 - 20) / 3)
+	local boxW = math.floor((BASE_W - 56 - 20) / 3)
 	for i, st in statSpecs do
 		local sBox = UiTheme.panel({
 			parent = statsRow,
 			position = UDim2.fromOffset((i - 1) * (boxW + 10), 0),
-			size = UDim2.fromOffset(boxW, 92),
+			size = UDim2.fromOffset(boxW, 84),
 			bg = C.BgCard,
 			borderColor = C.BorderDefault,
 		})
-		local ic = UiAssets.icon(sBox, st.icon, 24, st.color)
+		local ic = UiAssets.icon(sBox, st.icon, 22, st.color)
 		ic.AnchorPoint = Vector2.new(0.5, 0)
-		ic.Position = UDim2.new(0.5, 0, 0, 10)
+		ic.Position = UDim2.new(0.5, 0, 0, 8)
 
 		UiTheme.label({
 			parent = sBox,
-			position = UDim2.fromOffset(6, 38),
-			size = UDim2.new(1, -12, 0, 28),
+			position = UDim2.fromOffset(6, 34),
+			size = UDim2.new(1, -12, 0, 26),
 			text = st.value,
 			font = "Number",
 			textSize = UiTheme.TextSizes.XL,
@@ -142,7 +174,7 @@ local function renderSummary(data)
 		})
 		UiTheme.label({
 			parent = sBox,
-			position = UDim2.fromOffset(6, 66),
+			position = UDim2.fromOffset(6, 60),
 			size = UDim2.new(1, -12, 0, 18),
 			text = st.label,
 			font = "Body",
@@ -152,7 +184,102 @@ local function renderSummary(data)
 		})
 	end
 
-	-- Desglose de monedas (Partida, Misiones y Total)
+	-- Progreso de Nivel y XP pospartida (Contrato C19: data.progression)
+	local prog = type(data.progression) == "table" and data.progression or {}
+	local xpGained = math.floor(tonumber(prog.xp) or 0)
+	local levelBefore = math.floor(tonumber(prog.levelBefore) or tonumber(player:GetAttribute("Level")) or 1)
+	local levelAfter = math.floor(tonumber(prog.level) or tonumber(player:GetAttribute("Level")) or levelBefore)
+	local xpBefore = math.max(0, tonumber(prog.xpBefore) or tonumber(player:GetAttribute("XP")) or 0)
+	local xpAfter = math.max(0, tonumber(prog.xpAfter) or tonumber(player:GetAttribute("XP")) or xpBefore)
+	local xpNext = math.max(1, tonumber(prog.xpNext) or tonumber(player:GetAttribute("XPNext")) or 150)
+	local leveledUp = levelAfter > levelBefore
+
+	local progPanel = UiTheme.panel({
+		name = "ProgressionPanel",
+		parent = card,
+		position = UDim2.fromOffset(28, 234),
+		size = UDim2.new(1, -56, 0, 92),
+		bg = C.BgCard,
+		borderColor = leveledUp and C.GoldBright or C.GoldDim,
+	})
+	local progStroke = progPanel:FindFirstChildOfClass("UIStroke")
+
+	local lvlLbl = UiTheme.label({
+		parent = progPanel,
+		position = UDim2.fromOffset(16, 8),
+		size = UDim2.fromOffset(160, 24),
+		text = L.t("ui.hud.level", { level = levelBefore }),
+		font = "Title",
+		textSize = UiTheme.TextSizes.LG,
+		color = C.GoldBright,
+	})
+
+	UiTheme.label({
+		parent = progPanel,
+		anchor = Vector2.new(1, 0),
+		position = UDim2.new(1, -16, 0, 8),
+		size = UDim2.fromOffset(220, 24),
+		text = L.t("ui.match.xpEarned", { xp = xpGained }),
+		font = "Number",
+		textSize = UiTheme.TextSizes.SM,
+		color = C.Success,
+		alignX = Enum.TextXAlignment.Right,
+	})
+
+	local startFrac = math.clamp(xpBefore / xpNext, 0, 1)
+	local endFrac = math.clamp(xpAfter / xpNext, 0, 1)
+	local xpBarBg, xpBarFill = UiTheme.progressBar({
+		parent = progPanel,
+		position = UDim2.fromOffset(16, 38),
+		size = UDim2.new(1, -32, 0, 18),
+		fraction = startFrac,
+		fillColor = C.Gold,
+		showText = true,
+		text = L.t("ui.hud.xp", { xp = math.floor(xpAfter), next = math.floor(xpNext) }),
+	})
+	xpBarBg.Name = "MatchXPBar"
+
+	local levelUpBanner = UiTheme.label({
+		name = "LevelUpBanner",
+		parent = progPanel,
+		position = UDim2.fromOffset(16, 62),
+		size = UDim2.new(1, -32, 0, 22),
+		text = leveledUp and L.t("ui.match.levelUp", { level = levelAfter }) or "",
+		font = "Title",
+		textSize = UiTheme.TextSizes.MD,
+		color = C.GoldBright,
+		alignX = Enum.TextXAlignment.Center,
+	})
+
+	-- Animación de llenado de la barra de XP y festejo de subida de nivel
+	task.delay(0.22, function()
+		if not xpBarFill.Parent then return end
+		if leveledUp then
+			local tw1 = TweenService:Create(xpBarFill, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Size = UDim2.fromScale(1, 1),
+			})
+			tw1:Play()
+			task.delay(0.48, function()
+				if not xpBarFill.Parent then return end
+				lvlLbl.Text = L.t("ui.hud.level", { level = levelAfter })
+				UiTheme.playSound("UI_PurchaseOK")
+				if progStroke then
+					progStroke.Thickness = 2.6
+					progStroke.Color = C.GoldBright
+				end
+				xpBarFill.Size = UDim2.fromScale(0, 1)
+				TweenService:Create(xpBarFill, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+					Size = UDim2.fromScale(endFrac, 1),
+				}):Play()
+			end)
+		else
+			TweenService:Create(xpBarFill, TweenInfo.new(0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Size = UDim2.fromScale(endFrac, 1),
+			}):Play()
+		end
+	end)
+
+	-- Desglose de Almas (Partida, Misiones y Total — D5, C24)
 	local coinsData = type(data.coins) == "table" and data.coins or {}
 	local matchCoins = math.floor(coinsData.match or 0)
 	local missionCoins = math.floor((coinsData.missions and coinsData.missions > 0 and coinsData.missions) or data.missionCoinsAvailable or 0)
@@ -160,17 +287,17 @@ local function renderSummary(data)
 
 	local rewardPanel = UiTheme.panel({
 		parent = card,
-		position = UDim2.fromOffset(28, 266),
-		size = UDim2.new(1, -56, 0, 96),
+		position = UDim2.fromOffset(28, 336),
+		size = UDim2.new(1, -56, 0, 102),
 		bg = C.BgPanel,
 		borderColor = C.GoldDim,
 	})
 
-	local function coinLine(y, title, amount, highlight)
+	local function soulLine(y, title, amount, highlight)
 		UiTheme.label({
 			parent = rewardPanel,
 			position = UDim2.fromOffset(16, y),
-			size = UDim2.new(0.65, -16, 0, 24),
+			size = UDim2.new(0.62, -16, 0, 24),
 			text = title,
 			font = highlight and "Bold" or "Body",
 			textSize = highlight and UiTheme.TextSizes.MD or UiTheme.TextSizes.SM,
@@ -180,8 +307,8 @@ local function renderSummary(data)
 			parent = rewardPanel,
 			anchor = Vector2.new(1, 0),
 			position = UDim2.new(1, -16, 0, y),
-			size = UDim2.fromOffset(160, 24),
-			text = "+" .. L.t("Coins", { amount = amount }),
+			size = UDim2.fromOffset(180, 24),
+			text = "+" .. L.t("ui.souls", { amount = amount }),
 			font = "Number",
 			textSize = highlight and UiTheme.TextSizes.MD or UiTheme.TextSizes.SM,
 			color = C.Coins,
@@ -189,9 +316,13 @@ local function renderSummary(data)
 		})
 	end
 
-	coinLine(10, L.t("ui.match.coinsMatch"), matchCoins, false)
-	coinLine(36, L.t("ui.match.coinsMissions"), missionCoins, false)
-	coinLine(64, L.t("ui.match.coinsTotal"), totalCoins, true)
+	soulLine(10, L.t("ui.match.coinsMatch"), matchCoins, false)
+	soulLine(38, L.t("ui.match.coinsMissions"), missionCoins, false)
+	soulLine(68, L.t("ui.match.coinsTotal"), totalCoins, true)
+
+	if totalCoins > 0 then
+		spawnFlyingSouls(card, UDim2.fromOffset(BASE_W - 76, 336 + 78))
+	end
 
 	local continueBtn = UiTheme.button({
 		name = "ContinueBtn",
@@ -229,7 +360,7 @@ local function showSummary(data)
 	if type(data) ~= "table" then return end
 	local cam = workspace.CurrentCamera
 	if cam then
-		scale.Scale = UiTheme.computeScale(cam.ViewportSize, 620, 480, player)
+		scale.Scale = UiTheme.computeScale(cam.ViewportSize, BASE_W + 40, BASE_H + 40, player)
 	end
 	veil.Visible = true
 	card.GroupTransparency = 1
@@ -243,7 +374,6 @@ local function showSummary(data)
 end
 
 UserInputService.InputBegan:Connect(function(input, processed)
-	-- B del mando cierra aunque venga marcado como procesado (la selección de la GUI lo marca así)
 	if veil.Visible and (input.KeyCode == Enum.KeyCode.ButtonB or (not processed and input.KeyCode == Enum.KeyCode.Escape)) then
 		closeSummary()
 	end
@@ -257,7 +387,7 @@ end)
 
 RunService.Heartbeat:Connect(function()
 	if veil.Visible and workspace.CurrentCamera then
-		scale.Scale = UiTheme.computeScale(workspace.CurrentCamera.ViewportSize, 620, 480, player)
+		scale.Scale = UiTheme.computeScale(workspace.CurrentCamera.ViewportSize, BASE_W + 40, BASE_H + 40, player)
 	end
 end)
 
