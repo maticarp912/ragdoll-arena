@@ -12,6 +12,12 @@ Atributos del Model del personaje:
 
 Valores en `CombatConfig.Directional` (con `Enabled`).
 
+**Nombres finales (Claude, 10/11/2026 13:51)** ✅ en código, sin probar en Studio:
+- Los cuatro atributos se publican **siempre**, aunque `Enabled` sea false (`Stance` queda en `Up` y `AttackDir` en `""`). `CombatState` se recalcula cada frame en el servidor (`ServerScriptService/Directional.lua`) a partir de `Action`, `ActionPhase`, `Blocking`, `StunnedUntil`, `KnockedDown`, etc. `Windup`/`Active`/`Recovery` solo para golpes básicos y fuertes; la patada es `Kick` de punta a punta.
+- **Convención de lados:** `AttackDir` está en el marco **del atacante**. El golpe llega al defensor por el lado espejo (Left ↔ Right, Up = Up) y se bloquea poniendo la postura en ese lado. El triángulo dibuja el aviso rojo ya en el lado espejo.
+- Atributos extra del personaje: `ParriedUntil`, `GuardBrokenStateUntil` (horas de servidor) y `Finisher` (bool: el golpe en curso es un remate, D4).
+- Remoto `Input` (C25) y teclas del direccional en `InputMap.DirectionalDefaults`.
+
 ## C17. Fases de la partida y previa (produce Codex; consumen Claude y Gemini)
 - Atributos en `workspace`: `MatchPhase` (Lobby, Prematch, Cinematic, Round, RoundEnd, Summary) y `PhaseEnds` (hora del servidor).
 - La previa dura al menos 10 s (en `Economy` o un módulo de datos de partida). Durante `Prematch` cada jugador elige arma, skin e infusión con el remoto de equipar existente (C20); al pasar a `Cinematic` se bloquea la elección.
@@ -42,6 +48,16 @@ Valores en `CombatConfig.Directional` (con `Enabled`).
 
 ## C23. Sensación de combate (produce Claude)
 - Hit-stop, temblor y efectos de golpear, recibir, bloquear y parry salen del evento `Effect` de `CombatEvents`, con valores en `PolishConfig`. El HUD de Gemini puede escuchar el mismo evento para el destello de la barra.
+- **Nombre final (10/11/2026 13:51)** ✅ en código: remoto `Remotes.Effect`, tipo `"Feel"`, solo al jugador involucrado: `Effect.OnClientEvent:Connect(function(kind, role, info) if kind == "Feel" then ... end end)`.
+  - `role`: `Deal` (pegaste), `Take` (te pegaron), `Block` (bloqueaste), `Blocked` (te bloquearon), `Parry` (parreaste), `Parried` (te parrearon), `GuardBreak` (rompiste una guardia), `GuardBroken` (te la rompieron).
+  - `info`: `{ dir = Vector3, kind = "Light"|"Heavy"|"Kick", finisher = bool, amount = número (Deal/Take), guard = 0..1 (Block: guardia que queda) }`.
+  - Valores: `PolishConfig.Feel` (sonido 2D, borde de pantalla, cámara lenta) y `CombatConfig.Feel` (ritmo y tope de hit-stop). Para el HUD de Gemini: `Take` → destello de la vida; `Block` con `guard` → parpadeo de la guardia; `GuardBroken` → barra de guardia rota.
+
+## C25. Remoto `Input` ampliado (produce Claude; revisa Codex)
+- `Input:FireServer(acción, arg, extra, seq)`. `seq` es un entero creciente por cliente; el servidor descarta lo repetido o viejo. Sin `seq` (clientes viejos) se acepta igual. Límite: 30 mensajes por segundo en total y `StanceMaxRate` (15) cambios de postura por segundo.
+- Acciones nuevas: `Stance` (arg = `"Up"|"Left"|"Right"`, cualquier otro valor se descarta), `KickRelease` (soltar F: patear al derribado), `GuardDown`/`GuardUp` (alias de `BlockStart`/`BlockEnd`). `Kick` con el direccional decide en el servidor: derribado cerca → esperar `LiftHold` (levantar) o `KickRelease` (patear); si no, patada normal.
+- Si el servidor rechaza una postura responde `Effect:FireClient(jugador, "InputReject", seq, acción)` y el cliente vuelve a la postura real.
+- Depuración: `Remotes.Debug` acción `DummyDir` (arg `"Up"|"Left"|"Right"` o nada para rotar). Modos nuevos de muñeco: `DirOne`, `DirRandom` (claves `dummy.DirOne`, `dummy.DirRandom`).
 
 ## C24. Nombre de la moneda (según D5)
 - Si las monedas pasan a llamarse «almas», solo cambian los textos (claves de idioma) y el ícono. El dato guardado sigue igual. Textos: cada IA en su archivo de idioma; ícono: Gemini.

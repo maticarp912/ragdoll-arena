@@ -133,6 +133,17 @@ function Fx.shake(char, intensity, dir)
 	end
 end
 
+-- Sensación del combate (contrato C23). Le avisa SOLO al jugador involucrado qué le pasó, para que su cliente
+-- distinga golpear, recibir, bloquear y parry (hit-stop local, temblor, viñeta, sonido 2D propio).
+--   role: "Deal" (pegaste), "Take" (te pegaron), "Block" (bloqueaste), "Blocked" (te bloquearon),
+--         "Parry" (parreaste), "Parried" (te parrearon), "GuardBreak" (rompiste), "GuardBroken" (te rompieron)
+--   info: { dir = Vector3, kind = "Light"|"Heavy"|"Kick", finisher = bool, amount = número, guard = 0..1 }
+-- El HUD de Gemini puede escuchar el mismo evento (Effect, tipo "Feel") para el destello de las barras.
+function Fx.feel(char, role, info)
+	local p = char and Players:GetPlayerFromCharacter(char)
+	if p then Effect:FireClient(p, "Feel", role, info or {}) end
+end
+
 -- Efecto visual de una infusión al golpear (lo dibuja cada cliente)
 function Fx.infusionHit(position, infusionId, dir)
 	Effect:FireAllClients("InfusionHit", position, infusionId, dir or Vector3.zAxis)

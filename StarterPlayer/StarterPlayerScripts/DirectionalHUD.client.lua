@@ -1,0 +1,253 @@
+-- LocalScript: StarterPlayer/StarterPlayerScripts/DirectionalHUD
+-- Responsable: Claude (0.2). Triángulo invertido del combate direccional (Arquitectura, sección 2).
+-- Solo se ve con CombatConfig.Directional.Enabled y un objetivo fijado (LockTarget, de Controls).
+--
+--      ───────      lado de arriba  = Up
+--      \     /      lado izquierdo  = Left   (izquierda de TU pantalla)
+--       \   /       lado derecho    = Right
+--        \ /
+--
+-- Lo que muestra (valores en PolishConfig.Directional):
+--   · Tu postura: ese lado en blanco; más brillante y celeste mientras bloqueás.
+--   · El ataque que viene: el lado por donde llega se pone rojo apenas el rival empieza a cargar
+--     (dorado si es imbloqueable). Para bloquear, poné tu postura en ese mismo lado.
+--   · La patada que viene: punto naranja en el vértice de abajo (no se bloquea: se esquiva).
+--   · El parry: destello dorado de todo el triángulo (el sonido lo pone Vfx.client con el evento "Feel").
+-- La postura se dibuja con la predicción del cliente (PredictedStance) hasta que el servidor confirma.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local CollectionService = game:GetService("CollectionService")
+local TweenService = game:GetService("TweenService")
+
+local CombatConfig = require(ReplicatedStorage:WaitForChild("CombatConfig"))
+local Polish = require(ReplicatedStorage:WaitForChild("PolishConfig"))
+local Effect = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Effect")
+
+local DIR = CombatConfig.Directional
+local P = Polish.Directional
+local player = Players.LocalPlayer
+
+if not DIR or not P then return end
+
+local MIRROR = { Up = "Up", Left = "Right", Right = "Left" }
+
+----------------------------------------------------------------------
+-- Construcción
+----------------------------------------------------------------------
+local gui = Instance.new("ScreenGui")
+gui.Name = "DirectionalHUD"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.DisplayOrder = 2
+gui.Enabled = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local root = Instance.new("Frame")
+root.Name = "Triangle"
+root.AnchorPoint = Vector2.new(0.5, 0.5)
+root.Size = UDim2.fromOffset(P.Side + P.Edge, P.Side + P.Edge)
+root.BackgroundTransparency = 1
+root.Parent = gui
+
+local scale = Instance.new("UIScale")
+scale.Parent = root
+
+local H = P.Side * math.sqrt(3) / 2
+local center = Vector2.new((P.Side + P.Edge) / 2, (P.Side + P.Edge) / 2)
+
+-- Un lado del triángulo: barra rotada alrededor de su punto medio
+local sides = {}
+local function makeSide(name, mid, rotation)
+	local f = Instance.new("Frame")
+	f.Name = name
+	f.AnchorPoint = Vector2.new(0.5, 0.5)
+	f.Position = UDim2.fromOffset(center.X + mid.X, center.Y + mid.Y)
+	f.Size = UDim2.fromOffset(P.Side - P.Gap * 2, P.Thickness)
+	f.Rotation = rotation
+	f.BorderSizePixel = 0
+	f.BackgroundColor3 = P.Idle
+	f.BackgroundTransparency = P.IdleTransparency
+	f.Parent = root
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.5, 0)
+	corner.Parent = f
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = P.Guard
+	stroke.Thickness = 0
+	stroke.Transparency = 0.2
+	stroke.Parent = f
+	sides[name] = { frame = f, stroke = stroke }
+end
+-- Vértices (y hacia abajo): A(-S/2, -H/3), B(S/2, -H/3), C(0, 2H/3)
+makeSide("Up", Vector2.new(0, -H / 3), 0)
+makeSide("Left", Vector2.new(-P.Side / 4, H / 6), 60)
+makeSide("Right", Vector2.new(P.Side / 4, H / 6), -60)
+
+-- Aviso de patada: punto en el vértice de abajo
+local kickDot = Instance.new("Frame")
+kickDot.Name = "Kick"
+kickDot.AnchorPoint = Vector2.new(0.5, 0.5)
+kickDot.Position = UDim2.fromOffset(center.X, center.Y + H * 2 / 3 + P.KickDot * 0.6)
+kickDot.Size = UDim2.fromOffset(P.KickDot, P.KickDot)
+kickDot.BackgroundColor3 = P.Kick
+kickDot.BorderSizePixel = 0
+kickDot.Rotation = 45
+kickDot.Visible = false
+kickDot.Parent = root
+
+-- Destello de parry: copia dorada del contorno que crece y se apaga
+local flash = Instance.new("Frame")
+flash.Name = "ParryFlash"
+flash.AnchorPoint = Vector2.new(0.5, 0.5)
+flash.Position = UDim2.fromScale(0.5, 0.5)
+flash.Size = UDim2.fromScale(1, 1)
+flash.BackgroundTransparency = 1
+flash.Parent = root
+local flashScale = Instance.new("UIScale")
+flashScale.Parent = flash
+local flashSides = {}
+for name, s in sides do
+	local c = s.frame:Clone()
+	c.BackgroundColor3 = P.Parry
+	c.BackgroundTransparency = 1
+	local st = c:FindFirstChildOfClass("UIStroke")
+	if st then st:Destroy() end
+	c.Parent = flash
+	flashSides[name] = c
+end
+
+----------------------------------------------------------------------
+-- Lectura de estado
+----------------------------------------------------------------------
+local lockValue = player:WaitForChild("LockTarget", 10)
+local predicted = player:WaitForChild("PredictedStance", 10)
+
+local function myStance(char)
+	if predicted and predicted.Value ~= "" and os.clock() - (predicted:GetAttribute("At") or 0) < DIR.Input.PredictHold then
+		return predicted.Value
+	end
+	return char:GetAttribute("Stance") or DIR.DefaultStance
+end
+
+local function aliveModel(m)
+	local h = m and m.Parent and m:FindFirstChildOfClass("Humanoid")
+	return h ~= nil and h.Health > 0
+end
+
+-- Ataques que vienen hacia mí: el fijado y, en 2v2, cualquier rival cercano que me mire mientras carga
+local function incoming(me, target)
+	local list = {}
+	local myRoot = me:FindFirstChild("HumanoidRootPart")
+	if not myRoot then return list end
+	for _, m in CollectionService:GetTagged("Combatant") do
+		if m ~= me and aliveModel(m) then
+			local state = m:GetAttribute("CombatState") or ""
+			local dir = m:GetAttribute("AttackDir") or ""
+			local r = m:FindFirstChild("HumanoidRootPart")
+			if r and (state == "Windup" or state == "Active" or state == "Kick") then
+				local d = (myRoot.Position - r.Position) * Vector3.new(1, 0, 1)
+				local facing = d.Magnitude < 0.1 or r.CFrame.LookVector:Dot(d.Unit) > 0.3
+				if facing and (m == target or d.Magnitude <= P.OtherAttackers) then
+					table.insert(list, {
+						model = m,
+						state = state,
+						side = dir ~= "" and MIRROR[dir] or nil,
+						unblockable = (m:GetAttribute("Telegraph") or "") == "Unblockable",
+						main = m == target,
+					})
+				end
+			end
+		end
+	end
+	return list
+end
+
+----------------------------------------------------------------------
+-- Bucle de dibujo
+----------------------------------------------------------------------
+local flashUntil = 0
+
+RunService.RenderStepped:Connect(function()
+	local char = player.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	local target = lockValue and lockValue.Value
+	local show = DIR.Enabled and char ~= nil and hum ~= nil and hum.Health > 0 and target ~= nil and aliveModel(target)
+		and not char:GetAttribute("KnockedDown") and not char:GetAttribute("CarriedBy")
+	gui.Enabled = show == true
+	if not show then return end
+
+	-- Sobre el rival fijado (a la altura del pecho)
+	local camera = workspace.CurrentCamera
+	local anchor = target:FindFirstChild("UpperTorso") or target:FindFirstChild("HumanoidRootPart")
+	if not camera or not anchor then return end
+	local sp, onScreen = camera:WorldToViewportPoint(anchor.Position)
+	if onScreen then
+		root.Position = UDim2.fromOffset(sp.X, sp.Y + P.OffsetY)
+	else
+		local vp = camera.ViewportSize
+		root.Position = UDim2.fromOffset(vp.X / 2, vp.Y * 0.42)
+	end
+
+	local stance = myStance(char)
+	local blocking = char:GetAttribute("Blocking") == true
+	local t = os.clock()
+	local pulse = 1 - P.PulseAmp * (0.5 + 0.5 * math.sin(t * P.Pulse))
+
+	-- Base: lados apagados y tu postura en blanco
+	for name, s in sides do
+		local f = s.frame
+		if name == stance then
+			f.BackgroundColor3 = blocking and P.Guard or P.Stance
+			f.BackgroundTransparency = P.StanceTransparency
+			s.stroke.Thickness = blocking and P.GuardGlow or 0
+			s.stroke.Color = P.Guard
+		else
+			f.BackgroundColor3 = P.Idle
+			f.BackgroundTransparency = P.IdleTransparency
+			s.stroke.Thickness = 0
+		end
+	end
+
+	-- Ataques que vienen: rojo (o dorado si es imbloqueable) del lado por donde llegan
+	local kick = false
+	for _, a in incoming(char, target) do
+		if a.state == "Kick" then
+			kick = true
+		elseif a.side and sides[a.side] then
+			local s = sides[a.side]
+			s.frame.BackgroundColor3 = a.unblockable and P.Unblockable or P.Attack
+			s.frame.BackgroundTransparency = (a.main and 0 or 0.35) + (1 - pulse) * 0.5
+			s.stroke.Color = P.Attack
+			s.stroke.Thickness = a.main and P.GuardGlow or 1
+		end
+	end
+	kickDot.Visible = kick
+	if kick then kickDot.BackgroundTransparency = (1 - pulse) * 0.6 end
+
+	-- Destello de parry
+	local left = flashUntil - t
+	if left > 0 then
+		local a = left / P.ParryTime
+		for _, c in flashSides do c.BackgroundTransparency = 1 - a end
+		flashScale.Scale = 1 + (P.ParryScale - 1) * (1 - a)
+	else
+		for _, c in flashSides do c.BackgroundTransparency = 1 end
+	end
+end)
+
+----------------------------------------------------------------------
+-- Resultados que manda el servidor (contrato C23, evento "Feel")
+----------------------------------------------------------------------
+Effect.OnClientEvent:Connect(function(kind, role)
+	if kind ~= "Feel" then return end
+	if role == "Parry" then
+		flashUntil = os.clock() + P.ParryTime
+		scale.Scale = 1.15
+		TweenService:Create(scale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	elseif role == "Block" then
+		scale.Scale = 1.06
+		TweenService:Create(scale, TweenInfo.new(0.12), { Scale = 1 }):Play()
+	end
+end)

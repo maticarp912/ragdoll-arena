@@ -52,7 +52,8 @@ Sirve para hablar de diseño: cómo gana cada arma. Los números de referencia s
 ## Identidad de cada arma en el direccional
 Propuestas de Codex (maza: solo el fuerte superior imbloqueable; estoque: atravesar solo como especial; dagas con preparación visible): ver [[Diseño Combate PvP Direccional Roblox]], «Armas: evitar excepciones que anulen el sistema».
 
-## Propuesta de números para la 0.2 (Claude, 10/11) — pendiente de aprobar
+## Números de la 0.2 (Claude, 10/11) — aprobados (D3) y aplicados en `WeaponData` el 10/11/2026 13:51, sin probar en Studio
+Aplicado tal cual la tabla de abajo. Detalles de la aplicación: la Maza tiene `widths = { 5, 5, 6,5 }`; el Estoque conserva sus momentos de impacto (0,20 · 0,20 · 0,26), así los golpes 2 y 3 alargan solo la recuperación, y tiene `whiffStaminaMult = 1,5` (también para el fuerte). El +25 % de alcance (`ReachMult`) se aplica siempre, con o sin direccional. Además el ritmo general es un 10 % más lento (`CombatConfig.Feel.TempoMult = 1,1`, parejo para todas las armas: baja el daño por segundo de todas por igual y no cambia el equilibrio relativo).
 **Pedido del usuario:**
 - más alcance para todas las armas;
 - reforzar la maza y bajar las dagas y el estoque;

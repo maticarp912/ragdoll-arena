@@ -27,6 +27,7 @@ local WeaponBuilder = require(ReplicatedStorage:WaitForChild("WeaponBuilder"))
 local Anim = require(ServerScriptService:WaitForChild("Anim"))
 local Fx = require(ServerScriptService:WaitForChild("Fx"))
 local CombatEvents = require(ServerScriptService:WaitForChild("CombatEvents"))
+local Directional = require(ServerScriptService:WaitForChild("Directional"))
 
 local CFG = CombatConfig
 local C = Theme.Colors
@@ -224,6 +225,8 @@ local function clearActionAttrs(char)
 	char:SetAttribute("HitAt", 0)
 	char:SetAttribute("Telegraph", "")
 	char:SetAttribute("HyperArmor", false)
+	char:SetAttribute("AttackDir", "")
+	char:SetAttribute("Finisher", false)
 end
 
 -- Fin normal de una acción
@@ -407,10 +410,18 @@ function Combat.blockStart(char, quiet)
 	end
 
 	char:SetAttribute("Blocking", true)
-	char:SetAttribute("BlockStart", quiet and (t - CFG.Block.ParryWindow - 1) or t)
+	char:SetAttribute("BlockStart", quiet and (t - Combat.parryWindow() - 1) or t)
 	Anim.play(char, "Weapons." .. (char:GetAttribute("WeaponId") or "Sword") .. ".Block", { looped = true, fade = 0.06 })
 	Combat.refreshSpeed(char)
+	-- Direccional: una pulsación nueva puede parrear golpes que esperan por el margen de ping
+	if not quiet and Directional.enabled() then Directional.onGuardPress(char) end
 	return true
+end
+
+-- Ventana de parry vigente (0.1: CombatConfig.Block; direccional: la común de 0,15 s)
+function Combat.parryWindow()
+	if Directional.enabled() then return CFG.Directional.ParryWindow end
+	return CFG.Block.ParryWindow
 end
 
 -- noLock = true: no castigar el soltar F (lo usan las rupturas y los muñecos)
@@ -420,9 +431,10 @@ function Combat.blockEnd(char, noLock, keepWanting)
 	if not char:GetAttribute("Blocking") then return end
 	char:SetAttribute("Blocking", false)
 	local t = now()
-	if not noLock and t - (char:GetAttribute("BlockStart") or 0) <= CFG.Block.ParryWindow then
+	if not noLock and t - (char:GetAttribute("BlockStart") or 0) <= Combat.parryWindow() then
 		-- Soltar F dentro de la ventana sin parrear: breve bloqueo para evitar el spam de parry
-		char:SetAttribute("BlockLockUntil", t + CFG.Block.WhiffLock)
+		local lock = Directional.enabled() and CFG.Directional.ParryWhiffLock or CFG.Block.WhiffLock
+		char:SetAttribute("BlockLockUntil", t + lock)
 	end
 	Anim.stop(char, "Weapons." .. (char:GetAttribute("WeaponId") or "Sword") .. ".Block")
 	Combat.refreshSpeed(char)
@@ -496,6 +508,7 @@ local function doParry(defender, attacker)
 	CombatEvents.fire("Parry", defender, attacker)
 	-- El atacante queda aturdido, recibe Stun y es empujado hacia atrás
 	Combat.stagger(attacker, P.AttackerStagger, "Generic.ParriedStagger")
+	attacker:SetAttribute("ParriedUntil", t + P.AttackerStagger) -- estado Parried (C16)
 	Combat.addStun(attacker, P.AttackerStunGain)
 	push(attacker, flatDir(defender, attacker) * P.PushBack + Vector3.new(0, 4, 0))
 	if attacker:GetAttribute("Carrying") then Combat.drop(attacker, "drop") end
@@ -516,6 +529,8 @@ local function doParry(defender, attacker)
 	Fx.hitstop({ defender, attacker }, CFG.Hitstop.Parry)
 	Fx.shake(defender, CFG.CameraShake.Parry, d)
 	Fx.shake(attacker, CFG.CameraShake.Parry, -d)
+	Fx.feel(defender, "Parry", { dir = d })
+	Fx.feel(attacker, "Parried", { dir = -d })
 	return "parry"
 end
 
@@ -550,6 +565,10 @@ local function guardBreak(victim, attacker, hit, damage, stunGain)
 	st.lastGuardUseAt = t
 	Combat.blockEnd(victim, true, true)
 	Combat.stagger(victim, G.BrokenStagger, "Generic.GuardBreakStagger")
+	if Directional.enabled() then
+		-- Estado GuardBroken (C16): abierto a un golpe seguro
+		victim:SetAttribute("GuardBrokenStateUntil", t + math.max(G.BrokenStagger, CFG.Directional.Kick.GuardBrokenTime))
+	end
 	applyDamage(attacker, victim, damage)
 	Fx.hitstop({ attacker, victim }, hit.kind == "Heavy" and CFG.Hitstop.Heavy or CFG.Hitstop.GuardBreak)
 	Fx.popAbove(victim, "pop.guardBreak", C.GuardBreak)
@@ -559,6 +578,8 @@ local function guardBreak(victim, attacker, hit, damage, stunGain)
 	Fx.soundAt("GuardBreak", victim, 1)
 	Fx.shake(victim, CFG.CameraShake.GuardBreak, gdir)
 	Fx.shake(attacker, CFG.CameraShake.GuardBreak * 0.4, gdir)
+	Fx.feel(attacker, "GuardBreak", { dir = gdir, kind = hit.kind })
+	Fx.feel(victim, "GuardBroken", { dir = gdir, kind = hit.kind })
 	local dir = flatDir(attacker, victim)
 	Combat.addStun(victim, stunGain + G.BrokenStunGain, dir * CFG.Knockdown.Knockback + Vector3.new(0, 12, 0))
 	if not victim:GetAttribute("Ragdolled") then
@@ -588,6 +609,8 @@ local function doBlocked(victim, attacker, hit, damage)
 	Fx.shake(victim, CFG.CameraShake.Light * 0.7, bdir)
 	push(victim, flatDir(attacker, victim) * (hit.knockback or 0) * 0.35)
 	if Combat.hooks.onBlocked then Combat.hooks.onBlocked(attacker, victim, hit, damage) end
+	Fx.feel(victim, "Block", { dir = bdir, kind = hit.kind, guard = guard / math.max(1, victim:GetAttribute("GuardMax") or 100) })
+	Fx.feel(attacker, "Blocked", { dir = bdir, kind = hit.kind })
 	return "blocked"
 end
 
@@ -603,8 +626,12 @@ local function doHit(attacker, victim, hit, damage)
 	end
 
 	local dir = flatDir(attacker, victim)
-	local heavy = hit.kind == "Heavy"
+	-- El remate (D4) se siente como un fuerte
+	local heavy = hit.kind == "Heavy" or hit.finisher == true
 	local blunt = Combat.weaponOf(attacker).blunt == true
+	Fx.feel(attacker, "Deal", { dir = dir, kind = hit.kind, finisher = hit.finisher == true, amount = damage })
+	Fx.feel(victim, "Take", { dir = dir, kind = hit.kind, finisher = hit.finisher == true, amount = damage })
+	if hit.finisher then Fx.popAbove(victim, "pop.finisher", C.TelegraphHeavy) end
 	if hit.kind == "Kick" then
 		Fx.soundAt("Kick_Hit", victim)
 	else
@@ -639,8 +666,9 @@ local function doHit(attacker, victim, hit, damage)
 	-- El peso del arma cambia cuánto se congela el golpe y cuánto tiembla la cámara
 	local feel = WeaponData.feel(attacker:GetAttribute("WeaponId"))
 	if heavy then
-		Fx.hitstop({ attacker, victim }, CFG.Hitstop.Heavy * feel.hitstop)
-		Fx.shake(victim, CFG.CameraShake.Heavy * feel.shake, dir)
+		local fin = hit.finisher and CFG.Directional.Finisher or nil
+		Fx.hitstop({ attacker, victim }, CFG.Hitstop.Heavy * feel.hitstop * (fin and fin.HitstopMult or 1))
+		Fx.shake(victim, CFG.CameraShake.Heavy * feel.shake * (fin and fin.ShakeMult or 1), dir)
 		Fx.shake(attacker, CFG.CameraShake.Heavy * 0.45 * feel.shake, dir)
 	else
 		if CFG.Hitstop.Light > 0 then Fx.hitstop({ attacker, victim }, CFG.Hitstop.Light * feel.hitstop) end
@@ -650,10 +678,84 @@ local function doHit(attacker, victim, hit, damage)
 	return "hit"
 end
 
+-- Resolución direccional (0.2, CombatConfig.Directional.Enabled). Orden (Arquitectura, sección 1):
+--   1. derribado -> inmune a las armas (solo patada o levantar)
+--   2. ventana de parry del mismo lado -> parry
+--   3. guardia del mismo lado -> bloqueo (salvo fuerte imbloqueable por dirección o que atraviesa)
+--   4. cualquier otro caso -> golpe limpio
+-- La patada rompe cualquier guardia (no se parrea: se esquiva).
+local function dealDirectional(attacker, victim, hit, damage)
+	local DC = CFG.Directional
+	if DC.DownedWeaponImmune and hit.kind ~= "Kick"
+		and (victim:GetAttribute("KnockedDown") or victim:GetAttribute("Ragdolled")) then
+		return "immune"
+	end
+	local side = Directional.incomingSide(hit.dir)
+	local function guarding()
+		return victim:GetAttribute("Blocking") and not victim:GetAttribute("Ragdolled") and isFacing(victim, attacker)
+	end
+	local blocking = guarding()
+	local covers = blocking and Directional.guardSide(victim) == side
+	local canParry = hit.parryable ~= false
+
+	if hit.kind == "Kick" then
+		if blocking then return guardBreak(victim, attacker, hit, damage * 0.5, hit.stun or 0) end
+		return doHit(attacker, victim, hit, damage)
+	end
+	if covers and canParry and Directional.inParryWindow(victim) then
+		return doParry(victim, attacker)
+	end
+
+	-- Resultado con el estado del defensor en el momento de resolver
+	local function settle()
+		if guarding() and Directional.guardSide(victim) == side then
+			if hit.kind == "Heavy" and hit.unblockable then
+				return doHit(attacker, victim, hit, damage)
+			elseif hit.kind == "Heavy" and hit.pierces then
+				return doHit(attacker, victim, hit, damage * (hit.blockDamageMult or 1))
+			end
+			return doBlocked(victim, attacker, hit, damage)
+		end
+		return doHit(attacker, victim, hit, damage * (blocking and DC.SideHitGuardMult or 1))
+	end
+
+	-- Margen de ping: si el defensor (jugador) todavía podría parrear este golpe, espera hasta la gracia
+	if canParry and not covers then
+		local grace = Directional.grace(victim)
+		if grace > 0.01 then
+			Directional.defer(victim, side, grace, function(asParry)
+				local r = "none"
+				if attacker.Parent and victim.Parent and getHum(attacker) and getHum(victim) then
+					if asParry then
+						r = doParry(victim, attacker)
+					elseif (victim:GetAttribute("IFrameUntil") or 0) > now() then
+						Fx.popAbove(victim, "pop.dodge", C.Dodge)
+						r = "dodged"
+					else
+						r = settle()
+					end
+				end
+				if hit.onResult then hit.onResult(r) end
+			end)
+			return "pending"
+		end
+	end
+	return settle()
+end
+
 -- hit = { kind = "Light"|"Heavy"|"Kick", damage, stun, knockback, unblockable, parryable,
---         blockDamageMult, guardBreakStunMult, guardDrain }
--- Devuelve: "hit" | "blocked" | "parry" | "guardbreak" | "dodged" | "none"
+--         blockDamageMult, guardBreakStunMult, guardDrain,
+--         dir (direccional: AttackDir del atacante), pierces, finisher, onResult(resultado) }
+-- Devuelve: "hit" | "blocked" | "parry" | "guardbreak" | "dodged" | "none" | "immune" | "pending"
+-- "pending" (solo direccional): el golpe espera el margen de ping; onResult recibe el resultado final.
+local resolve
 function Combat.deal(attacker, victim, hit)
+	local r = resolve(attacker, victim, hit)
+	if r ~= "pending" and hit.onResult then hit.onResult(r) end
+	return r
+end
+
+function resolve(attacker, victim, hit)
 	local vHum = getHum(victim)
 	if not vHum or not getHum(attacker) or not Combat.isEnemy(attacker, victim) then return "none" end
 	if not victim:GetAttribute("CanFight") then return "none" end
@@ -681,6 +783,10 @@ function Combat.deal(attacker, victim, hit)
 		damage *= CFG.Parry.CounterDamageMult
 		attacker:SetAttribute("CounterUntil", 0)
 		Fx.popAbove(attacker, "pop.counter", C.ParryFlash)
+	end
+
+	if Directional.enabled() then
+		return dealDirectional(attacker, victim, hit, damage)
 	end
 
 	local blocking = victim:GetAttribute("Blocking")
@@ -1050,6 +1156,7 @@ function Combat.setupCombatant(char, weaponId)
 	char:SetAttribute("InfusedHeavyUnblockable", false)
 	char:SetAttribute("SlowUntil", 0)
 	clearActionAttrs(char)
+	Directional.setup(char) -- C16: Stance, AttackDir, CombatState, StateEnds (también con Enabled = false)
 	CollectionService:AddTag(char, Combat.TAG)
 	Combat.refreshSpeed(char)
 
@@ -1161,6 +1268,16 @@ RunService.Heartbeat:Connect(function(dt)
 			end
 
 			Combat.refreshSpeed(char)
+		end
+	end
+end)
+
+-- Máquina de estados direccional (C16): cada frame, para que el triángulo del rival reaccione al instante.
+-- Se publica siempre (aunque Enabled sea false) para que el HUD y Codex puedan leerla.
+RunService.Heartbeat:Connect(function()
+	for _, char in CollectionService:GetTagged(Combat.TAG) do
+		if char.Parent and getHum(char) then
+			Directional.refresh(char, Combat.state(char))
 		end
 	end
 end)

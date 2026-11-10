@@ -8,6 +8,9 @@
 --   Attack : te persigue y hace combos M1 (practica bloqueo y parry)
 --   Heavy  : te persigue y lanza fuertes (practica parry y esquiva contra el aviso naranja/rojo)
 --   Mixed  : mezcla de todo
+--   DirOne : (0.2, direccional) te persigue y ataca SIEMPRE por el mismo lado (workspace "DummyDir", Left por defecto)
+--   DirRandom: (0.2, direccional) igual, pero cada golpe sale por un lado al azar
+-- Con el direccional activo, los muñecos que bloquean o parrean ponen la guardia del lado por donde llega el golpe.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19,6 +22,7 @@ local WeaponData = require(ReplicatedStorage:WaitForChild("WeaponData"))
 local CombatConfig = require(ReplicatedStorage:WaitForChild("CombatConfig"))
 local Combat = require(ServerScriptService:WaitForChild("Combat"))
 local Actions = require(ServerScriptService:WaitForChild("Actions"))
+local Directional = require(ServerScriptService:WaitForChild("Directional"))
 local WeaponBuilder = require(ReplicatedStorage:WaitForChild("WeaponBuilder"))
 
 local CFG = CombatConfig
@@ -26,11 +30,14 @@ local now = Combat.now
 
 local Dummies = {}
 
-Dummies.Modes = { "Idle", "Block", "Parry", "Dodge", "Attack", "Heavy", "Mixed" }
+Dummies.Modes = { "Idle", "Block", "Parry", "Dodge", "Attack", "Heavy", "Mixed", "DirOne", "DirRandom" }
 Dummies.ModeNames = {
 	Idle = "Quieto", Block = "Bloquea", Parry = "Parrea", Dodge = "Esquiva",
 	Attack = "Ataca (M1)", Heavy = "Fuertes", Mixed = "Mixto",
+	DirOne = "Ataca por un lado", DirRandom = "Lados al azar",
 }
+-- Pausa entre elegir el lado y empezar el golpe (para que se lea en el triángulo)
+local DIR_TELL = 0.3
 local MAX_DUMMIES = 6
 local TARGET_RANGE = 26   -- solo persigue a jugadores cerca de su sitio
 
@@ -43,6 +50,7 @@ end
 
 workspace:SetAttribute("DummyMode", workspace:GetAttribute("DummyMode") or "Idle")
 workspace:SetAttribute("DummyWeapon", workspace:GetAttribute("DummyWeapon") or "Sword")
+workspace:SetAttribute("DummyDir", workspace:GetAttribute("DummyDir") or "Left")
 
 local slots = {} -- { home = CFrame, model = Model?, brain = {} }
 
@@ -175,6 +183,11 @@ local function think(slot)
 
 	-- Defensa ante un golpe que llega
 	local dt, attacker, hitAt = incoming(model)
+	-- Direccional: la guardia va del lado por donde llega el golpe (lo que haría un jugador que lee el triángulo)
+	if dt and Directional.enabled() and mode ~= "DirOne" and mode ~= "DirRandom" then
+		local atk = attacker:GetAttribute("AttackDir") or ""
+		if atk ~= "" then Directional.setStance(model, Directional.incomingSide(atk)) end
+	end
 	if dt and brain.lastThreat ~= hitAt then
 		local choice = brain.choice
 		if brain.choiceFor ~= hitAt then
@@ -216,20 +229,32 @@ local function think(slot)
 		Combat.blockEnd(model, true)
 	end
 
-	local aggressive = mode == "Attack" or mode == "Heavy" or mode == "Mixed"
+	local dirMode = mode == "DirOne" or mode == "DirRandom"
+	local aggressive = mode == "Attack" or mode == "Heavy" or mode == "Mixed" or dirMode
 	if target then
 		face(model, target.HumanoidRootPart.Position)
 	end
 
 	if aggressive and target then
 		local def = Combat.weaponOf(model)
-		local reach = def.combo.reach
+		local reach = Actions.reach(def.combo.reach)
 		if dist > reach * 0.85 then
 			hum:MoveTo(target.HumanoidRootPart.Position)
 		else
 			hum:Move(Vector3.zero)
-			if t >= (brain.nextAttackAt or 0) and not Combat.isBusy(model) then
+			if dirMode and t >= (brain.nextAttackAt or 0) and not Combat.isBusy(model) and not brain.tellAt then
+				-- Elige el lado y lo muestra un instante antes de atacar
+				local dirs = CFG.Directional.Dirs
+				local side = mode == "DirOne" and (Directional.validDir(workspace:GetAttribute("DummyDir")) or "Left")
+					or dirs[math.random(1, #dirs)]
+				Directional.setStance(model, side)
+				brain.tellAt = t + DIR_TELL
+			end
+			local ready = not dirMode or (brain.tellAt ~= nil and t >= brain.tellAt)
+			if ready and t >= (brain.nextAttackAt or 0) and not Combat.isBusy(model) then
+				brain.tellAt = nil
 				local doHeavy = mode == "Heavy" or (mode == "Mixed" and math.random() < 0.3)
+					or (dirMode and math.random() < 0.2)
 				if model:GetAttribute("Blocking") then Combat.blockEnd(model, true) end
 				if doHeavy then
 					if Actions.heavy(model) then
@@ -239,7 +264,8 @@ local function think(slot)
 					if Actions.m1(model) then
 						local step = Combat.state(model).comboStep
 						-- tras el 3er golpe (o al azar en Mixto) hace una pausa
-						if step >= #def.combo.damage or (mode == "Mixed" and math.random() < 0.35) then
+						if step >= #def.combo.damage or (mode == "Mixed" and math.random() < 0.35)
+							or (dirMode and math.random() < 0.3) then
 							brain.nextAttackAt = t + 1.2 + math.random()
 						end
 					end
@@ -309,6 +335,18 @@ function Dummies.cycleMode()
 	local current = workspace:GetAttribute("DummyMode")
 	local idx = table.find(Dummies.Modes, current) or 0
 	Dummies.setMode(Dummies.Modes[idx % #Dummies.Modes + 1])
+end
+
+-- Lado fijo del modo DirOne (panel de depuración)
+function Dummies.setDir(dir)
+	dir = Directional.validDir(dir)
+	if dir then workspace:SetAttribute("DummyDir", dir) end
+end
+
+function Dummies.cycleDir()
+	local dirs = CFG.Directional.Dirs
+	local idx = table.find(dirs, workspace:GetAttribute("DummyDir")) or 0
+	workspace:SetAttribute("DummyDir", dirs[idx % #dirs + 1])
 end
 
 function Dummies.cycleWeapon()

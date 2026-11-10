@@ -211,6 +211,79 @@ CombatConfig.Controls = {
 	MatchLockRange = 220,      -- 9/11: en partida el rival se fija solo al entrar y no se suelta por distancia dentro de la arena
 }
 
+----------------------------------------------------------------------
+-- 0.2: COMBATE DIRECCIONAL (Notas/Arquitectura Combate Direccional.md, decisiones D1, D2 y D4)
+-- Con Enabled = false el juego se comporta como en la 0.1 (salvo las mejoras de sensación, C23).
+-- Estados replicados en el personaje (contrato C16): CombatState, Stance, AttackDir, StateEnds.
+----------------------------------------------------------------------
+CombatConfig.Directional = {
+	Enabled = false,
+	Dirs = { "Up", "Left", "Right" },  -- únicas direcciones válidas (el servidor descarta cualquier otra)
+	DefaultStance = "Up",
+
+	-- Defensa por dirección
+	ParryWindow = 0.15,        -- D1: ventana común de parry tras una pulsación NUEVA de guardia (s)
+	ParryGrace = 0.1,          -- compensación de ping máxima: acepta un parry que llega hasta min(ping, esto) tarde
+	ParryWhiffLock = 0.3,      -- soltar la guardia dentro de la ventana sin parrear: no podés volver a parrear en este tiempo
+	SwitchTime = 0.12,         -- cambiar de lado tarda esto: mientras dura, la guardia sigue cubriendo el lado anterior
+	StanceMaxRate = 15,        -- cambios de postura por segundo que acepta el servidor (anti-spam)
+	SideHitGuardMult = 1.0,    -- un golpe que entra por un lado no cubierto hace el daño completo (multiplicador)
+
+	-- Alcance general (D1: +25 % parejo, se ajusta con pruebas)
+	ReachMult = 1.25,
+
+	-- Remate (D4): si los 3 golpes del combo conectan, el tercero es un golpe fuerte
+	Finisher = {
+		DamageMult = 1.5,
+		StunMult = 1.5,
+		KnockbackMult = 1.6,
+		HitstopMult = 1.6,
+		ShakeMult = 1.4,
+	},
+
+	-- Patada (F): rompe la guardia de quien bloquea; si falla, la recuperación es larga
+	Kick = {
+		Windup = 0.3,
+		Recovery = 0.35,
+		WhiffRecovery = 0.65,  -- recuperación extra si no conecta (castigo)
+		GuardBrokenTime = 0.8, -- estado GuardBroken: abierto a un golpe seguro
+		DownedPush = 2,        -- studs que debería recorrer un derribado pateado (D1); se logra con la velocidad de abajo
+		DownedPushSpeed = 16,  -- velocidad del empujón (studs/s). Calibrar en Studio para que recorra ~DownedPush
+		DownedPushUp = 4,      -- componente vertical del empujón (despega el cuerpo del suelo para que deslice)
+		LiftHold = 0.35,       -- mantener F este tiempo sobre un derribado = levantarlo
+		Cooldown = 1.2,
+	},
+
+	-- Derribado inmune a las armas (D1): solo patada o levantar
+	DownedWeaponImmune = true,
+
+	-- Fijado permanente en partida (D1): T / R3 cambia de objetivo, no lo suelta
+	PermanentLockInMatch = true,
+
+	-- Entrada (valores por defecto; los rangos se exponen en Ajustes más adelante)
+	Input = {
+		MouseThreshold = 26,   -- px de gesto acumulado para elegir un lado (D2: movimiento de cámara)
+		MouseDecay = 10,       -- el gesto acumulado se pierde a este ritmo (1/s): solo cuentan gestos cortos
+		MouseUpBias = 1.15,    -- arriba necesita un poco más de recorrido vertical que horizontal (histéresis)
+		StickDeadZone = 0.55,  -- stick derecho: pasado este radio se elige el sector
+		StickRelease = 0.3,    -- y hay que volver por debajo de esto para elegir otro
+		StickDownIgnore = true,-- el stick hacia abajo no hace nada
+		PredictHold = 0.45,    -- el triángulo muestra la postura predicha hasta que el servidor la confirme (s)
+	},
+}
+
+----------------------------------------------------------------------
+-- 0.2: SENSACIÓN DEL COMBATE (C23). Valores de hit-stop y ritmo; los visuales van en PolishConfig.Feel.
+----------------------------------------------------------------------
+CombatConfig.Feel = {
+	-- Ritmo más lento y pesado (Versión 0.2, sección 4): duración y momento de impacto de golpes básicos y fuertes,
+	-- multiplicados por igual para todas las armas (no cambia el equilibrio relativo de D3)
+	TempoMult = 1.1,
+	-- Hit-stop local por rol (s): cada cliente congela las animaciones de los dos involucrados.
+	-- Tope de 0,2 s (guía lihfolk-vfx, HitStop). El sonido del impacto nunca se pausa.
+	HitstopMax = 0.2,
+}
+
 -- Herramientas de depuración (Fase 0). En Studio siempre están permitidas.
 CombatConfig.Debug = {
 	AllowInLiveGame = false,   -- true = cualquier jugador puede usarlas en el juego publicado (¡solo para pruebas!)

@@ -8,7 +8,7 @@ Leyenda: ✅ comprobado en Studio · 🟡 implementado · 🔧 en curso · ⬜ p
 | Pedido                                              | Detalle                                                                                                                                                                                                                                                    | Resp. sugerido | Estado |
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ------ |
 | Punto doble cuando caen los dos                     | Si los dos caen de la arena, hoy cada uno suma un punto. Tiene que ganar **el que cae segundo**. Hoy `MatchService` trata `alive.Red == 0 and alive.Blue == 0` como empate: guardar el orden de eliminación y darle la ronda al equipo del último en caer. | Codex          | ⬜      |
-| Cámara rota en celular al fijar objetivo en partida | En el teléfono la cámara se traba o salta con el fijado automático. Revisar `Controls.client` (fijado, órbita y joystick táctil) y probar en teléfono real.                                                                                                | Claude         | ⬜      |
+| Cámara rota en celular al fijar objetivo en partida | En el teléfono la cámara se traba o salta con el fijado automático. Revisar `Controls.client` (fijado, órbita y joystick táctil) y probar en teléfono real.                                                                                                | Claude         | 🟡 implementado sin probar (Ronda 1 (10/11 13:51): ver [[Reporte 0.2 Claude]].) |
 
 ## 2. Celular (prioridad alta: el hermano juega en celular)
 | Pedido | Detalle | Resp. sugerido | Estado |
@@ -32,7 +32,7 @@ Leyenda: ✅ comprobado en Studio · 🟡 implementado · 🔧 en curso · ⬜ p
   - **Recibir:** retroceso marcado, destello rojo en el borde de la pantalla, sonido de carne o armadura, temblor más fuerte, animación de dolor exagerada.
   - **Bloquear:** chispa metálica clara, sonido de metal contra metal, empuje corto hacia atrás, la barra de guardia parpadea y una pose de bloqueo más marcada.
   - **Romper guardia / parry:** efectos únicos, cámara lenta breve.
-- Responsable: Claude (animaciones, efectos y sonido). Guías: LihFolk `lihfolk-vfx` (impactos, hit-stop, temblor) y `lihfolk-sfx`. Estado: ⬜
+- Responsable: Claude (animaciones, efectos y sonido). Guías: LihFolk `lihfolk-vfx` (impactos, hit-stop, temblor) y `lihfolk-sfx`. Estado: 🟡 implementado sin probar en Studio. Ronda 1 (10/11 13:51): ver [[Reporte 0.2 Claude]].
 
 ## 5. Roles y administración
 | Pedido | Detalle | Resp. sugerido | Estado |
@@ -71,7 +71,7 @@ Pedido del 10/11 (habló con Gemini Pro):
 - bajar dagas y estoque;
 - que las armas grandes no se sientan débiles.
 
-Números propuestos en [[Equilibrio de armas]] («Propuesta de números para la 0.2»), pendientes de aprobar. | Claude | ⬜ |
+Números propuestos en [[Equilibrio de armas]] («Propuesta de números para la 0.2»), aprobados (D3) y aplicados en `WeaponData`. | Claude | 🟡 sin probar |
 | Arena de la Mano | Fuera de la rotación porque no se entiende como mano. Rehacerla. | Gemini (Argon) | ⬜ |
 | Revisión de Codex, ronda 6 | Pendientes: hallazgo 5 (sesión perdida), 7 (estadísticas al abandonar una partida), 8 (precios reales si vuelve Robux) y 9 (rendimiento de `CityLife` y de la caché de nombres). | Codex | ⬜ |
 | Cielo | Más estrellas usando imágenes de cielo (6 caras), si hace falta. | Claude | ⬜ |
@@ -88,8 +88,8 @@ Números propuestos en [[Equilibrio de armas]] («Propuesta de números para la 
 |---|---|---|---|
 | Cinemáticas antes del combate | Presentación de los jugadores al entrar a la arena: cámara recorriendo la arena, nombres, armas y pose de entrada. Se hace en el motor (cámara + animaciones), porque tiene que mostrar el avatar, el arma y la skin reales de cada jugador. Opinión de Claude (10/11/2026): Higgsfield u otro generador de video sirve para el tráiler, la página del juego y bocetos de planos, no para esta previa. | Claude (cámara y poses) + Gemini (carteles) | ⬜ |
 | Previa de 10 s antes de cada partida | Al menos 10 s antes de que arranque, con una pantalla para elegir **arma, skin e infusión**. Hoy no se puede cambiar de arma en partida. | Codex (servidor) + Gemini (interfaz) | ⬜ |
-| Patear al rival derribado | Mantener la mecánica de levantar y agregar una patada para tirar al rival derribado fuera de la arena. | Claude | ⬜ |
-| Combate direccional | Ataques y bloqueos arriba, izquierda y derecha, parry perfecto, patada de ring-out, hit-stop y Elo para las clasificatorias. Diseño completo y preguntas abiertas en [[Diseño Combate PvP Direccional Roblox]]. Especificación de Gemini (10/11): [[Especificación Gemini combate direccional]]. Arquitectura y conflictos a decidir: [[Arquitectura Combate Direccional]]. Confirmado como eje de la 0.2 (sección 10). | Claude | ⬜ diseño |
+| Patear al rival derribado | Mantener la mecánica de levantar y agregar una patada para tirar al rival derribado fuera de la arena. | Claude | 🟡 F tocar = patear, mantener = levantar (direccional) |
+| Combate direccional | Ataques y bloqueos arriba, izquierda y derecha, parry perfecto, patada de ring-out, hit-stop y Elo para las clasificatorias. Diseño completo y preguntas abiertas en [[Diseño Combate PvP Direccional Roblox]]. Especificación de Gemini (10/11): [[Especificación Gemini combate direccional]]. Arquitectura y conflictos a decidir: [[Arquitectura Combate Direccional]]. Confirmado como eje de la 0.2 (sección 10). | Claude | 🟡 pasos 1 a 5 detrás de `Enabled` (Ronda 1 (10/11 13:51): ver [[Reporte 0.2 Claude]].) |
 | Clasificatorias con Elo | Parte del diseño direccional. Hoy RANKED dice «Próximamente». | Codex | ⬜ |
 
 ## Orden sugerido
@@ -109,7 +109,7 @@ Números propuestos en [[Equilibrio de armas]] («Propuesta de números para la 
 Referencia visual: [[Referencias/espada-concepto.png]] (concepto 2D hecho a partir del dibujo del usuario; no es modelo 3D).
 | Pedido | Detalle | Resp. sugerido | Estado |
 |---|---|---|---|
-| Combos según dirección | Series de combos por dirección dentro del direccional. Sin definir: secuencias, transiciones, cantidad de golpes, cancelaciones, resistencia. | Claude | ⬜ |
+| Combos según dirección | Series de combos por dirección dentro del direccional. Sin definir: secuencias, transiciones, cantidad de golpes, cancelaciones, resistencia. | Claude | 🟡 D4: remate si conectan los 3 golpes |
 | Todas las skins al acabado de la espada | Más detalle, acabado y brillo; formas menos cuadradas y más filosas. El dibujo del usuario es la referencia principal (Pinterest, secundaria). Conservar la identidad de cada skin; revisar silueta, materiales y lectura en juego. | Gemini | ⬜ |
 | Ruleta diaria y premio semanal | La espada y un par de skins más en la **misma** ruleta de monedas y XP. Tiradas diarias; skin o premio grande que rota cada semana. Sin definir: tiradas por día, reinicio, probabilidades, duplicados, calendario. | Codex (servidor) + Gemini (interfaz) | ⬜ |
 | Tienda nueva | Rediseñar la actual reutilizando lo que hay, presentación al estilo Fortnite con vistas previas (sin copiar su identidad). Vende skins, multiplicadores y monedas. | Gemini | ⬜ |

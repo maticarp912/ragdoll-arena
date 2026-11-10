@@ -25,4 +25,32 @@ return {
   Pulse = 10, PulseAmp = 0.18, FlashScale = 2.4, FlashTime = 0.16,
   LightRange = 6, LightBrightness = 2.5,
  },
+ -- 0.2 (Claude): triángulo del combate direccional (DirectionalHUD.client). Tamaños en píxeles, tiempos en s.
+ Directional = {
+  Side = 92, Thickness = 7, Gap = 6, OffsetY = -10, Edge = 60,
+  IdleTransparency = 0.72, StanceTransparency = 0.05, GuardGlow = 2.5,
+  Idle = Color3.fromRGB(235, 228, 214), Stance = Color3.fromRGB(255, 255, 255), Guard = Color3.fromRGB(150, 205, 255),
+  Attack = Color3.fromRGB(255, 40, 32), Unblockable = Color3.fromRGB(255, 196, 64), Kick = Color3.fromRGB(255, 140, 30),
+  Parry = Color3.fromRGB(255, 226, 120), ParryTime = 0.35, ParryScale = 1.35,
+  Pulse = 14, PulseAmp = 0.25, OtherAttackers = 14, KickDot = 16,
+ },
+ -- 0.2 (Claude): sensación del combate (C23). Lo usa Vfx.client con el evento Effect "Feel".
+ Feel = {
+  Deal = { Sound = "Hit_Blunt", Volume = 0.3, Pitch = 0.82, Punch = 0.2 },
+  Take = { Sound = "Hit_Heavy", Volume = 0.45, Pitch = 0.78, Edge = 0.55, EdgeTime = 0.35, Punch = 0.45 },
+  Block = { Sound = "BlockHit_Light", Volume = 0.5, Pitch = 1.18, Edge = 0.25, EdgeTime = 0.18 },
+  Blocked = { Sound = "BlockHit_Light", Volume = 0.3, Pitch = 0.9 },
+  Parry = { Sound = "ParrySpark", Volume = 0.6, Pitch = 1.1, SlowScale = 0.3, SlowTime = 0.22, SlowRadius = 30 },
+  Parried = { Sound = "Parry", Volume = 0.35, Pitch = 0.8, Edge = 0.4, EdgeTime = 0.3 },
+  GuardBreak = { Sound = "GuardBreak", Volume = 0.4, Pitch = 1.0, SlowScale = 0.35, SlowTime = 0.2, SlowRadius = 30 },
+  GuardBroken = { Sound = "GuardBreak", Volume = 0.45, Pitch = 0.85, Edge = 0.5, EdgeTime = 0.4 },
+  Finisher = { VolumeMult = 1.4, EdgeMult = 1.3 },
+  TakeColor = Color3.fromRGB(150, 0, 12), BlockColor = Color3.fromRGB(200, 200, 215),
+  ParriedColor = Color3.fromRGB(255, 70, 40), GuardBrokenColor = Color3.fromRGB(255, 120, 40),
+ },
+ -- 0.2 (Claude): respaldo de colores de rol para la etiqueta sobre la cabeza (manda ReplicatedStorage.Roles de Codex)
+ Roles = { Colors = {
+  Owner = Color3.fromRGB(255, 196, 64), Admin = Color3.fromRGB(255, 80, 70), Mod = Color3.fromRGB(90, 170, 255),
+  Tester = Color3.fromRGB(120, 230, 140), VIP = Color3.fromRGB(220, 130, 255), New = Color3.fromRGB(200, 200, 200),
+ } },
 }

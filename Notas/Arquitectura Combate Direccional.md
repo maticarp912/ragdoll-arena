@@ -1,7 +1,7 @@
 # Arquitectura del combate direccional (Claude, 10/11)
 
 Responde a [[Especificación Gemini combate direccional]], sobre la base de [[Diseño Combate PvP Direccional Roblox]] (incluida la «Mesa de diseño» de Codex).
-**Estado: solo diseño. No hay código.** Todo se monta sobre lo que ya funciona en la beta 0.1 (`Actions`, `Combat`, `CombatService`, `Controls.client`, `Overhead.client`, `Animator.client`), sin reescribir desde cero.
+**Estado (10/11/2026 13:51): pasos 1 a 5 implementados detrás de `CombatConfig.Directional.Enabled = false`, sin probar en Studio** ([[Reporte 0.2 Claude]]). Antes: solo diseño. Todo se monta sobre lo que ya funciona en la beta 0.1 (`Actions`, `Combat`, `CombatService`, `Controls.client`, `Overhead.client`, `Animator.client`), sin reescribir desde cero.
 
 ## 0. Lo que choca con la beta o entre las dos propuestas (decidir antes de programar)
 | # | Tema | Beta 0.1 hoy | Gemini | Mesa de Codex | Propuesta de Claude |

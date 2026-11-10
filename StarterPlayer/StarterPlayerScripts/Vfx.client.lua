@@ -380,7 +380,17 @@ edge(Vector2.new(0.5, 1), UDim2.fromScale(0.5, 1), UDim2.fromScale(1, 0.25), -90
 edge(Vector2.new(0, 0.5), UDim2.fromScale(0, 0.5), UDim2.fromScale(0.2, 1), 0)
 edge(Vector2.new(1, 0.5), UDim2.fromScale(1, 0.5), UDim2.fromScale(0.2, 1), 180)
 
-RunService.RenderStepped:Connect(function()
+-- 0.2 (C23): borde de impacto. Rojo al recibir, acero al bloquear, naranja al quedar abierto.
+-- Va en un marco aparte para no pelear con la viñeta de poca vida.
+local hitEdges = {}
+for _, src in edges do
+	local f = src:Clone()
+	f.Parent = vgui
+	table.insert(hitEdges, f)
+end
+local hitEdge, hitEdgeMax, hitEdgeTime = 0, 0, 0.3
+
+RunService.RenderStepped:Connect(function(dt)
 	local char = player.Character
 	local hum = char and char:FindFirstChildOfClass("Humanoid")
 	local frac = hum and hum.MaxHealth > 0 and hum.Health / hum.MaxHealth or 1
@@ -392,4 +402,57 @@ RunService.RenderStepped:Connect(function()
 	for _, f in edges do
 		f.BackgroundTransparency = 1 - intensity * 0.7
 	end
+	if hitEdge > 0 then
+		hitEdge = math.max(0, hitEdge - dt * hitEdgeMax / math.max(0.05, hitEdgeTime))
+	end
+	for _, f in hitEdges do
+		f.BackgroundTransparency = 1 - hitEdge
+	end
+end)
+
+----------------------------------------------------------------------
+-- 0.2: sensación del combate (contrato C23). El servidor avisa a cada involucrado qué le pasó (Effect "Feel"):
+-- golpear, recibir, bloquear y parry suenan y se ven distinto. Los sonidos van en 2D y bajos: son el «cuerpo»
+-- propio que se suma al sonido 3D del impacto (guía lihfolk-sfx: lo tuyo en 2D, nunca adelantar el resultado).
+----------------------------------------------------------------------
+local Assets = require(ReplicatedStorage:WaitForChild("Assets"))
+local FEEL = require(ReplicatedStorage:WaitForChild("PolishConfig")).Feel
+local SoundService = game:GetService("SoundService")
+
+local function sound2D(path, volume, pitch)
+	local id = path and Assets.sound(path)
+	if not id then return end
+	local s = Instance.new("Sound")
+	s.SoundId = id
+	s.Volume = volume or 0.5
+	s.PlaybackSpeed = (pitch or 1) * (1 + (math.random() * 2 - 1) * 0.04)
+	s.SoundGroup = SoundService:FindFirstChild("SFX")
+	s.Parent = SoundService
+	s:Play()
+	Debris:AddItem(s, 4)
+end
+
+local function edgeFlash(color, amount, time)
+	for _, f in hitEdges do f.BackgroundColor3 = color end
+	hitEdge = math.clamp(math.max(hitEdge, amount), 0, 0.9)
+	hitEdgeMax = hitEdge
+	hitEdgeTime = time or 0.3
+end
+
+local EDGE_COLOR = {
+	Take = "TakeColor", Block = "BlockColor", Parried = "ParriedColor", GuardBroken = "GuardBrokenColor",
+}
+
+Effect.OnClientEvent:Connect(function(kind, role, info)
+	if kind ~= "Feel" or type(role) ~= "string" or not FEEL then return end
+	local cfg = FEEL[role]
+	if type(cfg) ~= "table" then return end
+	info = type(info) == "table" and info or {}
+	local fin = info.finisher == true and FEEL.Finisher or nil
+	local heavy = info.kind == "Heavy" or fin ~= nil
+	sound2D(cfg.Sound, (cfg.Volume or 0.4) * (heavy and 1.2 or 1) * (fin and fin.VolumeMult or 1), cfg.Pitch)
+	if cfg.Edge and EDGE_COLOR[role] then
+		edgeFlash(FEEL[EDGE_COLOR[role]], cfg.Edge * (heavy and 1.25 or 1) * (fin and fin.EdgeMult or 1), cfg.EdgeTime)
+	end
+	if cfg.Punch then cameraPunch(cfg.Punch * (heavy and 1.6 or 1)) end
 end)

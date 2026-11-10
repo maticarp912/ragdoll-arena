@@ -30,6 +30,18 @@ local ZERO = { 0, 0, 0, 0, 0, 0 }
 
 local states = setmetatable({}, { __mode = "k" })
 local frozenTracks = {}
+local DIRCLIPS = AnimClips.Directional
+local DIRCFG = CombatConfig.Directional
+
+-- 0.2: ¿se dibujan las capas del combate direccional?
+local function directionalOn()
+	return DIRCFG ~= nil and DIRCFG.Enabled == true and DIRCLIPS ~= nil
+end
+
+local function smooth01(x)
+	x = math.clamp(x, 0, 1)
+	return x * x * (3 - 2 * x)
+end
 
 ----------------------------------------------------------------------
 -- Utilidades de poses (vectores de 6: rotX, rotY, rotZ, posX, posY, posZ)
@@ -286,8 +298,10 @@ local function update(char, dt, now)
 	if not m.W then return end
 	local arch = archetypeOf(char)
 
-	-- Hitstop: el tiempo de los clips casi se detiene
-	local timeScale = (os.clock() < st.frozenUntil) and CombatConfig.Hitstop.Speed or 1
+	-- Hitstop: el tiempo de los clips casi se detiene. Cámara lenta breve (0.2): parry y guardia rota
+	local clockNow = os.clock()
+	local timeScale = (clockNow < st.frozenUntil) and CombatConfig.Hitstop.Speed or 1
+	if clockNow < (st.slowUntil or 0) then timeScale = math.min(timeScale, st.slowScale or 1) end
 
 	-- ¿Nuevo clip del servidor?
 	local seq = char:GetAttribute("AnimSeq") or 0
@@ -303,8 +317,13 @@ local function update(char, dt, now)
 		if clip then
 			st.clip = clip
 			-- la captura de movimiento ya trae su recorrido real: no se exagera
-			st.exag = not clip.mocap and (string.match(key, "^Weapons%.%w+%.M1_%d$") or string.match(key, "^Weapons%.%w+%.Heavy$"))
-				and AnimClips.Playback.Exaggerate or nil
+			local isAttack = string.match(key, "^Weapons%.%w+%.M1_%d$") or string.match(key, "^Weapons%.%w+%.Heavy$")
+			st.exag = not clip.mocap and isAttack and AnimClips.Playback.Exaggerate or nil
+			-- 0.2 (C23): recibir un golpe se exagera más
+			if not clip.mocap and string.match(key, "^Generic%.HitReact") then
+				st.exag = AnimClips.Playback.HitReactExaggerate
+			end
+			st.isAttack = isAttack ~= nil
 			st.elapsed = math.clamp(now - (char:GetAttribute("AnimStart") or now), 0, 0.25)
 			local dur = char:GetAttribute("AnimDur") or 0
 			st.dur = dur > 0 and dur or clip.dur
@@ -351,6 +370,20 @@ local function update(char, dt, now)
 	local base = st.frameBase
 	table.clear(base)
 	for _, j in UPPER do base[j] = st.base[j] end
+
+	-- 0.2: postura direccional. La guardia se inclina hacia el lado elegido (en reposo, un poco):
+	-- así el rival también lee tu lado en tu cuerpo, no solo en su triángulo.
+	if directionalOn() then
+		local guardPose = DIRCLIPS.Guard[char:GetAttribute("Stance") or ""]
+		local w = char:GetAttribute("Blocking") and 1 or DIRCLIPS.ReadyWeight
+		local kk = 1 - math.exp(-DIRCLIPS.StanceResponse * dt)
+		st.stanceOff = st.stanceOff or {}
+		for _, j in UPPER do
+			local goal = guardPose and guardPose[j] and { guardPose[j][1] * w, guardPose[j][2] * w, guardPose[j][3] * w } or ZERO
+			st.stanceOff[j] = lerpV(st.stanceOff[j] or ZERO, goal, kk)
+			base[j] = addV(base[j], st.stanceOff[j])
+		end
+	end
 
 	local Lo = AnimClips.Locomotion
 	local feel = WeaponData.feel and WeaponData.feel(char:GetAttribute("WeaponId")) or nil
@@ -452,6 +485,28 @@ local function update(char, dt, now)
 		for _, p in weaponParts(char) do p.LocalTransparencyModifier = hide and 1 or 0 end
 	end
 
+	-- 0.2: golpe por dirección. Capa que carga hacia el lado del golpe y cruza al otro tras el impacto
+	local dirLayer, dirW1, dirW2 = nil, 0, 0
+	local attackDir = char:GetAttribute("AttackDir") or ""
+	if clip and st.isAttack and attackDir ~= "" and directionalOn() and not st.fading then
+		dirLayer = DIRCLIPS.Attack[attackDir]
+		-- u ya está deformado para que el impacto caiga en clip.hit (ver warp)
+		local dur = st.dur or clip.dur or 1
+		local hitU = math.clamp(clip.hit or (dur > 0 and (st.hit or 0) / dur) or 0.5, 0.05, 0.95)
+		if dirLayer then
+			local mult = char:GetAttribute("Finisher") and DIRCLIPS.FinisherMult or 1
+			if u < hitU then
+				local pre = u / hitU
+				local pk = DIRCLIPS.WindupPeak
+				dirW1 = (pre < pk and smooth01(pre / pk) or 1 - smooth01((pre - pk) / (1 - pk))) * mult
+			else
+				local post = (u - hitU) / (1 - hitU)
+				local pk = DIRCLIPS.FollowPeak
+				dirW2 = (post < pk and smooth01(post / pk) or 1 - smooth01((post - pk) / (1 - pk))) * mult
+			end
+		end
+	end
+
 	-- Calcular transforms
 	local tf = st.transforms
 	table.clear(tf)
@@ -465,6 +520,10 @@ local function update(char, dt, now)
 				if j == "RS" or j == "LS" then c[1] = math.clamp(c[1], -70, 195) end
 			end
 			if clip.additive then v = addV(v, c, w) else v = lerpV(v, c, w) end
+		end
+		if dirLayer then
+			if dirW1 > 0 and dirLayer.windup[j] then v = addV(v, dirLayer.windup[j], dirW1 * w) end
+			if dirW2 > 0 and dirLayer.follow[j] then v = addV(v, dirLayer.follow[j], dirW2 * w) end
 		end
 		tf[j] = toCF(v)
 	end
@@ -575,10 +634,13 @@ end)
 -- Hitstop que manda el servidor
 Effect.OnClientEvent:Connect(function(kind, a, b, speed)
 	if kind ~= "Hitstop" or type(a) ~= "table" then return end
+	-- 0.2: tope del hit-stop (guía lihfolk-vfx: más de 0,2 s se siente como lag)
+	local maxStop = (CombatConfig.Feel and CombatConfig.Feel.HitstopMax) or 0.2
+	local stopFor = math.min(type(b) == "number" and b or CombatConfig.Hitstop.Heavy, maxStop)
 	for _, char in a do
 		if typeof(char) == "Instance" then
 			local st = states[char]
-			local untilTime = os.clock() + (b or CombatConfig.Hitstop.Heavy)
+			local untilTime = os.clock() + stopFor
 			if st then st.frozenUntil = math.max(st.frozenUntil, untilTime) end
 			local hum = char:FindFirstChildOfClass("Humanoid")
 			local animator = hum and hum:FindFirstChildOfClass("Animator")
@@ -593,6 +655,26 @@ Effect.OnClientEvent:Connect(function(kind, a, b, speed)
 					end
 				end
 			end
+		end
+	end
+end)
+
+-- 0.2 (C23): cámara lenta breve en el parry y la guardia rota, solo en tu pantalla y alrededor tuyo
+local Polish = require(ReplicatedStorage:WaitForChild("PolishConfig"))
+Effect.OnClientEvent:Connect(function(kind, role)
+	if kind ~= "Feel" or not Polish.Feel then return end
+	local cfg = Polish.Feel[role]
+	if type(cfg) ~= "table" or not cfg.SlowScale then return end
+	local me = Players.LocalPlayer.Character
+	local myRoot = me and me:FindFirstChild("HumanoidRootPart")
+	if not myRoot then return end
+	local untilTime = os.clock() + cfg.SlowTime
+	for _, char in CollectionService:GetTagged("Combatant") do
+		local r = char:FindFirstChild("HumanoidRootPart")
+		local st = states[char]
+		if st and r and (r.Position - myRoot.Position).Magnitude <= cfg.SlowRadius then
+			st.slowUntil = math.max(st.slowUntil or 0, untilTime)
+			st.slowScale = cfg.SlowScale
 		end
 	end
 end)

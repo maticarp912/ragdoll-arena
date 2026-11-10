@@ -166,6 +166,14 @@ local aimWasOn = false
 local camRay = RaycastParams.new()
 camRay.FilterType = Enum.RaycastFilterType.Exclude
 
+-- 0.2, bug de la cámara en celular al fijar (Versión 0.2, sección 1):
+-- antes se suavizaba desde camera.CFrame, pero la cámara de Roblox la reescribe en cada frame (antes de este
+-- paso) con su propio estado: en el teléfono el arrastre táctil, el zoom con dos dedos y el «popper» de oclusión
+-- movían ese punto de partida y la cámara se trababa o saltaba. Ahora el suavizado parte de un estado propio
+-- (lockCam), se reinicia al fijar y salta directo si la meta quedó lejos (teletransporte al entrar a la arena).
+local lockCam = nil
+local LOCK_SNAP_DISTANCE = 25
+
 local function placeCamera(focus, flatDir, pitchDeg, smooth, dt)
 	local p = math.rad(pitchDeg)
 	local pos = focus - flatDir * math.cos(p) * CAM.Distance + Vector3.yAxis * math.sin(p) * CAM.Distance
@@ -178,12 +186,27 @@ local function placeCamera(focus, flatDir, pitchDeg, smooth, dt)
 	if hit and hit.Instance.CanCollide then
 		goal = goal - toCam.Unit * ((goal.Position - hit.Position).Magnitude + 0.6)
 	end
-	if smooth then
-		camera.CFrame = camera.CFrame:Lerp(goal, 1 - math.exp(-CombatConfig.Controls.LockOnSmoothing * dt))
+	lockCam = lockCam or camera.CFrame
+	if smooth and (lockCam.Position - goal.Position).Magnitude < LOCK_SNAP_DISTANCE then
+		lockCam = lockCam:Lerp(goal, 1 - math.exp(-CombatConfig.Controls.LockOnSmoothing * math.min(dt, 0.1)))
 	else
-		camera.CFrame = goal
+		lockCam = goal
 	end
+	camera.CFrame = lockCam
+	camera.Focus = CFrame.new(focus)
 end
+
+-- 0.2 (D1): con el direccional, el fijado es permanente en partida. T / R3 cambia de objetivo en vez de soltarlo,
+-- y si el objetivo cae se fija solo al siguiente rival.
+local DIR = CombatConfig.Directional
+local function directionalOn()
+	return DIR ~= nil and DIR.Enabled == true
+end
+local function permanentLock()
+	return directionalOn() and DIR.PermanentLockInMatch and player:GetAttribute("InMatch") == true
+end
+local relockAt = 0
+local dirMouseOn = false -- el ratón quedó centrado por el direccional (hay que soltarlo al salir)
 
 -- Fijado automático (9/11): al entrar a la arena se fija al rival más cercano. El HUD completo
 -- se muestra mientras haya objetivo fijado (LockTarget.Value).
@@ -234,8 +257,13 @@ end
 RunService:BindToRenderStep("LockOn", Enum.RenderPriority.Camera.Value + 1, function(dt)
 	camera = workspace.CurrentCamera
 	if not camera or camera.CameraType ~= Enum.CameraType.Custom then return end
-	if updateSpectate() then return end -- la cámara de Roblox sigue al espectado
+	local spectatingNow = updateSpectate()
 	local char = getChar()
+	if (spectatingNow or not char) and dirMouseOn then
+		dirMouseOn = false
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+	end
+	if spectatingNow then return end -- la cámara de Roblox sigue al espectado
 	if not char then return end
 	local hum = char:FindFirstChildOfClass("Humanoid")
 	local root = char.HumanoidRootPart
@@ -253,6 +281,12 @@ RunService:BindToRenderStep("LockOn", Enum.RenderPriority.Camera.Value + 1, func
 
 	local carrying = char:GetAttribute("Carrying") == true
 	if carrying and locked then setLock(nil) end -- el cargado nunca es objetivo: evita el bucle de cámara
+	-- Fijado permanente: sin objetivo (cayó, se alejó, terminaste de cargar), buscar el siguiente rival
+	if not locked and not carrying and permanentLock() and os.clock() >= relockAt then
+		relockAt = os.clock() + 0.3
+		setLock(pickTarget(nil, CombatConfig.Controls.MatchLockRange))
+		tRoot = locked and locked:FindFirstChild("HumanoidRootPart")
+	end
 
 	-- Modo apuntado al cargar: ratón centrado, la cámara gira con el ratón y el cuerpo mira hacia donde lanzará
 	local aiming = carrying and not player:GetAttribute("MenuOpen") and hum.Health > 0
@@ -272,6 +306,19 @@ RunService:BindToRenderStep("LockOn", Enum.RenderPriority.Camera.Value + 1, func
 		if not locked then hum.AutoRotate = true end
 	end
 
+	-- Direccional (D2): con objetivo fijado el mouse no gira la cámara; queda centrado y sus gestos eligen el lado
+	local phase = workspace:GetAttribute("MatchPhase")
+	local wantDirMouse = directionalOn() and locked ~= nil and UserInputService.MouseEnabled and not aiming
+		and not player:GetAttribute("MenuOpen") and hum.Health > 0
+		and (phase == nil or phase == "" or phase == "Round" or phase == "Lobby")
+	if wantDirMouse then
+		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+		dirMouseOn = true
+	elseif dirMouseOn then
+		dirMouseOn = false
+		if not aiming then UserInputService.MouseBehavior = Enum.MouseBehavior.Default end
+	end
+
 	if locked and tRoot then
 		local rp, tp = root.Position, tRoot.Position
 		local flatDir = Vector3.new(tp.X - rp.X, 0, tp.Z - rp.Z)
@@ -284,6 +331,7 @@ RunService:BindToRenderStep("LockOn", Enum.RenderPriority.Camera.Value + 1, func
 		end
 		placeCamera(focus, flatDir, CAM.LockPitch, true, dt)
 	else
+		lockCam = nil -- al volver a fijar, el suavizado arranca desde la cámara actual
 		-- Libre: el ángulo (arriba/abajo) y el giro los lleva la cámara de Roblox; la distancia es fija
 		-- (zoom bloqueado) y solo se desplaza a la derecha para que el personaje quede a la izquierda.
 		local goal = camera.CFrame * CFrame.new(CAM.OffsetX, 0, 0)
@@ -371,6 +419,20 @@ end
 ----------------------------------------------------------------------
 -- Enviar acciones al servidor
 ----------------------------------------------------------------------
+-- Número de secuencia de cada mensaje al servidor (0.2): el servidor descarta lo repetido o viejo
+local seqCounter = 0
+local function nextSeq()
+	seqCounter += 1
+	return seqCounter
+end
+
+-- Derribado o cargado (también lo usa la postura direccional)
+local function isDownLocal(char)
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	return hum == nil or hum.Health <= 0
+		or char:GetAttribute("KnockedDown") == true or char:GetAttribute("CarriedBy") == true
+end
+
 local function faceAim(char, aim)
 	if char:GetAttribute("Ragdolled") or char:GetAttribute("Action") == "Dodge" then return end
 	local root = char.HumanoidRootPart
@@ -395,8 +457,103 @@ local function send(action)
 		end
 		if locked and canLock(locked) then extra = locked end -- el servidor elige la animación respecto de él
 	end
-	Input:FireServer(action, arg, extra)
+	Input:FireServer(action, arg, extra, nextSeq())
 end
+
+----------------------------------------------------------------------
+-- 0.2: postura direccional (D2). Se elige con un gesto corto del mouse (con objetivo fijado) o con el stick
+-- derecho; queda hasta elegir otra. El cliente la muestra al instante (predicción) y el servidor la valida.
+-- DirectionalHUD lee PredictedStance (objeto local, no se replica) y el atributo Stance del personaje.
+----------------------------------------------------------------------
+local predictedStance = Instance.new("StringValue")
+predictedStance.Name = "PredictedStance"
+predictedStance.Parent = player
+
+local function setStance(dir)
+	if not directionalOn() or not table.find(DIR.Dirs, dir) then return end
+	local char = getChar()
+	if not char or isDownLocal(char) then return end
+	local current = predictedStance.Value ~= "" and predictedStance.Value or char:GetAttribute("Stance")
+	if current == dir then return end
+	predictedStance.Value = dir
+	predictedStance:SetAttribute("At", os.clock())
+	Input:FireServer("Stance", dir, nil, nextSeq())
+end
+
+-- El servidor rechazó la postura: volver a la real
+Effect.OnClientEvent:Connect(function(kind, _seq, action)
+	if kind == "InputReject" and action == "Stance" then
+		local char = getChar()
+		predictedStance.Value = char and (char:GetAttribute("Stance") or "") or ""
+		predictedStance:SetAttribute("At", 0)
+	end
+end)
+player.CharacterAdded:Connect(function()
+	predictedStance.Value = ""
+	predictedStance:SetAttribute("At", 0)
+end)
+
+local function stanceInputActive()
+	if not directionalOn() or not locked or player:GetAttribute("MenuOpen") then return false end
+	local char = getChar()
+	return char ~= nil and not isDownLocal(char)
+end
+
+-- Gesto del mouse: se acumula el movimiento y se pierde rápido; pasado el umbral elige el lado
+local gestureX, gestureY = 0, 0
+local stickSector = nil
+local IN = DIR and DIR.Input
+
+local function sectorOf(x, upY)
+	-- upY > 0 = hacia arriba. Abajo no hace nada (D1)
+	local angle = math.deg(math.atan2(x, upY)) -- 0 = arriba, +90 = derecha
+	if math.abs(angle) <= 50 then return "Up" end
+	if angle > 50 and angle <= 140 then return "Right" end
+	if angle < -50 and angle >= -140 then return "Left" end
+	return nil
+end
+
+UserInputService.InputChanged:Connect(function(input)
+	if not stanceInputActive() then
+		gestureX, gestureY = 0, 0
+		return
+	end
+	if input.UserInputType == Enum.UserInputType.MouseMovement then
+		gestureX += input.Delta.X
+		gestureY += input.Delta.Y
+		local up = -gestureY
+		if math.sqrt(gestureX * gestureX + up * up) >= IN.MouseThreshold then
+			local dir
+			if up > math.abs(gestureX) * IN.MouseUpBias then
+				dir = "Up"
+			elseif math.abs(gestureX) >= math.abs(up) then
+				dir = gestureX > 0 and "Right" or "Left"
+			end
+			gestureX, gestureY = 0, 0
+			if dir then setStance(dir) end
+		end
+	elseif input.KeyCode == Enum.KeyCode.Thumbstick2 then
+		local p = input.Position
+		local mag = Vector2.new(p.X, p.Y).Magnitude
+		if mag < IN.StickRelease then
+			stickSector = nil
+		elseif mag >= IN.StickDeadZone then
+			local sector = sectorOf(p.X, p.Y)
+			if sector and sector ~= stickSector then
+				stickSector = sector
+				setStance(sector)
+			end
+		end
+	end
+end)
+
+RunService.RenderStepped:Connect(function(dt)
+	if gestureX ~= 0 or gestureY ~= 0 then
+		local k = math.exp(-(IN and IN.MouseDecay or 10) * dt)
+		gestureX *= k
+		gestureY *= k
+	end
+end)
 
 ----------------------------------------------------------------------
 -- Interfaz propia: aviso contextual, avisos cortos y botón para levantarse.
@@ -612,7 +769,8 @@ task.spawn(function()
 							text = keyLabel("Interact") .. ": levantar al aliado"
 							break
 						elseif c:GetAttribute("KnockedDown") and not c:GetAttribute("CarriedBy") and isEnemyModel(c) then
-							text = keyLabel("Interact") .. ": agarrar al derribado"
+							text = directionalOn() and L.t("hint.kickDowned", { key = keyLabel("Kick") })
+							or (keyLabel("Interact") .. ": agarrar al derribado")
 							break
 						end
 					end
@@ -653,16 +811,30 @@ local function onAction(action, began)
 	elseif action == "Interact" then
 		if began then send("Interact") end
 	elseif action == "Kick" then
-		if began then send("Kick") end
+		-- Direccional: tocar F sobre un derribado lo patea, mantenerla lo levanta (lo decide el servidor)
+		if began then
+			send("Kick")
+		elseif directionalOn() then
+			send("KickRelease")
+		end
 	elseif action == "Infuse" then
 		if began then send("Infuse") end
 	elseif action == "LockOn" then
 		if began then
-			if locked then setLock(nil) else setLock(pickTarget(nil)) end
+			if permanentLock() then
+				-- En partida no se suelta: cambia al siguiente rival (D1, T / R3)
+				local range = CombatConfig.Controls.MatchLockRange
+				local nextTarget = locked and pickTarget(locked, range) or pickTarget(nil, range)
+				if nextTarget then setLock(nextTarget) end
+			elseif locked then
+				setLock(nil)
+			else
+				setLock(pickTarget(nil))
+			end
 		end
 	elseif action == "SwitchTarget" then
 		if began and locked then
-			local nextTarget = pickTarget(locked)
+			local nextTarget = pickTarget(locked, permanentLock() and CombatConfig.Controls.MatchLockRange or nil)
 			if nextTarget then setLock(nextTarget) end
 		end
 	elseif action == "Menu" then
@@ -711,7 +883,7 @@ UserInputService.InputEnded:Connect(function(input)
 		end
 		return
 	end
-	if action == "Block" or action == "Heavy" then
+	if action == "Block" or action == "Heavy" or action == "Kick" then
 		onAction(action, false)
 	end
 end)
@@ -721,7 +893,7 @@ InputBridge.Action:Connect(function(action, isDown)
 	if player:GetAttribute("MenuOpen") and action ~= "Menu" then return end
 	if isDown then
 		onAction(action, true)
-	elseif action == "Block" or action == "Heavy" then
+	elseif action == "Block" or action == "Heavy" or action == "Kick" then
 		onAction(action, false)
 	end
 end)

@@ -17,7 +17,9 @@
 local AnimClips = {}
 
 AnimClips.Playback = {
-	Exaggerate = 1.22,  -- amplía el recorrido de los golpes (M1 y fuerte) respecto a la postura
+	-- 0.2 (C23): golpes más exagerados (1,22 → 1,32) y reacciones de dolor más marcadas
+	Exaggerate = 1.32,  -- amplía el recorrido de los golpes (M1 y fuerte) respecto a la postura
+	HitReactExaggerate = 1.4, -- amplía Generic.HitReact* (recibir un golpe se tiene que ver)
 	Transition = 0.09,
 	Recovery = 0.16,
 	StanceResponse = 16,
@@ -31,6 +33,39 @@ AnimClips.Joints = {
 	LH = "LeftHip", LK = "LeftKnee", LA = "LeftAnkle",
 }
 AnimClips.Upper = { "W", "N", "RS", "RE", "RW", "LS", "LE", "LW" }
+
+-- 0.2: combate direccional (solo con CombatConfig.Directional.Enabled). Capas PROCEDURALES que se suman a las
+-- posturas y a los golpes existentes, como se empezó con las dagas; más adelante pueden pasar a captura.
+-- Valores en grados, mismo formato de pose. Propuesta a calibrar en Studio con PoseTune.
+AnimClips.Directional = {
+	-- Guardia por lado (se suma a la postura de guardia del arma). En reposo se suma ReadyWeight de esto,
+	-- para que el rival vea de qué lado estás sin necesidad del triángulo.
+	Guard = {
+		Up = { W = { 6, 0, 0 }, N = { -4, 0, 0 }, RS = { 38, 0, 0 }, RE = { -18, 0, 0 }, LS = { 26, 0, 0 } },
+		Left = { W = { 0, 26, 4 }, N = { 0, -18, 0 }, RS = { -6, 0, -24 }, RW = { 0, -38, 0 }, LS = { -8, 0, -10 } },
+		Right = { W = { 0, -26, -4 }, N = { 0, 18, 0 }, RS = { -8, 0, 26 }, RW = { 0, 38, 0 }, LS = { 6, 0, 12 } },
+	},
+	ReadyWeight = 0.45,
+	StanceResponse = 18, -- rapidez con que la pose sigue al cambio de lado
+	-- Golpe por dirección (en el marco del atacante): carga hacia su lado y cruza al otro tras el impacto
+	Attack = {
+		Up = {
+			windup = { W = { 14, 0, 0 }, RS = { 62, 0, 0 }, RE = { -22, 0, 0 }, LS = { 30, 0, 0 } },
+			follow = { W = { -16, 0, 0 }, RS = { -34, 0, 0 }, RE = { 10, 0, 0 } },
+		},
+		Left = {
+			windup = { W = { 0, 38, 0 }, N = { 0, -20, 0 }, RS = { 10, 0, -38 }, RW = { 0, -30, 0 } },
+			follow = { W = { 0, -32, 0 }, N = { 0, 16, 0 }, RS = { -6, 0, 32 } },
+		},
+		Right = {
+			windup = { W = { 0, -38, 0 }, N = { 0, 20, 0 }, RS = { 6, 0, 42 }, RW = { 0, 30, 0 } },
+			follow = { W = { 0, 32, 0 }, N = { 0, -16, 0 }, RS = { -4, 0, -34 } },
+		},
+	},
+	WindupPeak = 0.7, -- fracción de la carga en que la capa llega a su máximo (después cruza en el impacto)
+	FollowPeak = 0.3, -- fracción de la recuperación en que el seguimiento llega a su máximo
+	FinisherMult = 1.35, -- el remate (D4) exagera más
+}
 AnimClips.Lower = { "R", "RH", "RK", "RA", "LH", "LK", "LA" }
 
 local BASE = "base"

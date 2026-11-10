@@ -16,8 +16,10 @@ local AnimTiming = require(ServerScriptService:WaitForChild("AnimTiming"))
 local Dummies = require(ServerScriptService:WaitForChild("Dummies"))
 local Fx = require(ServerScriptService:WaitForChild("Fx"))
 local Remotes = require(ServerScriptService:WaitForChild("Remotes"))
+local Directional = require(ServerScriptService:WaitForChild("Directional"))
 
 local Input = Remotes.get("Input")
+local Effect = Remotes.get("Effect")
 local DebugRemote = Remotes.get("Debug")
 
 AnimTiming.preload()
@@ -64,16 +66,41 @@ local function validTarget(char, target)
 	return target
 end
 
-Input.OnServerEvent:Connect(function(player, action, arg, extra)
+-- 0.2: número de secuencia (4.º argumento). Entero creciente por jugador; lo repetido o viejo se descarta.
+-- Los remotos de Roblox llegan en orden, así que esto solo frena reenvíos falsos. Si el servidor rechaza un
+-- cambio de postura, avisa al cliente («InputReject») para que el triángulo vuelva a la postura real.
+local lastSeq = {}
+Players.PlayerRemoving:Connect(function(p) lastSeq[p] = nil end)
+
+local function acceptSeq(player, seq)
+	if seq == nil then return true end -- clientes viejos (o acciones sin predicción)
+	if typeof(seq) ~= "number" or seq ~= seq or seq % 1 ~= 0 or seq < 0 or seq > 2 ^ 31 then return false end
+	local last = lastSeq[player] or -1
+	if seq <= last then return false end
+	lastSeq[player] = seq
+	return true
+end
+
+local function reject(player, seq, action)
+	if typeof(seq) == "number" then Effect:FireClient(player, "InputReject", seq, action) end
+end
+
+Input.OnServerEvent:Connect(function(player, action, arg, extra, seq)
 	if typeof(action) ~= "string" or not allowed(player) then return end
+	if not acceptSeq(player, seq) then return end
 	local char = player.Character
 	if not char or not Combat.getHum(char) then return end
 	if not char:FindFirstChild("HumanoidRootPart") then return end
 
-	if action == "BlockStart" then
+	if action == "Stance" then
+		-- Postura direccional (C16): arriba, izquierda o derecha. Cualquier otro valor se descarta.
+		if not Directional.enabled() or not Directional.setStance(char, arg) then reject(player, seq, action) end
+	elseif action == "BlockStart" or action == "GuardDown" then
 		Combat.blockStart(char, false)
-	elseif action == "BlockEnd" then
+	elseif action == "BlockEnd" or action == "GuardUp" then
 		Combat.blockEnd(char, false)
+	elseif action == "KickRelease" then
+		Actions.kickRelease(char) -- direccional: soltar F antes de levantar = patear al derribado
 	elseif action == "M1" then
 		if char:GetAttribute("Carrying") then
 			Combat.throw(char, validDir(arg)) -- tirón corto
@@ -95,7 +122,7 @@ Input.OnServerEvent:Connect(function(player, action, arg, extra)
 	elseif action == "Interact" then
 		Actions.interact(char, validDir(arg))
 	elseif action == "Kick" then
-		Actions.kick(char)
+		Actions.kickPress(char) -- con el direccional apagado es la patada de la 0.1
 	elseif action == "Infuse" then
 		Actions.infuse(char)
 	elseif action == "GetUp" then
@@ -138,6 +165,9 @@ DebugRemote.OnServerEvent:Connect(function(player, action, arg)
 		workspace:SetAttribute("DebugHitboxes", not workspace:GetAttribute("DebugHitboxes"))
 	elseif action == "DummyMode" then
 		if typeof(arg) == "string" then Dummies.setMode(arg) else Dummies.cycleMode() end
+	elseif action == "DummyDir" then
+		-- 0.2: lado fijo de los muñecos en modo DirOne (sin argumento: rota arriba > izquierda > derecha)
+		if typeof(arg) == "string" then Dummies.setDir(arg) else Dummies.cycleDir() end
 	elseif action == "DummyWeapon" then
 		Dummies.cycleWeapon()
 	elseif action == "ResetDummies" then

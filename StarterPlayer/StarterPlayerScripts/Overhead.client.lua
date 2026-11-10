@@ -29,6 +29,64 @@ local DUMMY_MODES = {
 
 local attached = {} -- [model] = { conns = {}, gui = BillboardGui, ... }
 
+----------------------------------------------------------------------
+-- 0.2 (C18): etiqueta de rol antes del nombre. El rol es el atributo Role del jugador (lo pone RoleService de
+-- Codex); el color sale de ReplicatedStorage.Roles (Codex). Si Roles todavía no existe o cambia de forma, se usa
+-- PolishConfig.Roles como respaldo, así esto no se rompe mientras se integra.
+----------------------------------------------------------------------
+local RolesModule = nil
+local function rolesData()
+	if RolesModule ~= nil then return RolesModule or nil end
+	local m = ReplicatedStorage:FindFirstChild("Roles")
+	if not m then return nil end -- se vuelve a buscar la próxima vez
+	local ok, data = pcall(require, m)
+	RolesModule = ok and type(data) == "table" and data or false
+	return RolesModule or nil
+end
+
+local function asColor(v)
+	if typeof(v) == "Color3" then return v end
+	if typeof(v) == "BrickColor" then return v.Color end
+	if type(v) == "string" and string.match(v, "^#?%x%x%x%x%x%x$") then
+		local ok, c = pcall(Color3.fromHex, v)
+		if ok then return c end
+	end
+	return nil
+end
+
+local function roleColor(role)
+	local R = rolesData()
+	if R then
+		if type(R.color) == "function" then
+			local ok, c = pcall(R.color, role)
+			if ok and asColor(c) then return asColor(c) end
+		end
+		for _, field in { "Colors", "Data", "Info", "Roles", "List" } do
+			local t = R[field]
+			local entry = type(t) == "table" and t[role]
+			local c = asColor(entry) or (type(entry) == "table" and (asColor(entry.color) or asColor(entry.Color)))
+			if c then return c end
+		end
+		local entry = R[role]
+		local c = type(entry) == "table" and (asColor(entry.color) or asColor(entry.Color))
+		if c then return c end
+	end
+	local fallback = PolishConfig.Roles and PolishConfig.Roles.Colors
+	return fallback and fallback[role] or C.Gold
+end
+
+local function roleText(role)
+	local key = "overhead.role." .. role
+	local text = L.t(key)
+	return text ~= key and text or role
+end
+
+local HIDDEN_ROLES = { [""] = true, Player = true, Member = true, None = true, Jugador = true }
+
+local function escapeRich(text)
+	return (string.gsub(string.gsub(string.gsub(text, "&", "&amp;"), "<", "&lt;"), ">", "&gt;"))
+end
+
 local function bar(parent, y, height, color)
 	local bg = Instance.new("Frame")
 	bg.Position = UDim2.fromOffset(N.Zero, y)
@@ -161,15 +219,29 @@ local function attach(model)
 
 	local function updateName()
 		if model:GetAttribute("IsDummy") then
+			name.RichText = false
 			name.Text = L.t("dummy", { mode = L.t("dummy." .. (workspace:GetAttribute("DummyMode") or "Idle")) })
 			name.TextColor3 = C.BoneDim
 		else
-			name.Text = player and player.DisplayName or model.Name
+			local display = player and player.DisplayName or model.Name
+			local role = player and player:GetAttribute("Role")
+			if type(role) == "string" and not HIDDEN_ROLES[role] then
+				-- [ROL] Nombre: el rol con su color, el nombre con el del equipo
+				name.RichText = true
+				name.Text = ('<font color="#%s">[%s]</font> %s'):format(roleColor(role):ToHex(),
+					escapeRich(string.upper(roleText(role))), escapeRich(display))
+			else
+				name.RichText = false
+				name.Text = display
+			end
 			name.TextColor3 = teamColorOf(model) or C.Bone
 		end
 	end
 	updateName()
-	if player then on(player:GetPropertyChangedSignal("Team"), updateName) end
+	if player then
+		on(player:GetPropertyChangedSignal("Team"), updateName)
+		on(player:GetAttributeChangedSignal("Role"), updateName)
+	end
 	if model:GetAttribute("IsDummy") then on(workspace:GetAttributeChangedSignal("DummyMode"), updateName) end
 
 	local function updateHealth()

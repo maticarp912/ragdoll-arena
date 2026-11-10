@@ -19,12 +19,31 @@ local AnimTiming = require(ServerScriptService:WaitForChild("AnimTiming"))
 local Fx = require(ServerScriptService:WaitForChild("Fx"))
 local Remotes = require(ServerScriptService:WaitForChild("Remotes"))
 local Infusion = require(ServerScriptService:WaitForChild("Infusion"))
+local Directional = require(ServerScriptService:WaitForChild("Directional"))
+local CombatEvents = require(ServerScriptService:WaitForChild("CombatEvents"))
 
 local Effect = Remotes.get("Effect")
 local CFG = CombatConfig
 local now = Combat.now
 
 local Actions = {}
+
+-- 0.2: ritmo más lento y parejo (C23) y alcance general +25 % (D1/D3)
+local function tempo()
+	return (CFG.Feel and CFG.Feel.TempoMult) or 1
+end
+function Actions.reach(r)
+	return r * ((CFG.Directional and CFG.Directional.ReachMult) or 1)
+end
+
+-- Resistencia extra al fallar (Estoque, WeaponData.combo.whiffStaminaMult)
+local function whiffPenalty(char, kind, mult)
+	if not mult or mult <= 1 then return end
+	if char:GetAttribute("IsDummy") and not CFG.Stamina.DummiesUseStamina then return end
+	local extra = WeaponData.staminaCost(char:GetAttribute("WeaponId"), kind) * (mult - 1)
+	char:SetAttribute("Stamina", math.max(0, (char:GetAttribute("Stamina") or 0) - extra))
+	Combat.state(char).lastStaminaUseAt = now()
+end
 
 -- Calcula velocidad de la animación y tiempos escalados.
 -- Devuelve speed (para AdjustSpeed), y una función que convierte un marcador en segundos reales.
@@ -114,11 +133,27 @@ function Actions.m1(char)
 	end
 
 	local atkSpeed = char:GetAttribute("AttackSpeedMult") or 1
-	local duration = combo.duration[step] / atkSpeed
+	local duration = combo.duration[step] * tempo() / atkSpeed
 	local wid = char:GetAttribute("WeaponId") or "Sword"
 	local animKey = "Weapons." .. wid .. ".M1_" .. step
 	local animSpeed, marker = timing(animKey, duration)
-	local hitTime = marker("Hit") or (combo.hitTime[step] / atkSpeed)
+	local hitTime = marker("Hit") or (combo.hitTime[step] * tempo() / atkSpeed)
+
+	-- Direccional: el golpe sale por la postura de este momento (D4). Remate si los anteriores conectaron.
+	local dirOn = Directional.enabled()
+	local dir = dirOn and (char:GetAttribute("Stance") or CFG.Directional.DefaultStance) or ""
+	if step == 1 then
+		st.comboChain = (st.comboChain or 0) + 1
+		st.comboLanded = {}
+	end
+	local chain = st.comboChain or 0
+	local landed = st.comboLanded or {}
+	local finisher = dirOn and step == #combo.damage and step > 1
+	if finisher then
+		for i = 1, step - 1 do
+			if not landed[i] then finisher = false break end
+		end
+	end
 
 	local token = Combat.beginAction(char, "M1", duration, "Windup")
 	st.comboStep = step
@@ -126,6 +161,8 @@ function Actions.m1(char)
 	st.queuedM1 = false
 	char:SetAttribute("ComboStep", step)
 	char:SetAttribute("HitAt", t + hitTime)
+	char:SetAttribute("AttackDir", dir)
+	char:SetAttribute("Finisher", finisher == true) -- el remate (D4) se anima más exagerado
 	-- Hiperarmadura por golpe (Espadón 2-3, Maza 3): los golpes básicos no lo interrumpen al preparar
 	char:SetAttribute("HyperArmor", combo.hyperArmor ~= nil and combo.hyperArmor[step] == true)
 
@@ -138,14 +175,21 @@ function Actions.m1(char)
 		Combat.setPhase(char, "Recovery")
 		char:SetAttribute("HitAt", 0)
 		char:SetAttribute("HyperArmor", false)
-		strike(char, combo.reach, combo.width, {
+		local F = CFG.Directional.Finisher
+		local results = strike(char, Actions.reach(combo.reach), (combo.widths and combo.widths[step]) or combo.width, {
 			kind = "Light",
-			damage = combo.damage[step],
-			stun = combo.stun[step],
-			knockback = combo.knockback[step],
+			damage = combo.damage[step] * (finisher and F.DamageMult or 1),
+			stun = combo.stun[step] * (finisher and F.StunMult or 1),
+			knockback = combo.knockback[step] * (finisher and F.KnockbackMult or 1),
 			guardDrainMult = combo.guardDrainMult,
 			staggerMult = combo.staggerMult,
+			dir = dir,
+			finisher = finisher or nil,
+			onResult = function(r)
+				if r == "hit" and st.comboChain == chain and st.comboLanded then st.comboLanded[step] = true end
+			end,
 		}, combo.sweetSpot)
+		if #results == 0 then whiffPenalty(char, "m1", combo.whiffStaminaMult) end
 	end)
 
 	task.delay(duration, function()
@@ -185,21 +229,31 @@ function Actions.heavy(char)
 	local wid = char:GetAttribute("WeaponId") or "Sword"
 	local animKey = "Weapons." .. wid .. ".Heavy"
 
-	local baseWindup = h.windup / atkSpeed
-	local baseHit = baseWindup + h.hitDelay / atkSpeed
-	local duration = baseHit + h.recovery / atkSpeed
+	local baseWindup = h.windup * tempo() / atkSpeed
+	local baseHit = baseWindup + h.hitDelay * tempo() / atkSpeed
+	local duration = baseHit + h.recovery * tempo() / atkSpeed
 	local animSpeed, marker = timing(animKey, duration)
 	local windup = marker("WindupEnd") or baseWindup
 	local hitTime = marker("Hit") or math.max(baseHit, windup + 0.02)
 
-	-- Imbloqueable: por arma, o por estar con la infusión activa (decisión 2, Fase C)
-	local unblockable = h.unblockable or char:GetAttribute("InfusedHeavyUnblockable") == true
+	-- Imbloqueable: por arma, o por estar con la infusión activa (decisión 2, Fase C).
+	-- Direccional: la excepción de cada arma depende de la dirección (Maza: solo arriba).
+	local dirOn = Directional.enabled()
+	local dir = dirOn and (char:GetAttribute("Stance") or CFG.Directional.DefaultStance) or ""
+	local infused = char:GetAttribute("InfusedHeavyUnblockable") == true
+	local unblockable
+	if dirOn then
+		unblockable = Directional.heavyUnblockable(char, dir) or infused
+	else
+		unblockable = h.unblockable or infused
+	end
 
 	local token = Combat.beginAction(char, "Heavy", duration, "Windup")
 	st.comboStep = 0
 	char:SetAttribute("ComboStep", 0)
 	st.windupEnd = t + windup
 	char:SetAttribute("HitAt", t + hitTime)
+	char:SetAttribute("AttackDir", dir)
 	char:SetAttribute("Telegraph", unblockable and "Unblockable" or "Heavy")
 	char:SetAttribute("HyperArmor", h.hyperArmor == true)
 
@@ -220,7 +274,7 @@ function Actions.heavy(char)
 		char:SetAttribute("HitAt", 0)
 		char:SetAttribute("Telegraph", "")
 		Fx.soundAt("Swing." .. wid .. ".Heavy", char)
-		strike(char, h.reach, h.width, {
+		local results = strike(char, Actions.reach(h.reach), h.width, {
 			kind = "Heavy",
 			damage = h.damage,
 			stun = h.stun,
@@ -228,7 +282,10 @@ function Actions.heavy(char)
 			unblockable = unblockable,
 			blockDamageMult = h.blockDamageMult,
 			guardBreakStunMult = h.guardBreakStunMult,
+			dir = dir,
+			pierces = dirOn and Directional.heavyPierces(char) or nil,
 		})
+		if #results == 0 then whiffPenalty(char, "heavy", def.combo.whiffStaminaMult) end
 	end)
 
 	task.delay(duration, function()
@@ -251,17 +308,21 @@ function Actions.kick(char)
 	if char:GetAttribute("Blocking") then Combat.blockEnd(char, true, true) end
 
 	local K = CFG.Kick
-	local duration = K.Windup + K.Recovery
+	-- Direccional: tiempos propios y castigo si la patada no conecta
+	local DK = Directional.enabled() and CFG.Directional.Kick or nil
+	local windupT = DK and DK.Windup or K.Windup
+	local duration = windupT + (DK and DK.Recovery or K.Recovery)
 	local animSpeed, marker = timing("Generic.Kick", duration)
-	local hitTime = marker("Hit") or K.Windup
+	local hitTime = marker("Hit") or windupT
 
 	local token = Combat.beginAction(char, "Kick", duration, "Windup")
-	st.kickReadyAt = t + K.Cooldown
+	st.kickReadyAt = t + (DK and DK.Cooldown or K.Cooldown)
 	st.comboStep = 0
 	char:SetAttribute("HitAt", t + hitTime)
 	Anim.play(char, "Generic.Kick", { speed = animSpeed, duration = duration, hitTime = hitTime })
 	Fx.soundAt("Kick_Swing", char)
 
+	local whiffed = false
 	task.delay(hitTime, function()
 		if not Combat.valid(char, token) then return end
 		Combat.setPhase(char, "Recovery")
@@ -273,13 +334,90 @@ function Actions.kick(char)
 			knockback = K.Knockback,
 			parryable = K.Parryable,
 		})
-		if #results > 0 then Fx.soundAt("Kick_Hit", char) end
+		if #results > 0 then
+			Fx.soundAt("Kick_Hit", char)
+		elseif DK then
+			-- Patada al aire: recuperación larga (se ve venir, se castiga)
+			whiffed = true
+			st.kickWhiffToken = token -- la esquiva no cancela esta recuperación
+			st.busyUntil = math.max(st.busyUntil, now() + (duration - hitTime) + DK.WhiffRecovery)
+		end
 	end)
 
 	task.delay(duration, function()
-		Combat.endAction(char, token)
+		if whiffed and DK then
+			task.delay(DK.WhiffRecovery, function() Combat.endAction(char, token) end)
+		else
+			Combat.endAction(char, token)
+		end
 	end)
 	return true
+end
+
+----------------------------------------------------------------------
+-- Direccional (D1): F sobre un rival derribado. Tocar = patearlo 2 studs; mantener = levantarlo.
+-- Sin derribado cerca, F es la patada normal. El servidor decide con su propio reloj (no confía en el cliente).
+----------------------------------------------------------------------
+-- Patada a un derribado: lo empuja (sirve para sacarlo por el borde). No hace daño.
+function Actions.kickDowned(char, victim)
+	if not Combat.canAct(char) or Combat.isBusy(char) then return false end
+	local st = Combat.state(char)
+	local t = now()
+	if t < st.kickReadyAt then return false end
+	local root = char:FindFirstChild("HumanoidRootPart")
+	local vbody = victim and (victim:FindFirstChild("UpperTorso") or victim:FindFirstChild("HumanoidRootPart"))
+	if not root or not vbody then return false end
+	if not Combat.spendStamina(char, CFG.Stamina.Kick) then return false end
+	local DK = CFG.Directional.Kick
+	local duration = DK.Windup + DK.Recovery * 0.6
+	local token = Combat.beginAction(char, "Kick", duration, "Windup")
+	st.kickReadyAt = t + DK.Cooldown * 0.6
+	Anim.play(char, "Generic.Kick", { duration = duration, hitTime = DK.Windup })
+	Fx.soundAt("Kick_Swing", char)
+	task.delay(DK.Windup, function()
+		if not Combat.valid(char, token) or not victim.Parent or not victim:GetAttribute("KnockedDown")
+			or victim:GetAttribute("CarriedBy") then return end
+		Combat.setPhase(char, "Recovery")
+		local d = (vbody.Position - root.Position) * Vector3.new(1, 0, 1)
+		if d.Magnitude > CFG.Grab.Range + 2 then return end
+		d = d.Magnitude > 0.01 and d.Unit or root.CFrame.LookVector
+		CombatEvents.noteAttacker(victim, char) -- si cae al vacío, la eliminación es de quien pateó
+		Combat.push(victim, d * DK.DownedPushSpeed + Vector3.new(0, DK.DownedPushUp, 0))
+		Fx.soundAt("Kick_Hit", victim)
+		Fx.dust(vbody.Position - Vector3.new(0, 1, 0), 0.6)
+		Fx.shake(char, CFG.CameraShake.Light, d)
+	end)
+	task.delay(duration, function() Combat.endAction(char, token) end)
+	return true
+end
+
+-- F apretada
+function Actions.kickPress(char)
+	if not Directional.enabled() then return Actions.kick(char) end
+	local st = Combat.state(char)
+	local victim = Combat.findGrabTarget(char)
+	if victim and Combat.canAct(char) and not Combat.isBusy(char) then
+		st.kickHoldToken = (st.kickHoldToken or 0) + 1
+		local token = st.kickHoldToken
+		st.kickHeld = victim
+		task.delay(CFG.Directional.Kick.LiftHold, function()
+			if st.kickHoldToken ~= token or not st.kickHeld then return end
+			st.kickHeld = nil
+			Combat.grab(char) -- mantener F: levantarlo
+		end)
+		return true
+	end
+	return Actions.kick(char)
+end
+
+-- F soltada antes de LiftHold: patear al derribado
+function Actions.kickRelease(char)
+	local st = Combat.state(char)
+	local victim = st.kickHeld
+	if not victim then return false end
+	st.kickHeld = nil
+	st.kickHoldToken = (st.kickHoldToken or 0) + 1
+	return Actions.kickDowned(char, victim)
 end
 
 ----------------------------------------------------------------------
@@ -316,7 +454,8 @@ function Actions.dodge(char, dir, target)
 		-- Se puede esquivar desde la preparación de un fuerte (finta) o, tras el impacto,
 		-- desde la recuperación de un golpe básico o de la patada (encadenar golpe y dash)
 		local phase = char:GetAttribute("ActionPhase")
-		if CFG.Dodge.CancelsRecovery and (st.action == "M1" or st.action == "Kick") and phase == "Recovery" then
+		if CFG.Dodge.CancelsRecovery and (st.action == "M1" or st.action == "Kick") and phase == "Recovery"
+			and not (st.action == "Kick" and st.kickWhiffToken == st.token) then
 			Combat.cancelAction(char)
 			st.comboStep = 0
 		elseif not (CFG.Dodge.CancelsHeavy and Combat.tryFeint(char)) then

@@ -12,6 +12,12 @@
 --   guardDrainMult: cuánta Guardia gasta el rival al bloquear este combo (x daño x CombatConfig.Guard.LightDrainMult).
 --   staggerMult   : duración del aturdimiento corto que provoca cada golpe (interrupción).
 --   sweetSpot     : golpes en el extremo del alcance (desde "from" x reach) hacen x"mult" de daño (Estoque).
+--   widths        : (opcional) ancho por golpe; si falta se usa width.
+--   whiffStaminaMult: (opcional) un golpe que no conecta gasta este múltiplo de su resistencia (Estoque).
+-- direccional (0.2, solo con CombatConfig.Directional.Enabled): por arma
+--   unblockableDirs: direcciones del FUERTE que no se pueden bloquear (Maza: arriba)
+--   piercesGuard   : el fuerte atraviesa la guardia (Estoque); el parry sigue funcionando
+--   stanceSwitch   : multiplica CombatConfig.Directional.SwitchTime (armas pesadas cambian de lado más lento)
 -- heavy  : ataque fuerte (E / M2). Destello naranja; rompe la guardia pasiva.
 --   windup / hitDelay / recovery: preparación (ventana de parry/esquiva), impacto y tiempo vulnerable.
 --   feintable, hyperArmor, unblockable, blockDamageMult, guardBreakStunMult (ver CombatConfig).
@@ -52,13 +58,14 @@ WeaponData.Data = {
 		archetype = "TwoHand", name = "Espadón", desc = "Lento y previsible, pero con alcance, barridos anchos y presión que no se frena.",
 		hp = 290, speed = 12.5, guardMax = 115, -- etapa 8: +35 % (era 215)
 		combo = {
-			damage = { 17, 19, 26 }, stun = { 25, 28, 45 }, knockback = { 14, 14, 32 },
+			-- 0.2 (D3): 17·19·26 → 19·21·29 y alcance 9,5 → 10
+			damage = { 19, 21, 29 }, stun = { 25, 28, 45 }, knockback = { 14, 14, 32 },
 			duration = { 0.92, 0.92, 1.05 }, hitTime = { 0.5, 0.5, 0.58 },
-			reach = 9.5, width = 7.5,
+			reach = 10, width = 7.5,
 			hyperArmor = { false, true, true }, guardDrainMult = 1.6, staggerMult = 1.3,
 		},
 		heavy = {
-			name = "Tajo Aplastante", damage = 45, stun = 70, knockback = 55,
+			name = "Tajo Aplastante", damage = 50, stun = 70, knockback = 55, -- 0.2 (D3): 45 → 50
 			windup = 0.64, hitDelay = 0.1, recovery = 0.66, reach = 10, width = 7,
 			feintable = true, hyperArmor = true, unblockable = false,
 			blockDamageMult = 0.5, guardBreakStunMult = 1.6,
@@ -73,8 +80,9 @@ WeaponData.Data = {
 		archetype = "Dual", name = "Dagas", desc = "Velocidad y presión de cerca. Interrumpen y esquivan mejor que nadie.",
 		hp = 216, speed = 18.5, guardMax = 80, -- etapa 8: +35 % (era 160)
 		combo = {
-			damage = { 7, 8, 12 }, stun = { 11, 11, 20 }, knockback = { 3, 3, 8 },
-			duration = { 0.32, 0.32, 0.42 }, hitTime = { 0.15, 0.15, 0.21 },
+			-- 0.2 (D3): 7·8·12 → 6·7·11; los golpes 2 y 3 impactan más tarde para dejar lugar al parry
+			damage = { 6, 7, 11 }, stun = { 11, 11, 20 }, knockback = { 3, 3, 8 },
+			duration = { 0.32, 0.40, 0.48 }, hitTime = { 0.15, 0.19, 0.25 },
 			reach = 5, width = 4,
 			hyperArmor = { false, false, false }, guardDrainMult = 0.9, staggerMult = 0.85,
 		},
@@ -95,11 +103,13 @@ WeaponData.Data = {
 		archetype = "Rapier", name = "Estoque", desc = "Precisión y alcance frontal. La punta castiga; de lado falla.",
 		hp = 230, speed = 17, guardMax = 90, -- etapa 8: +35 % (era 170)
 		combo = {
-			damage = { 9, 11, 15 }, stun = { 12, 12, 24 }, knockback = { 5, 5, 12 },
-			duration = { 0.4, 0.4, 0.5 }, hitTime = { 0.2, 0.2, 0.26 },
+			-- 0.2 (D3): 9·11·15 → 8·10·14, duración 0,40·0,40·0,50 → 0,40·0,45·0,55, punta +25 % → +15 %
+			damage = { 8, 10, 14 }, stun = { 12, 12, 24 }, knockback = { 5, 5, 12 },
+			duration = { 0.4, 0.45, 0.55 }, hitTime = { 0.2, 0.2, 0.26 }, -- impacto igual: la recuperación se alarga
 			reach = 10, width = 2.5,
 			hyperArmor = { false, false, false }, guardDrainMult = 0.9, staggerMult = 1.0,
-			sweetSpot = { from = 0.65, mult = 1.25 },
+			sweetSpot = { from = 0.65, mult = 1.15 },
+			whiffStaminaMult = 1.5, -- 0.2 (D3): fallar un golpe gasta +50 % de resistencia
 		},
 		heavy = {
 			name = "Puntada Perforante", damage = 26, stun = 35, knockback = 20,
@@ -117,13 +127,14 @@ WeaponData.Data = {
 		archetype = "Hammer", name = "Maza", desc = "Presión sobre la Guardia y el Stun. Rompe bloqueos y aturde; lenta y corta.",
 		hp = 317, speed = 12.5, guardMax = 110, -- etapa 8: +35 % (era 235)
 		combo = {
-			damage = { 13, 15, 20 }, stun = { 32, 32, 52 }, knockback = { 8, 8, 22 },
+			-- 0.2 (D3): 13·15·20 → 17·19·26, alcance 7 → 8, golpe 3 más ancho (5 → 6,5)
+			damage = { 17, 19, 26 }, stun = { 32, 32, 52 }, knockback = { 8, 8, 22 },
 			duration = { 1.0, 1.0, 1.12 }, hitTime = { 0.56, 0.56, 0.63 },
-			reach = 7, width = 5, -- 9/11: 6.5 → 7, maza 30 % más grande (ver Equilibrio de armas)
+			reach = 8, width = 5, widths = { 5, 5, 6.5 },
 			hyperArmor = { false, false, true }, guardDrainMult = 2.0, staggerMult = 1.3,
 		},
 		heavy = {
-			name = "Machaque Pesado", damage = 40, stun = 85, knockback = 36,
+			name = "Machaque Pesado", damage = 46, stun = 85, -- 0.2 (D3): 40 → 46 knockback = 36,
 			windup = 0.6, hitDelay = 0.1, recovery = 0.68, reach = 7.5, width = 5.5, -- 9/11: 7 → 7.5
 			feintable = true, hyperArmor = false, unblockable = true,
 			blockDamageMult = 1.0, guardBreakStunMult = 1,
@@ -161,6 +172,21 @@ WeaponData.Feel = {
 	Rapier = { hitstop = 0.75, shake = 0.75, lunge = 3.6, weight = 1 },
 	Mace = { hitstop = 1.7, shake = 1.65, lunge = 2.0, weight = 3 },
 }
+
+-- Combate direccional (0.2): excepciones por arma, sin anular el sistema (propuesta de Codex en
+-- «Diseño Combate PvP Direccional Roblox»: maza solo el fuerte de arriba imbloqueable; estoque atraviesa solo con el fuerte).
+-- Solo se usan con CombatConfig.Directional.Enabled = true.
+WeaponData.Directional = {
+	Sword = { stanceSwitch = 1.0 },
+	Greatsword = { stanceSwitch = 1.35 },
+	Dagger = { stanceSwitch = 0.8 },
+	Rapier = { stanceSwitch = 0.9, piercesGuard = true },
+	Mace = { stanceSwitch = 1.35, unblockableDirs = { Up = true } },
+}
+
+function WeaponData.directional(id)
+	return WeaponData.Directional[id] or WeaponData.Directional.Sword
+end
 
 function WeaponData.feel(id)
 	return WeaponData.Feel[id] or WeaponData.Feel.Sword

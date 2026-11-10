@@ -4,6 +4,15 @@
 
 local InputMap = {}
 
+-- 0.2: con el combate direccional (CombatConfig.Directional.Enabled) cambia el esquema de fábrica (D1):
+-- guardia Q / L2, patada y levantar en F, fijar y cambiar de objetivo con T / R3. Ver InputMap.DirectionalDefaults.
+local ok, CombatConfig = pcall(function()
+	return require(script.Parent:WaitForChild("CombatConfig"))
+end)
+local function directionalOn()
+	return ok and type(CombatConfig) == "table" and CombatConfig.Directional ~= nil and CombatConfig.Directional.Enabled == true
+end
+
 InputMap.Actions = {
 	{ id = "Attack", name = "Combo (ataque)" },
 	{ id = "Heavy", name = "Fuerte / cargar lanzamiento" },
@@ -27,6 +36,27 @@ InputMap.Defaults = {
 		Kick = "ButtonL2", Infuse = "ButtonY", LockOn = "ButtonR3", SwitchTarget = "DPadRight", Menu = "DPadUp",
 	},
 }
+
+-- Esquema del combate direccional (D1). Las asignaciones guardadas con el esquema anterior no se mezclan:
+-- cada tabla de dispositivo lleva la marca __layout y, si no coincide, se usan las de fábrica de este esquema.
+InputMap.DirectionalDefaults = {
+	Keyboard = {
+		Attack = "MouseButton1", Heavy = "MouseButton2", Block = "Q", Dodge = "Space", Interact = "E",
+		Kick = "F", Infuse = "R", LockOn = "T", SwitchTarget = "G", Menu = "B",
+	},
+	Gamepad = {
+		Attack = "ButtonR1", Heavy = "ButtonR2", Block = "ButtonL2", Dodge = "ButtonL1", Interact = "ButtonX",
+		Kick = "ButtonB", Infuse = "ButtonY", LockOn = "ButtonR3", SwitchTarget = "DPadRight", Menu = "DPadUp",
+	},
+}
+
+function InputMap.layout()
+	return directionalOn() and "Directional" or "Classic"
+end
+
+function InputMap.defaults()
+	return directionalOn() and InputMap.DirectionalDefaults or InputMap.Defaults
+end
 
 -- Atajos fijos además de los asignables (no se muestran en el menú)
 InputMap.Extra = {
@@ -74,12 +104,17 @@ end
 -- Une las asignaciones guardadas con las de fábrica (y descarta lo inválido)
 function InputMap.merge(saved)
 	local out = { Keyboard = {}, Gamepad = {} }
-	for device, defaults in InputMap.Defaults do
+	local layout = InputMap.layout()
+	for device, defaults in InputMap.defaults() do
 		local s = type(saved) == "table" and type(saved[device]) == "table" and saved[device] or {}
+		-- Guardado sin marca = esquema de la 0.1 ("Classic")
+		local savedLayout = type(s.__layout) == "string" and s.__layout or "Classic"
+		if savedLayout ~= layout then s = {} end
 		for action, def in defaults do
 			local v = s[action]
 			out[device][action] = (type(v) == "string" and #v <= 32 and not InputMap.Reserved[v]) and v or def
 		end
+		out[device].__layout = layout
 	end
 	return out
 end
@@ -90,7 +125,7 @@ function InputMap.actionFor(binds, input)
 	if not name then return nil end
 	local device = InputMap.isGamepad(input) and "Gamepad" or "Keyboard"
 	for action, key in binds[device] do
-		if key == name then return action end
+		if key == name and action ~= "__layout" then return action end
 	end
 	return InputMap.Extra[name]
 end
