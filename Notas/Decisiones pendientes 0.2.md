@@ -1,6 +1,6 @@
 # Decisiones 0.2 — respondidas el 10/11/2026 (Argentina, UTC-3)
 
-El usuario respondió a Claude: «apruebo todo», con los cambios de abajo. **Todas las decisiones están cerradas**; la D6 sigue la propuesta de Claude (el usuario la planteó como pregunta: si no está de acuerdo, se corrige acá).
+El usuario respondió a Claude: «apruebo todo», con los cambios de abajo. **Todas las decisiones están cerradas** (D6 confirmada después: «Sí, Blender»).
 Si una respuesta cambia, se edita acá con fecha y hora, sin borrar la anterior.
 
 ## Combate
@@ -15,7 +15,7 @@ Si una respuesta cambia, se edita acá con fecha y hora, sin borrar la anterior.
 ## Skins, tienda y armería
 | # | Pregunta | Respuesta del usuario |
 |---|---|---|
-| D6 | Skins: ¿por código o en Blender? | 🟡 El usuario preguntó si hacerlas en Blender subiendo la resolución de todas. **Propuesta de Claude, adoptada salvo que el usuario diga lo contrario:** **todas las skins pasan a Blender**, en dos tandas. Tanda 1 (piloto): las 3 de la ruleta + 1 por arma, para validar el proceso de subida y cómo se ven. Tanda 2: el resto. Cada skin conserva su versión por código como respaldo hasta que se suba la malla. Gemini genera las mallas y texturas por script; **el usuario las sube** a Roblox (importador 3D de Studio, se pueden subir varias juntas) y pega los IDs en la lista que deja Gemini. Límites: mallas livianas para celular (pocos miles de triángulos por skin) y texturas de 1024 como máximo. |
+| D6 | Skins: ¿por código o en Blender? | ✅ **Confirmado por el usuario (10/11/2026): Blender.** **todas las skins pasan a Blender**, en dos tandas. Tanda 1 (piloto): las 3 de la ruleta + 1 por arma, para validar el proceso de subida y cómo se ven. Tanda 2: el resto. Cada skin conserva su versión por código como respaldo hasta que se suba la malla. Gemini genera las mallas y texturas por script; **el usuario las sube** a Roblox (importador 3D de Studio, se pueden subir varias juntas) y pega los IDs en la lista que deja Gemini. Límites: mallas livianas para celular (pocos miles de triángulos por skin) y texturas de 1024 como máximo. |
 | D7 | Roles | ✅ **Owner: PapuDoNacimento**, se detecta solo porque es el creador del juego (`game.CreatorId`, como ya hace el menú de depuración). **Tester: Mateito = usuario `mateodoupa`**: guardar el nombre en `Roles.lua` y resolver el UserId en el servidor (`GetUserIdFromNameAsync`, con caché); si el usuario pasa después el número de ID, se usa ese. Admin y Mod: ninguno por ahora. Permisos como la recomendación: Owner y Admin todo el panel; Mod expulsar y silenciar; Tester depuración; VIP etiqueta; Nuevo menos de 3 h. |
 | D8 | Panel: darse cosas a sí mismo | ✅ El Owner ya tiene todo; un Admin no se da cosas ni roles iguales o mayores. Todo registrado. |
 | D9 | Niveles | ✅ Máximo 100; XP por partida, victoria, eliminación y misión; premios cada 5 y cada 10 niveles. Codex propone la curva. |
