@@ -76,7 +76,7 @@ Revisar con datos de la beta. | Claude | ⬜ |
 | Cinemáticas antes del combate | Presentación de los jugadores al entrar a la arena: cámara recorriendo la arena, nombres, armas y pose de entrada. | Claude (cámara y poses) + Gemini (carteles) | ⬜ |
 | Previa de 10 s antes de cada partida | Al menos 10 s antes de que arranque, con una pantalla para elegir **arma, skin e infusión**. Hoy no se puede cambiar de arma en partida. | Codex (servidor) + Gemini (interfaz) | ⬜ |
 | Patear al rival derribado | Mantener la mecánica de levantar y agregar una patada para tirar al rival derribado fuera de la arena. | Claude | ⬜ |
-| Combate direccional | Ataques y bloqueos arriba, izquierda y derecha, parry perfecto, patada de ring-out, hit-stop y Elo para las clasificatorias. Diseño completo y preguntas abiertas en [[Diseño Combate PvP Direccional Roblox]]. Cambio grande: decidir antes si entra en la 0.2 o en la 0.3. | Claude | ⬜ diseño |
+| Combate direccional | Ataques y bloqueos arriba, izquierda y derecha, parry perfecto, patada de ring-out, hit-stop y Elo para las clasificatorias. Diseño completo y preguntas abiertas en [[Diseño Combate PvP Direccional Roblox]]. Especificación de Gemini (10/11): [[Especificación Gemini combate direccional]]. Arquitectura y conflictos a decidir: [[Arquitectura Combate Direccional]]. Cambio grande: decidir antes si entra en la 0.2 o en la 0.3. | Claude | ⬜ diseño |
 | Clasificatorias con Elo | Parte del diseño direccional. Hoy RANKED dice «Próximamente». | Codex | ⬜ |
 
 ## Orden sugerido

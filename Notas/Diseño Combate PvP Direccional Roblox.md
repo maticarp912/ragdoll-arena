@@ -122,3 +122,6 @@ Primero patio de práctica, desactivado en partidas públicas: espada contra mu�
 - Celular SIN mando: adaptación secundaria, con esquema simplificado de entrada si hace falta. Propuesta de Codex: simplificar gestos/disposición, manteniendo las reglas de daño, guardia y parry comunes. Esta igualdad de reglas sigue como propuesta, no decisión adicional del usuario.
 - Orden de diseño propuesto: cerrar mando y teclado/mouse; validar con práctica; adaptar táctil. La elección PC mouse frente a Q/M1/E y la cámara/selector sin fijado siguen abiertas.
 **Implementado:** solo documentación de la decisión. **Comprobado en Studio:** ninguna prueba nueva del direccional. **Pendiente:** definir controles, prototipo y pruebas en PC y teléfono con mando; luego táctil.
+
+## 10/11
+El usuario trajo una especificación de Gemini: [[Especificación Gemini combate direccional]]. Claude escribió la arquitectura y la tabla de conflictos con la beta y con la Mesa de Codex: [[Arquitectura Combate Direccional]].
