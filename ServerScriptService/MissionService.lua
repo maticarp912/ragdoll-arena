@@ -6,10 +6,13 @@ local Data = require(script.Parent.PlayerData)
 local Remotes = require(script.Parent.Remotes)
 local Changed = Remotes.get("MissionsChanged")
 local RF = Remotes.get("Missions", "RemoteFunction")
+local Progression = require(script.Parent.ProgressionService)
+local claimAt = {}
+Players.PlayerRemoving:Connect(function(p) claimAt[p] = nil end)
 local Service = {}
 local function daily(player)
  local data = Data.get(player) if not data then return nil end
- local day = math.floor(os.time() / E.DaySeconds)
+ local day = math.floor((os.time() - E.DayOffset) / E.DaySeconds)
  if data.Daily.day ~= day then
   data.Daily = { day = day, progress = {}, claimed = {} }
  end
@@ -29,7 +32,7 @@ function Service.get(player)
   local m = Catalog.Data[id]
   table.insert(list, { id = id, nameKey = "cx.mission." .. id, params = { goal = m.goal }, progress = d.progress[id] or E.Zero, goal = m.goal, reward = m.reward, claimed = d.claimed[id] == true })
  end
- return { resetAt = (d.day + E.One) * E.DaySeconds, list = list }
+ return { resetAt = (d.day + E.One) * E.DaySeconds + E.DayOffset, list = list }
 end
 function Service.progress(player, event, amount, weapon)
  local d = daily(player) if not d then return end
@@ -45,6 +48,9 @@ function Service.progress(player, event, amount, weapon)
  if changed and player.Parent then Changed:FireClient(player) end
 end
 RF.OnServerInvoke = function(player, action, id)
+ local now = os.clock()
+ if claimAt[player] and now - claimAt[player] < E.ShopInterval then return false, { key = "cx.shop.wait" } end
+ claimAt[player] = now
  if type(action) ~= "string" then return false, { key = "invalid" } end
  if action == "Get" then return Service.get(player) end
  if action ~= "Claim" or type(id) ~= "string" then return false, { key = "invalid" } end
@@ -57,15 +63,16 @@ RF.OnServerInvoke = function(player, action, id)
  local data = Data.get(player)
  data.Stats.Coins = (data.Stats.Coins or E.Zero) + m.reward
  Data.addCoins(player, m.reward)
+ Progression.source(player, "Mission")
  Changed:FireClient(player)
- local saved = Data.save(player)
- return true, { key = saved and "cx.mission.claimed" or "cx.debug.temporary", params = { amount = m.reward } }
+ Data.saveSoon(player)
+ return true, { key = "cx.mission.claimed", params = { amount = m.reward } }
 end
 task.spawn(function()
- local lastDay = math.floor(os.time() / E.DaySeconds)
+ local lastDay = math.floor((os.time() - E.DayOffset) / E.DaySeconds)
  while true do
   task.wait(E.LeaderboardInterval)
-  local day = math.floor(os.time() / E.DaySeconds)
+  local day = math.floor((os.time() - E.DayOffset) / E.DaySeconds)
   if day ~= lastDay then
    lastDay = day
    for _, player in Players:GetPlayers() do daily(player) Changed:FireClient(player) end

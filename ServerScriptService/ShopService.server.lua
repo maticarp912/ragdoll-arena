@@ -22,11 +22,12 @@ local ShopRF = Remotes.get("Shop", "RemoteFunction")
 local SettingsRF = Remotes.get("Settings", "RemoteFunction")
 local RunService = game:GetService("RunService")
 local InputMap = require(ReplicatedStorage:WaitForChild("InputMap"))
+local RoleService = require(ServerScriptService:WaitForChild("RoleService"))
 local CombatConfig = require(ReplicatedStorage:WaitForChild("CombatConfig"))
 
 -- Herramientas de prueba (monedas gratis) solo en Studio o para quien tenga permiso
 local function canDebug(player)
-	if RunService:IsStudio() then return true end
+	if RunService:IsStudio() or RoleService.has(player, "Debug") then return true end
 	if game.CreatorType == Enum.CreatorType.User and player.UserId == game.CreatorId then return true end
 	return table.find(CombatConfig.Debug.AllowedUserIds, player.UserId) ~= nil
 end
@@ -72,14 +73,20 @@ local function shopAction(player, action, id)
 	if type(action) ~= "string" or type(id) ~= "string" then
 		return false, { key = "invalid" }
 	end
-	if player:GetAttribute("InMatch") and (action == "SelectWeapon" or action == "SelectInfusion" or action == "Equip") then
+	if player:GetAttribute("InMatch") and player:GetAttribute("MatchPhase") ~= "Prematch" and (action == "SelectWeapon" or action == "SelectInfusion" or action == "Equip") then
   return false, { key = "locked" }
  end
  local data = PlayerData.get(player)
 	if not data then return false, { key = "loading" } end
+ if action == "GetFeatured" then
+  local ids = {} for skinId, skin in Skins.Data do if skinId ~= "Default" and not skin.comingSoon then table.insert(ids, skinId) end end
+  table.sort(ids) local result = {} local day = math.floor((os.time() - E.DayOffset) / E.DaySeconds)
+  for i = 1, math.min(E.FeaturedCount, #ids) do table.insert(result, ids[(day * E.FeaturedCount + i - 1) % #ids + 1]) end
+  return true, { ids = result, resetAt = (day + 1) * E.DaySeconds + E.DayOffset }
+ end
 
 	if action == "BuyAura" or action == "EquipAura" or action == "UnequipAura" then
-  if player:GetAttribute("InMatch") then return false, { key = "locked" } end
+  if player:GetAttribute("InMatch") and player:GetAttribute("MatchPhase") ~= "Prematch" then return false, { key = "locked" } end
   if action == "UnequipAura" then
    PlayerData.equipAura(player, "") PlayerData.saveSoon(player)
    return true, { key = "cx.aura.removed" }
@@ -90,7 +97,7 @@ local function shopAction(player, action, id)
    if not PlayerData.equipAura(player,id) then return false, { key = "notOwned" } end
    PlayerData.saveSoon(player) return true, { key = "cx.aura.equipped" }
   end
-  if data.OwnedAuras[id] then return false, { key = "alreadyOwned" } end
+  if PlayerData.owns(player, "OwnedAuras", id) then return false, { key = "alreadyOwned" } end
   if aura.currency == "Coins" then
    local ok,key=PlayerData.buyCosmetic(player,id,aura.price,true)
    return ok, { key = key }
@@ -119,6 +126,7 @@ local function shopAction(player, action, id)
 		local equipped = Skins.Data[data.EquippedSkin]
 		if equipped and equipped.weapon and equipped.weapon ~= id then PlayerData.equipSkin(player, "Default") end
 		PlayerData.setWeapon(player, id)
+  PlayerData.saveSoon(player)
 		refreshWeapon(player)
 		return true
 
@@ -126,6 +134,7 @@ local function shopAction(player, action, id)
   if data.InfusionId==id then return true end
 		if not Infusions.Data[id] then return false, { key = "invalid" } end
 		PlayerData.setInfusion(player, id)
+  PlayerData.saveSoon(player)
 		-- Se aplica al momento si no está encendida ahora mismo (en partida, también entre rondas)
 		local char = player.Character
 		if char and not char:GetAttribute("InfusionActive") then
@@ -139,6 +148,7 @@ local function shopAction(player, action, id)
 		if not skin or skin.comingSoon then return false, { key = "soon" } end
 		if skin.weapon and skin.weapon ~= data.WeaponId then return false, { key = "otherWeapon" } end
 		if not PlayerData.equipSkin(player, id) then return false, { key = "notOwned" } end
+  PlayerData.saveSoon(player)
 		refreshWeapon(player)
 		return true
 
@@ -146,7 +156,7 @@ local function shopAction(player, action, id)
 		local skin = Skins.Data[id]
 		if not skin then return false, { key = "invalid" } end
 		if skin.comingSoon then return false, { key = "soon" } end
-		if data.OwnedSkins[id] then return false, { key = "alreadyOwned" } end
+		if PlayerData.owns(player, "OwnedSkins", id) then return false, { key = "alreadyOwned" } end
 
 		if skin.currency == "Coins" then
 			local ok,key=PlayerData.buyCosmetic(player,id,skin.price,false)

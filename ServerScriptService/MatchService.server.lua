@@ -22,6 +22,18 @@ require(ServerScriptService:WaitForChild("Remotes"))
 local ArenaConfig = require(ReplicatedStorage:WaitForChild("ArenaConfig"))
 local ArenaBuilder = require(ServerScriptService:WaitForChild("ArenaBuilder"))
 local Stats = require(ServerScriptService:WaitForChild("StatsService"))
+local E = require(ReplicatedStorage:WaitForChild("Economy"))
+local RunService = game:GetService("RunService")
+local RoleService = require(ServerScriptService:WaitForChild("RoleService"))
+local Progression = require(ServerScriptService:WaitForChild("ProgressionService"))
+require(ServerScriptService:WaitForChild("AdminService"))
+local function phase(name, duration, group)
+ local ends = workspace:GetServerTimeNow() + (duration or 0)
+ workspace:SetAttribute("PhaseEnds", ends) workspace:SetAttribute("MatchPhase", name)
+ for _, p in Players:GetPlayers() do if p:GetAttribute("InMatch") then p:SetAttribute("MatchPhase", name) end end
+ for _, player in group or {} do player:SetAttribute("MatchPhase", name) end
+end
+phase("Lobby")
 local CONFIG = ArenaConfig.Match
 local MODES = ArenaConfig.Modes
 
@@ -289,6 +301,13 @@ local function runRound(roundNumber: number, modeName: string, teamsMap)
 
 	resetArena(modeName)
 	local fighters = {}
+ local connections = {}
+ local lastEliminated
+ local function eliminate(f, at)
+  if f.eliminatedAt then return end
+  f.eliminatedAt = at f.player:SetAttribute("Eliminated", true)
+  if not lastEliminated or at > lastEliminated.eliminatedAt or (at == lastEliminated.eliminatedAt and f.player.UserId > lastEliminated.player.UserId) then lastEliminated = f end
+ end
 
 	for teamName, list in teamsMap do
 		for i, player in list do
@@ -298,18 +317,26 @@ local function runRound(roundNumber: number, modeName: string, teamsMap)
 				if char and hum then
 					char:SetAttribute("Frozen", true)
 					Combat.refreshSpeed(char)
-					table.insert(fighters, { player = player, team = teamName, char = char, hum = hum })
+					local f = { player = player, team = teamName, char = char, hum = hum }
+     table.insert(fighters, f)
+     table.insert(connections, hum.HealthChanged:Connect(function(health) if health <= 0 then eliminate(f, os.clock()) end end))
 				end
 			end
 		end
 	end
 
-	for i = CONFIG.Countdown, 1, -1 do
+	if roundNumber == 1 then
+  phase("Cinematic", E.CinematicTime, nil)
+  task.wait(E.CinematicTime)
+ end
+ phase("Round", CONFIG.RoundTime + CONFIG.Countdown)
+ for i = CONFIG.Countdown, 1, -1 do
 		setStatus("cx.match.prepare", { round = roundNumber, seconds = i })
 		task.wait(1)
 	end
 
 	for _, f in fighters do
+  f.player:SetAttribute("MatchPhase", "Round")
 		if f.hum.Parent then
 			f.char:SetAttribute("Frozen", false)
 			f.char:SetAttribute("CanFight", true)
@@ -327,21 +354,27 @@ local function runRound(roundNumber: number, modeName: string, teamsMap)
 		local alive = { Red = 0, Blue = 0 }
 		local health = { Red = 0, Blue = 0 }
 
-		for _, f in fighters do
-			local root = f.char:FindFirstChild("HumanoidRootPart")
-			-- Eliminated: Roblox regenera la vida de un Humanoid muerto (visto en Studio: 0 → 4 → 9),
-			-- así que Health > 0 sola haría volver a contar como vivo a un aliado caído en 2v2.
-			if f.player.Parent and f.hum.Parent and f.hum.Health > 0 and not f.player:GetAttribute("Eliminated") and root then
-				if root.Position.Y < voidY then
-					f.hum.Health = 0 -- eliminado: cayó de la arena
-				else
-					alive[f.team] += 1
-					health[f.team] += f.hum.Health
-				end
-			end
-		end
+  local now = os.clock()
+  -- Sample every Heartbeat. Interpolate void crossings within the last frame;
+  -- an exactly simultaneous crossing uses UserId as a stable, documented tie-break.
+  for _, f in fighters do
+   local root = f.char:FindFirstChild("HumanoidRootPart")
+   if not f.eliminatedAt then
+    if not f.player.Parent or not f.hum.Parent or not root then eliminate(f, now)
+    elseif root.Position.Y < voidY then
+     local at = now
+     if f.previousY and f.previousY >= voidY and f.previousY > root.Position.Y then
+      at = f.previousAt + (now - f.previousAt) * (f.previousY - voidY) / (f.previousY - root.Position.Y)
+     end
+     eliminate(f, at) f.hum.Health = 0
+    elseif f.hum.Health <= 0 or f.player:GetAttribute("Eliminated") then eliminate(f, now)
+    else alive[f.team] += 1 health[f.team] += f.hum.Health end
+   end
+   f.previousY = root and root.Position.Y f.previousAt = now
+  end
 
 		if alive.Red == 0 and alive.Blue == 0 then
+   winner = lastEliminated and lastEliminated.team
 			break
 		elseif alive.Red == 0 then
 			winner = "Blue"
@@ -364,10 +397,12 @@ local function runRound(roundNumber: number, modeName: string, teamsMap)
    lastText = stamp
    setStatus(key, { round = roundNumber, red = alive.Red, blue = alive.Blue, seconds = remaining })
   end
-		task.wait(0.2)
+		RunService.Heartbeat:Wait()
 	end
 
-	arena.token += 1 -- detiene el derrumbe
+	for _, connection in connections do connection:Disconnect() end
+ phase("RoundEnd", E.RoundEndTime)
+ arena.token += 1 -- detiene el derrumbe
 	for _, f in fighters do
 		f.char:SetAttribute("CanFight", false)
 		Combat.drop(f.char)
@@ -401,7 +436,12 @@ local function runMatch(group, modeName: string)
 		player:SetAttribute("MatchInfusionCharge", 0) -- cada partida empieza sin carga
 	end
 
-	Stats.begin(group, modeName)
+	phase("Prematch", math.max(E.MinPrematchTime, E.PrematchTime), group)
+ for _, player in group do if player.Character then player.Character:SetAttribute("CanFight", false) player.Character:SetAttribute("Frozen", true) Combat.refreshSpeed(player.Character) end end
+ task.wait(math.max(E.MinPrematchTime, E.PrematchTime))
+ -- Lock BEFORE any yielding character loads. Cinematic timer starts after spawning.
+ phase("Cinematic", nil, group)
+ Stats.begin(group, modeName)
 	local wins = { Red = 0, Blue = 0 }
 	local round = 0
 	while wins.Red < CONFIG.RoundsToWin and wins.Blue < CONFIG.RoundsToWin and round < CONFIG.MaxRounds do
@@ -409,7 +449,7 @@ local function runMatch(group, modeName: string)
 		local winner = runRound(round, modeName, teamsMap)
 		if winner then wins[winner] += 1 end
 		setStatus(winner and "cx.match.point" or "cx.match.draw", { teamKey = winner and "team." .. winner, red = wins.Red, blue = wins.Blue })
-		task.wait(3)
+		task.wait(E.RoundEndTime)
 	end
 
 	local matchWinner = nil
@@ -418,6 +458,7 @@ local function runMatch(group, modeName: string)
 		setStatus("cx.match.winner", { teamKey = "team." .. matchWinner })
 	end
 
+	phase("Summary", E.SummaryTime, group)
 	for teamName, list in teamsMap do
 		for _, player in list do
 			if player.Parent then
@@ -425,17 +466,19 @@ local function runMatch(group, modeName: string)
 			end
 		end
 	end
-	task.wait(4)
+	task.wait(E.SummaryTime)
 
 	for _, player in group do
 		if player.Parent then
 			player:SetAttribute("InMatch", false)
+   player:SetAttribute("MatchPhase", "Lobby")
 			player:SetAttribute("Eliminated", false)
 			player.Team = nil
 			spawnInLobby(player)
 		end
 	end
 	resetArena(modeName)
+ phase("Lobby")
 end
 
 ----------------------------------------------------------------------
@@ -444,7 +487,7 @@ end
 local function setupPlayer(player: Player)
 	player:SetAttribute("InMatch", false)
 	PlayerData.load(player)
-	if PlayerData.get(player) and player.Parent then spawnInLobby(player) end
+	if PlayerData.get(player) and player.Parent then RoleService.refresh(player) Progression.refresh(player) spawnInLobby(player) end
 end
 
 Dummies.setup(dummyHomes)
@@ -460,7 +503,12 @@ local QUEUE_NEED = { ["1v1"] = 2, ["2v2"] = 4 }
 -- Botones de cola (Lobby.client): entrar o salir de la cola sin ir a los círculos
 local queueRequests = {} -- [jugador] = "1v1" | "2v2"
 local QueueRemote = require(ServerScriptService:WaitForChild("Remotes")).get("Queue")
+local queueAt = {}
+Players.PlayerRemoving:Connect(function(p) queueAt[p] = nil end)
 QueueRemote.OnServerEvent:Connect(function(player, action, mode)
+ local now = os.clock()
+ if queueAt[player] and now - queueAt[player] < E.QueueInterval then return end
+ queueAt[player] = now
 	if type(action) ~= "string" then return end
 	if action == "Join" and type(mode) == "string" and QUEUE_NEED[mode] and not player:GetAttribute("InMatch") then
 		queueRequests[player] = mode

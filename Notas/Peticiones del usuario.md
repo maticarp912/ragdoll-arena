@@ -21,3 +21,7 @@ Leyenda: ✅ comprobado en Studio · 🟡 implementado, sin probar jugando · �
 | 10/11/2026 | Respuestas D1 a D22: mouse y cámara eligen la dirección; remate si conectan los 3 golpes; almas; Blender (propuesta); Mateito = mateodoupa; ruleta, cajas y sistema completo de recompensas y retención | [[Decisiones pendientes 0.2]], [[Recompensas y retención 0.2]] | ✅ anotado |
 | 10/11/2026 | Ronda 1 de la 0.2 enviada a Claude, Codex y Gemini | [[Plan de desarrollo 0.2]] | 🔧 en curso |
 | 10/11/2026 13:51 | Ronda 1 de Claude: direccional pasos 1 a 5, cámara en celular, sensación, equilibrio D3, rol sobre la cabeza, muñecos por dirección | [[Reporte 0.2 Claude]] | 🟡 implementado, sin probar en Studio |
+
+
+| 10/11/2026 14:11 (Argentina, UTC-3) | Ejecutar la asignación adjunta 0.2 Ronda 1 - Codex | [[Reporte 0.2 Codex]] y [[Contratos 0.2]] | Código entregado; Studio e integración pendientes |
+| 10/11/2026 | Revisar los reportes de la ronda 1 | [[Integración 0.2]] | ✅ revisados; 5 desajustes para la integración |

@@ -11,9 +11,13 @@ local RunService = game:GetService("RunService")
 local PlayerData = {}
 local HttpService = game:GetService("HttpService")
 local E = require(game:GetService("ReplicatedStorage"):WaitForChild("Economy"))
+local P = require(game:GetService("ReplicatedStorage"):WaitForChild("Progression"))
 local tokens, loading = {}, {}
+local lost, leaseUntil = {}, {}
 local finalizing = {}
 local finalResults = setmetatable({}, { __mode = "k" })
+local releaseHooks = {}
+function PlayerData.beforeRelease(callback) table.insert(releaseHooks, callback) end
 local shutdownDeadline
 local writable, saving, closing = {}, {}, {}
 local function copy(value)
@@ -34,7 +38,9 @@ local cache = {}
 
 local function defaults()
 	return {
-		Coins = 0,
+		Schema = E.Schema, Level = 1, XP = 0, PlaySeconds = 0, GrantedRole = "",
+        OwnedWeapons = {}, Titles = {}, Boxes = { Relic = 0 }, Boosts = { XP = 1, Coins = 1, XPSeconds = 0, CoinsSeconds = 0 },
+        Coins = 0,
         Stats = { Wins = 0, Kills = 0, Knockdowns = 0, Matches = 0, Coins = 0 }, Daily = {}, FirstWinDay = -1,
         OwnedAuras = {}, EquippedAura = "", Receipts = {}, Options = {},
 		OwnedSkins = { Default = true },
@@ -48,7 +54,7 @@ end
 
 -- Copia los datos a leaderstats y atributos del jugador (los lee la UI)
 local function refresh(player: Player)
-	local data = cache[player]
+	local data = PlayerData.get(player)
 	if not data then return end
 
 	local ls = player:FindFirstChild("leaderstats")
@@ -66,7 +72,8 @@ local function refresh(player: Player)
 	coins.Value = data.Coins
 
 	local owned = {}
-	for id in data.OwnedSkins do
+	local skinSource = player:GetAttribute("AllCosmetics") and require(game:GetService("ReplicatedStorage").Skins).Data or data.OwnedSkins
+	for id in skinSource do
 		table.insert(owned, id)
 	end
 	table.sort(owned)
@@ -76,7 +83,7 @@ local function refresh(player: Player)
 	player:SetAttribute("InfusionId", data.InfusionId)
 	player:SetAttribute("Language", data.Language)
  for _, stat in { "Wins", "Kills", "Knockdowns", "Matches" } do player:SetAttribute("Stat" .. stat, data.Stats[stat] or E.Zero) end
- local auras = {} for id, owned in data.OwnedAuras do if owned then table.insert(auras, id) end end
+ local auras = {} for id, owned in (player:GetAttribute("AllCosmetics") and require(game:GetService("ReplicatedStorage").Auras).Data or data.OwnedAuras) do if owned then table.insert(auras, id) end end
  table.sort(auras) player:SetAttribute("OwnedAuras", table.concat(auras, ","))
  player:SetAttribute("EquippedAura", data.EquippedAura)
  for key, spec in E.Options do player:SetAttribute(spec.attr, data.Options[key] or spec.default) end
@@ -97,6 +104,7 @@ function PlayerData.load(player: Player)
    ok, saved = pcall(function()
     return store:UpdateAsync("u_" .. player.UserId, function(old)
      old = type(old) == "table" and old or defaults()
+     if type(old.Schema) == "number" and old.Schema > E.Schema then return nil end
      local lock = old.Session
      if type(lock) == "table" and lock.id ~= session and (lock.expires or E.Zero) > os.time() then return nil end
      local nextData = copy(old)
@@ -130,11 +138,27 @@ function PlayerData.load(player: Player)
  loading[player] = nil
  writable[player] = ok and type(saved) == "table" and saved.Session and saved.Session.id == session
  if writable[player] then
+  for key, value in saved do if data[key] == nil and key ~= "Session" then data[key] = copy(value) end end
   for key in data do if type(saved[key]) == type(data[key]) then data[key] = copy(saved[key]) end end
   data.Keybinds = type(saved.Keybinds) == "table" and saved.Keybinds or nil
   if saved.Language == "ES" or saved.Language == "EN" or saved.Language == "PT-BR" then data.Language = saved.Language end
   data.Coins = math.max(E.Zero, math.floor(data.Coins))
   data.OwnedSkins.Default = true
+  data.Schema = E.Schema
+  local function finite(n, fallback, min, max)
+   if type(n) ~= "number" or n ~= n or math.abs(n) == math.huge then return fallback end
+   return math.clamp(n, min, max)
+  end
+  data.Level = math.floor(finite(data.Level, 1, 1, P.MaxLevel))
+  data.XP = finite(data.XP, 0, 0, P.MaxGrant)
+  data.PlaySeconds = finite(data.PlaySeconds, 0, 0, E.MaxPlaySeconds)
+  if type(data.Boxes) ~= "table" then data.Boxes = {} end
+  if type(data.Boosts) ~= "table" then data.Boosts = {} end
+  data.Boxes.Relic = math.floor(finite(data.Boxes.Relic, 0, 0, P.MaxGrant))
+  for _, kind in { "XP", "Coins" } do
+   data.Boosts[kind] = finite(data.Boosts[kind], 1, 1, P.MaxMultiplier)
+   data.Boosts[kind .. "Seconds"] = finite(data.Boosts[kind .. "Seconds"], 0, 0, P.MaxBoostSeconds)
+  end
  elseif not RunService:IsStudio() then
   local locales = require(game:GetService("ReplicatedStorage"):WaitForChild("LocaleCodex"))
   local lang = string.lower(player.LocaleId)
@@ -143,20 +167,28 @@ function PlayerData.load(player: Player)
  else
   warn("[PlayerData] Studio profile is temporary; persistent purchases are disabled.")
  end
- cache[player] = data refresh(player)
+ leaseUntil[player] = writable[player] and saved.Session.expires or nil
+ cache[player] = data player:SetAttribute("ProfileState", writable[player] and "Ready" or "Temporary") refresh(player)
 end
 
 local function persist(player, data, release)
  if not store or not writable[player] then return false end
+ local rejected = false
  local ok, result = pcall(function()
   return store:UpdateAsync("u_" .. player.UserId, function(old)
-   if type(old) ~= "table" or type(old.Session) ~= "table" or old.Session.id ~= tokens[player] then return nil end
+   if type(old) ~= "table" or type(old.Session) ~= "table" or old.Session.id ~= tokens[player] then rejected = true return nil end
    local nextData = copy(data)
    if release then nextData.Session = nil
    else nextData.Session = { id = tokens[player], expires = os.time() + E.SessionTTL } end
    return nextData
   end)
  end)
+ if ok and rejected then
+  lost[player] = true writable[player] = nil
+  player:SetAttribute("ProfileState", "Lost")
+  task.defer(function() if player.Parent then player:Kick(require(game:GetService("ReplicatedStorage").LocaleCodex).EN["cx.profile.lost"]) end end)
+ end
+ if ok and result and result.Session then leaseUntil[player] = result.Session.expires end
  return ok and result ~= nil
 end
 
@@ -213,7 +245,7 @@ end
 -- Receipt grants are staged outside the live profile. Failed writes cannot erase concurrent rewards.
 function PlayerData.processReceipt(player, purchaseId, itemId, aura)
  while saving[player] do task.wait(E.RetryDelay) end
- local data = cache[player]
+ local data = PlayerData.get(player)
  if not data or closing[player] or not writable[player] then return false end
  if table.find(data.Receipts, purchaseId) then return true end
  saving[player] = true
@@ -233,14 +265,14 @@ function PlayerData.processReceipt(player, purchaseId, itemId, aura)
 end
 
 function PlayerData.equipAura(player, id)
- local data=cache[player]
- if not data or (id~="" and not data.OwnedAuras[id]) then return false end
+ local data = PlayerData.get(player)
+ if not data or (id~="" and not PlayerData.owns(player, "OwnedAuras", id)) then return false end
  data.EquippedAura=id refresh(player) return true
 end
 -- Cash purchases share the receipt/save mutex; publish ownership only after durable write.
 function PlayerData.buyCosmetic(player, id, price, aura)
  while saving[player] do task.wait(E.RetryDelay) end
- local data=cache[player]
+ local data = PlayerData.get(player)
  if not data or closing[player] then return false, "loading" end
  if player:GetAttribute("InMatch") then return false, "locked" end
  local field=aura and "OwnedAuras" or "OwnedSkins"
@@ -250,18 +282,18 @@ function PlayerData.buyCosmetic(player, id, price, aura)
  local pending=copy(data) pending.Coins-=price pending[field][id]=true
  local saved=persist(player,pending,false)
  local temporary=RunService:IsStudio() and not writable[player]
- if saved or temporary then data.Coins-=price data[field][id]=true refresh(player) end
+ if (saved or temporary) and PlayerData.get(player) == data then data.Coins-=price data[field][id]=true refresh(player) end
  saving[player]=nil
  if not saved and not temporary then return false, "cx.purchase.failed" end
  return true, saved and "acquired" or "cx.debug.temporary"
 end
 
 function PlayerData.getOptions(player)
- local data = cache[player] if not data then return nil end
+ local data = PlayerData.get(player) if not data then return nil end
  local result = {} for key, spec in E.Options do result[key] = data.Options[key] or spec.default end return result
 end
 function PlayerData.setOptions(player, payload)
- local data = cache[player] if not data or type(payload) ~= "table" then return nil end
+ local data = PlayerData.get(player) if not data or type(payload) ~= "table" then return nil end
  local options = PlayerData.getOptions(player)
  for key, value in payload do
   local spec = E.Options[key]
@@ -271,35 +303,43 @@ function PlayerData.setOptions(player, payload)
  data.Options = options refresh(player) return copy(options)
 end
 function PlayerData.resetTestPurchases(player)
- local data = cache[player] if not data then return false end
+ local data = PlayerData.get(player) if not data then return false end
  data.OwnedSkins = { Default = true } data.EquippedSkin = "Default"
  data.OwnedAuras = {} data.EquippedAura = ""
  refresh(player) return true
 end
 
+function PlayerData.owns(player, field, id)
+ local data = PlayerData.get(player)
+ return data ~= nil and (player:GetAttribute("AllCosmetics") == true or data[field][id] == true)
+end
 function PlayerData.refresh(player) refresh(player) end
-function PlayerData.isPersistent(player) return writable[player] == true end
+function PlayerData.isPersistent(player) return not lost[player] and writable[player] == true end
 function PlayerData.get(player: Player)
-	return cache[player]
+ if leaseUntil[player] and os.time() >= leaseUntil[player] and not lost[player] then
+  lost[player] = true writable[player] = nil player:SetAttribute("ProfileState", "Lost")
+  task.defer(function() if player.Parent then player:Kick(require(game:GetService("ReplicatedStorage").LocaleCodex).EN["cx.profile.lost"]) end end)
+ end
+ return not lost[player] and cache[player] or nil
 end
 
 function PlayerData.addCoins(player: Player, amount: number)
-	local data = cache[player]
-	if not data then return end
-	data.Coins = math.max(0, data.Coins + amount)
+	local data = PlayerData.get(player)
+	if not data or type(amount) ~= "number" or amount ~= amount or math.abs(amount) == math.huge then return end
+	data.Coins = math.max(0, data.Coins + math.floor(amount))
 	refresh(player)
 end
 
 function PlayerData.grantSkin(player: Player, skinId: string)
-	local data = cache[player]
+	local data = PlayerData.get(player)
 	if not data then return end
 	data.OwnedSkins[skinId] = true
 	refresh(player)
 end
 
 function PlayerData.equipSkin(player: Player, skinId: string)
-	local data = cache[player]
-	if not data or not data.OwnedSkins[skinId] then return false end
+	local data = PlayerData.get(player)
+	if not data or not PlayerData.owns(player, "OwnedSkins", skinId) then return false end
 	data.EquippedSkin = skinId
 	refresh(player)
 	return true
@@ -307,35 +347,37 @@ end
 
 function PlayerData.setLanguage(player, language)
  if language ~= "ES" and language ~= "EN" and language ~= "PT-BR" then return false end
- local data = cache[player] if not data then return false end
+ local data = PlayerData.get(player) if not data then return false end
  data.Language = language refresh(player) return true
 end
 
 function PlayerData.setKeybinds(player: Player, binds)
-	local data = cache[player]
+	local data = PlayerData.get(player)
 	if not data then return end
 	data.Keybinds = binds
 end
 
 function PlayerData.setInfusion(player: Player, infusionId: string)
-	local data = cache[player]
+	local data = PlayerData.get(player)
 	if not data then return end
 	data.InfusionId = infusionId
 	refresh(player)
 end
 
 function PlayerData.setWeapon(player: Player, weaponId: string)
-	local data = cache[player]
+	local data = PlayerData.get(player)
 	if not data then return end
 	data.WeaponId = weaponId
 	refresh(player)
 end
 
 Players.PlayerRemoving:Connect(function(player)
+ for _, hook in releaseHooks do hook(player) end
 	closing[player] = true
 	PlayerData.save(player, true)
 	cache[player], writable[player] = nil, nil
  if not loading[player] then tokens[player]=nil end
+ lost[player]=nil leaseUntil[player]=nil
  closing[player]=nil
 end)
 
@@ -353,7 +395,7 @@ task.spawn(function()
 	while true do
 		task.wait(E.Autosave)
 		for _, player in Players:GetPlayers() do
-			PlayerData.save(player)
+			task.spawn(PlayerData.save, player)
 		end
 	end
 end)

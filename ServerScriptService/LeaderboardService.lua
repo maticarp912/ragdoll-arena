@@ -13,9 +13,16 @@ for _, key in { "Wins", "Kills", "Knockdowns", "Coins" } do
  boards[key] = { value = value, store = ok and store or nil }
 end
 local function nameFor(id)
- if names[id] then return names[id] end
+ local cached = names[id]
+ if cached and cached.expires > os.clock() then return cached.name end
+ names[id] = nil
  local ok, name = pcall(Players.GetNameFromUserIdAsync, Players, id)
- if ok then names[id] = name end
+ if ok then
+  local count = 0 local oldest, oldestAt
+  for key, row in names do count += 1 if not oldestAt or row.expires < oldestAt then oldest = key oldestAt = row.expires end end
+  if count >= E.NameCacheLimit then names[oldest] = nil end
+  names[id] = { name = name, expires = os.clock() + E.NameCacheTTL }
+ end
  return ok and name or tostring(id)
 end
 local function update()
@@ -25,7 +32,7 @@ local function update()
    local data = Data.get(player)
    if data then
     local value = math.floor(data.Stats[key] or E.Zero)
-    names[player.UserId] = player.Name
+    -- Connected players already supply their names; do not grow the lookup cache.
     table.insert(fallback, { userId = player.UserId, name = player.Name, value = value })
     if board.store and Data.isPersistent(player) then
      pcall(function() board.store:UpdateAsync(tostring(player.UserId), function(old) return math.max(old or E.Zero, value) end) end)

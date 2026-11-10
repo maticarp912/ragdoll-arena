@@ -12,6 +12,7 @@ Bóveda de Obsidian del proyecto. Juego de Roblox PvP 1v1/2v2 con ragdoll, estil
 | [[Decisiones pendientes 0.2]] | Decisiones del usuario para la 0.2 (D1 a D22, respondidas). |
 | [[Recompensas y retención 0.2]] | Ruleta, cajas, racha, niveles y gancho de jugadores nuevos. |
 | [[Contratos 0.2]] | Conexiones nuevas entre IA (C16 a C24). |
+| [[Integración 0.2]] | Desajustes entre las entregas y orden de la sesión de integración. |
 | [[Versión 0.2]] | **Lista única** de lo que entra en la 0.2, con responsable y estado. |
 | [[Peticiones del usuario]] | Registro breve de cada pedido, con fecha. |
 | [[Decisiones]] | Reglas de diseño del juego ya decididas. |

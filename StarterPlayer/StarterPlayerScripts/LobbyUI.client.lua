@@ -61,22 +61,43 @@ local armoryBtn = UiTheme.button({
 	parent = leftDock,
 	layoutOrder = 1,
 	size = UDim2.fromOffset(168, 42),
-	text = L.t("armory"),
+	text = L.t("ui.lobby.dock.armory"),
 	icon = "armory",
 	iconSize = 20,
 	font = "Header",
 	textSize = UiTheme.TextSizes.MD,
 	variant = "secondary",
 	onClick = function()
-		local event=player:FindFirstChild("ToggleMenu")
-  if event and event:IsA("BindableEvent") then event:Fire() end
+		local event = player:FindFirstChild("ToggleArmory")
+		if event and event:IsA("BindableEvent") then
+			event:Fire()
+		end
+	end,
+})
+
+local shopBtn = UiTheme.button({
+	name = "ShopBtn",
+	parent = leftDock,
+	layoutOrder = 2,
+	size = UDim2.fromOffset(168, 42),
+	text = L.t("ui.lobby.dock.shop"),
+	icon = "coin",
+	iconSize = 20,
+	font = "Header",
+	textSize = UiTheme.TextSizes.MD,
+	variant = "secondary",
+	onClick = function()
+		local event = player:FindFirstChild("ToggleMenu")
+		if event and event:IsA("BindableEvent") then
+			event:Fire()
+		end
 	end,
 })
 
 local settingsBtn = UiTheme.button({
 	name = "SettingsBtn",
 	parent = leftDock,
-	layoutOrder = 2,
+	layoutOrder = 3,
 	size = UDim2.fromOffset(168, 42),
 	text = L.t("settings"),
 	icon = "settings",
@@ -92,7 +113,7 @@ local settingsBtn = UiTheme.button({
 local missionsBtn = UiTheme.button({
 	name = "MissionsBtn",
 	parent = leftDock,
-	layoutOrder = 3,
+	layoutOrder = 4,
 	size = UDim2.fromOffset(168, 42),
 	text = L.t("ui.lobby.missions"),
 	icon = "mission",
@@ -129,7 +150,7 @@ local missionBadgeText = UiTheme.label({
 local boardsBtn = UiTheme.button({
 	name = "LeaderboardsBtn",
 	parent = leftDock,
-	layoutOrder = 4,
+	layoutOrder = 5,
 	size = UDim2.fromOffset(168, 42),
 	text = L.t("ui.lobby.leaderboards"),
 	icon = "trophy",
@@ -732,7 +753,8 @@ local function refreshBar()
 	join2Btn.Text = L.t("ui.queue.2v2")
 	rankedBtn.Text = L.t("cx.ui.ranked")
 	leaveBtn.Text = L.t("ui.queue.leave")
-	armoryBtn.Text = L.t("armory")
+	armoryBtn.Text = L.t("ui.lobby.dock.armory")
+	shopBtn.Text = L.t("ui.lobby.dock.shop")
 	settingsBtn.Text = L.t("settings")
 	missionsBtn.Text = L.t("ui.lobby.missions")
 	boardsBtn.Text = L.t("ui.lobby.leaderboards")

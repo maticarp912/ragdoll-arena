@@ -86,9 +86,11 @@ function Builder:look(role)
 	if own then return own[1], own[2] end
 	if role == "Glow" then
 		return skin.trail or skin.accent or rgb(220, 220, 230), M.Neon
+	elseif role == "Gem" then
+		return skin.trail or skin.accent or rgb(235, 32, 46), M.Neon
 	elseif role == "Edge" then
 		local c = (skin.blade or p.blade)
-		return c:Lerp(rgb(235, 235, 240), 0.35), M.Metal
+		return c:Lerp(rgb(240, 242, 248), 0.45), M.Foil
 	elseif role == "Trim" then
 		return skin.accent or rgb(150, 120, 70), M.Metal
 	elseif role == "Leather" then
@@ -790,6 +792,8 @@ local function populateFromMesh(container, weaponId, skinId)
 	if skin and skin.trail then
 		trail.Color = ColorSequence.new(Color3.new(1, 1, 1), skin.trail)
 	end
+	local scale = WeaponBuilder.ClassScale[weaponId]
+	if scale and scale ~= 1 then scaleWeapon(container, handle, scale) end
 	return handle
 end
 

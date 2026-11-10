@@ -151,3 +151,7 @@ La ruleta aporta sorpresa; la progresión principal conviene que sea comprensibl
 Primera versión pequeña: preview del objetivo + progreso pospartida + misión breve + ruleta semanal existente. Resolver almas/monedas primero. Evaluar un pase completo después: exige producción sostenida de arte.
 Medir llegada al primer duelo/desbloqueo, partidas completas, cosméticos reclamados/usados, retorno D1/D7/D30, abandono y progreso de principiantes. Comparar cohortes con línea base y pocas modificaciones por vez; pocos jugadores no dan conclusiones firmes. Combate, cámara y rendimiento siguen siendo centrales.
 **Implementado:** solo documentación. **Comprobado en Studio:** nada nuevo. **Pendiente:** definir almas, aprobar alcance, balancear, implementar y medir. Reparto sugerido: Claude integración/combate, Codex economía/guardado/medición, Gemini previews/interfaz.
+
+## Entrega backend ronda 1 — 10/11/2026 14:12 (Argentina, UTC-3)
+🟡 Código de la ronda 1 de Codex integrado con aprobación explícita del usuario. Detalle único de alcance, contratos, limitaciones y pruebas en [[Reporte 0.2 Codex]]; nombres finales en [[Contratos 0.2]]. Revisión estática completa: 82 archivos OK y LihFolk 0 errores/avisos. No comprobado en Studio; faltan los puntos de integración de Claude/Gemini del reporte. Recompensas completas: ronda 2.
+

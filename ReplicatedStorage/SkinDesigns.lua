@@ -1,1149 +1,1290 @@
 -- ModuleScript: ReplicatedStorage/SkinDesigns
--- Modelos de piezas de las skins por arma (lote 6), hechos a partir de las imágenes de
--- F:/RobloxJuegos/skins armas. Solo cosmético: no cambia alcance ni daño.
---
--- Ejes (espacio del mango): la hoja crece hacia +Z, el ancho de la hoja va en Y y el grosor en X.
--- v(y, z, x) crea un punto. El mango (Handle) está en el origen y mide lo que diga handle.Size.
--- Largos de referencia (igual que las armas base, para que la estela y el agarre sigan bien):
---   Espada: hoja 1.0 → 5.1   · Estoque: 1.1 → 5.6 · Espadón: 1.25 → 6.4
---   Daga:   hoja 0.6 → 2.9   · Maza: cabeza en z = 3.75
--- Roles de color: cada diseño trae su paleta { Rol = { Color3, Material } }.
--- Presupuesto: 110 piezas como máximo por skin, 1 luz y 1 emisor de partículas.
+-- Geometría procedural 3D de alta definición (Estándar 0.2 D6/D15: nivel de acabado de Notas/Referencias/espada-concepto.png).
+-- Cada skin combina:
+--   - Biseles de filo plateados/metálicos en cuña (Wedge + Foil/Metal) diferenciados del núcleo oscuro (Slate/Metal).
+--   - Acanaladura (Fuller) y vena/relámpago central luminoso (Neon) con ramificaciones diagonales.
+--   - Recazo romboidal con gemas engarzadas, guarda en media luna / guardamonte y pomo astado con gema.
+--   - Presupuesto estricto: <= 110 BaseParts, <= 1 PointLight, <= 1 ParticleEmitter y punta exacta en TipZ (BladeTip).
+
+local SkinDesigns = {}
 
 local rgb = Color3.fromRGB
 local M = Enum.Material
+local ang = CFrame.Angles
+local cf = CFrame.new
+local rad = math.rad
 
-local function P(r, g, b, mat) return { rgb(r, g, b), mat } end
+-- ============================================================================
+-- UTILIDADES COMUNES DE ACABADO (ESTÁNDAR ESPADA DE REFERENCIA)
+-- ============================================================================
 
-local D = {}
-
-----------------------------------------------------------------------
--- Ayudantes comunes
-----------------------------------------------------------------------
--- Mango: tamaño, envoltura y anillos de los extremos
-local function grip(b, len, d, wraps, role, tilt)
-	b.handle.Size = Vector3.new(d, d, len)
-	b:wrap(-len / 2 + 0.04, len / 2 - 0.04, wraps, d + 0.04, role or "Grip", tilt)
+-- Vena de relámpago quebrada a lo largo de la hoja (z0 -> z1) con ramificaciones
+local function addLightningVein(b, v, z0, z1, segments, ampY, thickX, widthY, role, forks)
+	local dz = (z1 - z0) / segments
+	local prevY = 0
+	for i = 1, segments do
+		local za = z0 + (i - 1) * dz
+		local zb = z0 + i * dz
+		local nextY = (i == segments) and 0 or ((i % 2 == 1 and 1 or -1) * ampY * (0.65 + 0.35 * ((i % 3) / 2)))
+		b:seg("LightningVein", v(prevY, za), v(nextY, zb), thickX, widthY, role, 0.015)
+		if forks and (i % 2 == 1) and i < segments then
+			local dir = (i % 4 == 1) and 1 or -1
+			b:seg("VeinFork", v(nextY, zb), v(nextY + dir * (ampY * 1.9), zb + dz * 0.55), thickX * 0.92, widthY * 0.65, role, 0.01)
+		end
+		prevY = nextY
+	end
 end
 
--- Línea fina en las dos caras de la hoja (runas, vetas, bordes grabados)
-local function faces(b, name, a, c, w, x, role)
+-- Dientes dorsales ganchudos (estilo sierra de espada-concepto.png: base oscura + filo de plata)
+local function addDorsalHooks(b, v, zList, ySpine, dirY, hookW, hookL, thickX, baseRole, edgeRole)
+	for _, z in zList do
+		local pBase = v(ySpine, z)
+		local pMid = v(ySpine + dirY * (hookW * 0.62), z - hookL * 0.45)
+		local pTip = v(ySpine + dirY * hookW, z - hookL)
+		b:point("DorsalHookBase", pBase, pMid, hookW * 0.68, thickX * 0.88, baseRole)
+		b:point("DorsalHookEdge", pMid, pTip, hookW * 0.48, thickX * 0.72, edgeRole or "Edge")
+	end
+end
+
+-- Recazo romboidal con 2 gemas engarzadas en bisel (fiel a espada-concepto.png)
+local function addDiamondBolsterGems(b, v, z0, z1, bolsterW, thickX, frameRole, darkRole, gemRole)
+	local zMid = (z0 + z1) * 0.5
+	local len = z1 - z0
+	b:add("BolsterCore", Vector3.new(thickX, bolsterW, len), cf(0, 0, zMid), darkRole or "Dark")
+	b:add("BolsterFrameL", Vector3.new(thickX + 0.02, bolsterW * 0.46, len * 0.76), cf(0, bolsterW * 0.24, zMid) * ang(rad(14), 0, 0), frameRole or "Edge", "Wedge")
+	b:add("BolsterFrameR", Vector3.new(thickX + 0.02, bolsterW * 0.46, len * 0.76), cf(0, -bolsterW * 0.24, zMid) * ang(rad(-14), 0, rad(180)), frameRole or "Edge", "Wedge")
+	for idx, gz in { z0 + len * 0.28, z0 + len * 0.74 } do
+		local gScale = idx == 1 and 1.0 or 0.82
+		b:add("GemBezel", Vector3.new(thickX + 0.035, 0.13 * gScale, 0.13 * gScale), cf(0, 0, gz) * ang(rad(45), 0, 0), frameRole or "Trim")
+		b:add("BolsterGem", Vector3.new(thickX + 0.052, 0.085 * gScale, 0.085 * gScale), cf(0, 0, gz) * ang(rad(45), 0, 0), gemRole or "Gem")
+	end
+end
+
+-- Pomo de tres garras con gema central engarzada (fiel a espada-concepto.png)
+local function addClawedGemPommel(b, v, zPommel, radius, thickX, clawLen, metalRole, edgeRole, gemRole)
+	b:add("PommelCore", Vector3.new(thickX, radius * 1.65, radius * 1.45), cf(0, 0, zPommel) * ang(rad(45), 0, 0), metalRole or "Accent")
+	b:add("PommelBezel", Vector3.new(thickX + 0.025, radius * 0.92, radius * 0.92), cf(0, 0, zPommel) * ang(rad(45), 0, 0), edgeRole or "Edge")
+	b:add("PommelGem", Vector3.new(thickX + 0.045, radius * 0.56, radius * 0.56), cf(0, 0, zPommel) * ang(rad(45), 0, 0), gemRole or "Gem")
+	-- Espiga central y dos garras laterales curvas
+	b:point("PommelCenterSpike", v(0, zPommel - radius * 0.4), v(0, zPommel - radius * 0.4 - clawLen), radius * 0.75, thickX * 0.78, edgeRole or "Edge")
 	for _, s in { 1, -1 } do
-		b:seg(name, a + Vector3.new(x * s, 0, 0), c + Vector3.new(x * s, 0, 0), 0.02, w, role)
+		b:point("PommelSideClaw", v(s * radius * 0.55, zPommel - radius * 0.12), v(s * radius * 1.18, zPommel - radius * 0.12 - clawLen * 0.78), radius * 0.58, thickX * 0.68, metalRole or "Accent")
 	end
 end
 
--- Rombo pequeño (gema) en las dos caras
-local function gem(b, name, y, z, size, x, role)
-	for _, s in { 1, -1 } do
-		b:add(name, Vector3.new(0.03, size, size), CFrame.new(x * s, y, z) * CFrame.Angles(math.rad(45), 0, 0), role)
-	end
-end
+-- ============================================================================
+-- 1. CONSTRUCTOR DE DAGAS (5 SKINS: Relic01 - Relic05)
+-- ============================================================================
+local function dagger(cfg)
+	return {
+		palette = cfg.palette,
+		build = function(b, v)
+			b.handle.Size = Vector3.new(0.18, 0.22, 0.85)
+			b.basePos = v(0, 0.55)
 
-----------------------------------------------------------------------
--- DAGAS (Relic01 – Relic05)
-----------------------------------------------------------------------
+			-- Empuñadura contorneada con anillos en chevrón
+			b:add("GripCore", Vector3.new(0.19, 0.24, 0.78), cf(0, 0, 0), "Grip")
+			b:wrap(-0.32, 0.32, 4, 0.24, "Trim", 18)
+			b:add("GripCollarB", Vector3.new(0.22, 0.28, 0.08), cf(0, 0, -0.39), "Accent")
+			b:add("GripCollarF", Vector3.new(0.24, 0.32, 0.10), cf(0, 0, 0.41), "Accent")
 
--- Colmillos Carmesí: hoja curva negra como una garra, runas rojas encendidas, espolón y hoja en el pomo
-D.Fangs = {
-	palette = { Blade = P(24, 18, 20, M.Metal), Glow = P(230, 40, 36, M.Neon), Grip = P(30, 22, 24, M.Leather), Accent = P(40, 26, 28, M.Metal) },
-	build = function(b, v)
-		grip(b, 0.8, 0.2, 4, "Grip", 18)
-		for i = 0, 2 do b:seg("GripRune", v(-0.02, -0.25 + i * 0.25, 0.115), v(0.03, -0.15 + i * 0.25, 0.115), 0.02, 0.03, "Glow") end
-		b:cyl("Collar", 0.45, 0.12, 0.27, "Accent")
-		local pts = { { 0, 0.5 }, { 0.05, 0.92 }, { 0.14, 1.38 }, { 0.26, 1.82 }, { 0.42, 2.20 }, { 0.58, 2.54 } }
-		b:strip("Blade", pts, { 0.36, 0.38, 0.34, 0.28, 0.2, 0.12 }, 0.08, "Blade", 0.36)
-		-- vena de runas encendida en las dos caras, pegada al lomo
-		local runes = { { -0.08, 0.6 }, { -0.03, 1.0 }, { 0.06, 1.48 }, { 0.2, 1.92 }, { 0.38, 2.3 } }
-		for _, x in { 0.045, -0.045 } do b:strip("Rune", runes, { 0.035, 0.035, 0.03, 0.025, 0.02 }, 0.02, "Glow", 0, x) end
-		-- espolón que sube desde la guarda
-		b:strip("Spur", { { -0.12, 0.5 }, { -0.36, 0.62 }, { -0.46, 0.85 }, { -0.42, 1.02 } }, { 0.14, 0.12, 0.08, 0.05 }, 0.07, "Blade", 0.14)
-		-- hoja corta en el pomo, curvada hacia el otro lado
-		b:strip("PommelBlade", { { 0, -0.42 }, { -0.06, -0.7 }, { -0.18, -0.95 }, { -0.34, -1.12 } }, { 0.2, 0.18, 0.13, 0.07 }, 0.07, "Blade", 0.2)
-		b:seg("PommelRune", v(-0.03, -0.5, 0.045), v(-0.15, -0.9, 0.045), 0.02, 0.03, "Glow")
-		b:light(Vector3.new(0, 0.2, 1.5), rgb(230, 40, 36), 5, 0.6)
-	end,
-}
+			-- Pomo astado con gema engarzada
+			addClawedGemPommel(b, v, -0.52, 0.16, 0.20, 0.28, "Accent", "Edge", "Gem")
 
--- Espinas Vivas: núcleo negro con grieta roja y crecimientos de hueso blanco en los filos
-D.LivingThorns = {
-	palette = { Blade = P(26, 24, 28, M.Basalt), Bone = P(200, 190, 170, M.Limestone), Glow = P(220, 30, 30, M.Neon), Grip = P(32, 28, 30, M.Fabric), Accent = P(36, 32, 36, M.Metal) },
-	build = function(b, v)
-		grip(b, 0.8, 0.2, 4, "Grip", 25)
-		b:ball("PommelGem", v(0, -0.48), 0.2, "Glow")
-		b:point("PommelSpike", v(0, -0.52), v(0, -0.85), 0.18, 0.12, "Accent")
-		-- guarda de púas negras abiertas en abanico
-		for i, a in { 20, 45, 70 } do
-			local r = math.rad(a)
-			for _, s in { 1, -1 } do b:point("GuardThorn", v(0.1 * s, 0.48), v(s * math.sin(r) * (0.55 - i * 0.06), 0.48 + math.cos(r) * 0.35), 0.1, 0.08, "Accent") end
-		end
-		b:strip("Blade", { { 0, 0.45 }, { 0, 1.2 }, { 0.02, 2.0 }, { 0, 2.55 } }, { 0.3, 0.28, 0.22, 0.14 }, 0.1, "Blade", 0.36)
-		faces(b, "Crack", v(0, 0.55), v(0, 2.6), 0.035, 0.052, "Glow")
-		-- crecimientos de hueso: hacia atrás y hacia afuera, más largos cerca de la guarda
-		for i = 0, 8 do
-			local z = 0.7 + i * 0.22
-			local len = 0.6 - i * 0.045
-			b:point("BoneGrowth", v(0.1, z), v(0.14 + len * 0.85, z + len * 0.55), 0.2, 0.14, "Bone")
-			b:point("BoneGrowth", v(-0.1, z + 0.11), v(-0.14 - len * 0.7, z + 0.11 + len * 0.65), 0.17, 0.13, "Bone")
-		end
-		b:emit("Embers", 0.6, 2.4, rgb(230, 50, 40))
-	end,
-}
-
--- Lunas del Vacío: alfanje oscuro con vetas violetas y guarda en media luna
-D.VoidMoons = {
-	palette = { Blade = P(30, 28, 38, M.Metal), Glow = P(150, 110, 240, M.Neon), Accent = P(44, 42, 52, M.Metal), Grip = P(26, 24, 30, M.Leather) },
-	build = function(b, v)
-		grip(b, 0.82, 0.2, 5, "Grip", 15)
-		b:point("Pommel", v(0, -0.42), v(0, -0.72), 0.24, 0.14, "Accent")
-		b:point("Pommel", v(0, -0.42), v(0, -0.3), 0.24, 0.14, "Accent")
-		b:cyl("Collar", 0.43, 0.08, 0.25, "Accent")
-		-- media luna: arco que abre hacia la hoja y dos cuernos
-		b:arc("Moon", v(0, 0.66), Vector3.yAxis, Vector3.zAxis, 0.3, math.pi * 1.05, math.pi * 1.95, 6, 0.1, 0.09, "Accent")
-		b:point("MoonHorn", v(0.28, 0.6), v(0.36, 0.86), 0.09, 0.08, "Accent")
-		b:point("MoonHorn", v(-0.28, 0.6), v(-0.36, 0.86), 0.09, 0.08, "Accent")
-		local pts = { { 0, 0.5 }, { 0.03, 0.96 }, { 0, 1.42 }, { -0.09, 1.88 }, { -0.22, 2.26 }, { -0.38, 2.58 } }
-		b:strip("Blade", pts, { 0.34, 0.42, 0.44, 0.4, 0.3, 0.16 }, 0.08, "Blade", 0.30)
-		-- vetas violetas en zigzag
-		local vein = { { 0.02, 0.75 }, { -0.06, 1.1 }, { 0.05, 1.45 }, { -0.09, 1.8 }, { -0.12, 2.15 }, { -0.28, 2.5 } }
-		for _, x in { 0.045, -0.045 } do b:strip("Vein", vein, { 0.03, 0.04, 0.03, 0.035, 0.03, 0.02 }, 0.02, "Glow", 0, x) end
-		b:light(Vector3.new(0, 0, 1.6), rgb(150, 110, 240), 5, 0.5)
-		b:emit("Wisps", 0.8, 2.5, rgb(140, 100, 230))
-	end,
-}
-
--- Crecientes de Plata: hoja curva con filo plateado agrietado, gancho en la guarda y mango envuelto
-D.SilverCrescent = {
-	palette = { Blade = P(36, 36, 40, M.Metal), Edge = P(225, 226, 232, M.Foil), Accent = P(58, 58, 64, M.Metal), Grip = P(22, 22, 24, M.Fabric) },
-	build = function(b, v)
-		grip(b, 0.84, 0.2, 7, "Grip", 8)
-		-- pomo angular con ventana
-		b:add("Pommel", Vector3.new(0.14, 0.3, 0.18), CFrame.new(0, 0.04, -0.5) * CFrame.Angles(math.rad(-12), 0, 0), "Accent")
-		b:add("PommelHole", Vector3.new(0.16, 0.09, 0.07), CFrame.new(0, 0.07, -0.5), "Dark")
-		-- gancho grande (anillo abierto) del lado del filo
-		b:arc("Hook", v(-0.22, 0.6), Vector3.yAxis, Vector3.zAxis, 0.2, math.pi * 0.1, math.pi * 1.35, 6, 0.08, 0.09, "Accent")
-		b:add("GuardPlate", Vector3.new(0.12, 0.4, 0.22), CFrame.new(0, 0, 0.5), "Accent")
-		local pts = { { 0, 0.55 }, { 0.04, 1.0 }, { 0.04, 1.48 }, { -0.03, 1.92 }, { -0.14, 2.30 }, { -0.30, 2.60 } }
-		b:strip("Blade", pts, { 0.36, 0.4, 0.4, 0.36, 0.26, 0.14 }, 0.08, "Blade", 0.30)
-		-- filo plateado en el lado cóncavo
-		local edge = {}
-		for i, p in pts do edge[i] = { p[1] - ({ 0.36, 0.4, 0.4, 0.36, 0.26, 0.14 })[i] / 2 + 0.03, p[2] } end
-		b:strip("SilverEdge", edge, { 0.07, 0.07, 0.07, 0.06, 0.05, 0.04 }, 0.1, "Edge", 0)
-		-- ranura central y grietas
-		b:strip("Fuller", { { 0.08, 0.9 }, { 0.08, 1.6 }, { 0.02, 2.1 } }, { 0.06, 0.06, 0.04 }, 0.1, "Edge", 0)
-		b:seg("Crack", v(-0.1, 1.2, 0.045), v(0.02, 1.35, 0.045), 0.02, 0.025, "Edge")
-		b:seg("Crack", v(-0.08, 1.9, -0.045), v(0.04, 2.0, -0.045), 0.02, 0.025, "Edge")
-	end,
-}
-
--- Garras del Eclipse: dos medias lunas enormes en la guarda y hoja curva larga
-D.EclipseClaws = {
-	palette = { Blade = P(70, 72, 78, M.Metal), Edge = P(170, 172, 178, M.Metal), Accent = P(46, 46, 52, M.Metal), Grip = P(90, 86, 80, M.Fabric), Dark = P(14, 14, 16, M.Metal) },
-	build = function(b, v)
-		grip(b, 0.84, 0.2, 6, "Grip", 30)
-		b:cyl("Ferrule", -0.46, 0.1, 0.24, "Accent")
-		b:ball("Pommel", v(0, -0.58), 0.22, "Accent")
-		b:ring("PommelCrown", -0.66, 0.1, 0.05, 6, "Accent")
-		b:cyl("Ferrule", 0.44, 0.08, 0.24, "Accent")
-		-- garra hacia adelante (lado +Y) y garra hacia atrás (lado −Y)
-		b:strip("ClawFront", { { 0.1, 0.55 }, { 0.32, 0.72 }, { 0.48, 1.0 }, { 0.52, 1.3 } }, { 0.16, 0.14, 0.1, 0.06 }, 0.07, "Blade", 0.25)
-		b:strip("ClawBack", { { -0.1, 0.5 }, { -0.36, 0.42 }, { -0.5, 0.2 }, { -0.5, -0.06 } }, { 0.16, 0.14, 0.1, 0.06 }, 0.07, "Blade", 0.22)
-		b:add("GuardCore", Vector3.new(0.14, 0.32, 0.26), CFrame.new(0, 0, 0.55), "Accent")
-		-- dientes cortos sobre la guarda
-		for i = 0, 2 do b:point("Teeth", v(0.05 + i * 0.06, 0.62), v(0.1 + i * 0.07, 0.8), 0.06, 0.05, "Blade") end
-		local pts = { { 0, 0.6 }, { -0.05, 1.04 }, { -0.14, 1.48 }, { -0.26, 1.88 }, { -0.42, 2.24 }, { -0.60, 2.56 } }
-		local widths = { 0.3, 0.34, 0.32, 0.28, 0.2, 0.1 }
-		b:strip("Blade", pts, widths, 0.08, "Blade", 0.34)
-		-- veta oscura (grieta) por el centro de la hoja
-		for _, x in { 0.045, -0.045 } do b:strip("Crack", { { 0, 0.65 }, { -0.07, 1.15 }, { -0.15, 1.6 }, { -0.3, 2.05 }, { -0.48, 2.42 } }, { 0.035, 0.03, 0.03, 0.025, 0.02 }, 0.02, "Dark", 0, x) end
-		local edge = {}
-		for i, p in pts do edge[i] = { p[1] + widths[i] / 2 - 0.02, p[2] } end
-		b:strip("Edge", edge, { 0.05, 0.05, 0.05, 0.04, 0.03, 0.02 }, 0.09, "Edge", 0)
-	end,
-}
-
-----------------------------------------------------------------------
--- ESPADAS (Requiem + Relic07, 08, 09, 12, 13)
-----------------------------------------------------------------------
-
--- Réquiem Astado (antigua espada base gótica: guarda con cuernos curvos, rizos, ganchos y pomo en espina)
-D.RequiemHorns = {
-	palette = {
-		Blade = P(32, 32, 37, M.Metal),
-		Accent = P(44, 42, 47, M.Metal),
-		Grip = P(40, 30, 24, M.Fabric),
-		Dark = P(24, 23, 26, M.Metal),
-		Leather = P(30, 22, 18, M.Leather),
-		Edge = P(103, 103, 108, M.Metal),
-	},
-	build = function(b)
-		local h = b.handle
-		h.Size = Vector3.new(0.3, 0.3, 1.3)
-		for _, z in { -0.42, -0.14, 0.14, 0.42 } do
-			b:add("GripRing", Vector3.new(0.34, 0.34, 0.06), CFrame.new(0, 0, z), "Dark")
-		end
-		-- Pomo: bola + espina
-		b:add("Pommel", Vector3.new(0.34, 0.34, 0.34), CFrame.new(0, 0, -0.78), "Accent", nil, Enum.PartType.Ball)
-		b:spike("PommelSpike", -0.92, 0.45, 0.22, "Accent", -1)
-		-- Centro de la guarda
-		b:add("GuardCore", Vector3.new(0.34, 0.5, 0.42), CFrame.new(0, 0, 0.82), "Accent")
-		b:add("GuardGem", Vector3.new(0.38, 0.2, 0.2), CFrame.new(0, 0, 0.82), "Dark")
-		-- Cuernos curvos hacia arriba (hacia la hoja) a ambos lados
-		b:curve("GuardHorn", { { 0.22, 0.85 }, { 0.6, 0.98 }, { 0.95, 1.22 }, { 1.16, 1.58 }, { 1.2, 1.98 }, { 1.08, 2.32 } }, 0.2, 0.07, "Accent", true)
-		-- Rizos hacia abajo
-		b:curve("GuardCurl", { { 0.22, 0.76 }, { 0.55, 0.62 }, { 0.8, 0.4 }, { 0.84, 0.16 }, { 0.72, 0.02 } }, 0.15, 0.06, "Accent", true)
-		-- Ganchos interiores pegados a la hoja
-		b:curve("GuardHook", { { 0.2, 0.98 }, { 0.42, 1.18 }, { 0.46, 1.44 }, { 0.36, 1.62 } }, 0.12, 0.05, "Accent", true)
-		-- Hoja
-		local blade = b:add("Blade", Vector3.new(0.1, 0.38, 3.5), CFrame.new(0, 0, 0.98 + 1.75), "Blade")
-		b:add("BladeRidge", Vector3.new(0.13, 0.07, 3.3), CFrame.new(0, 0, 0.98 + 1.7), "Accent")
-		b:tip("BladePoint", 4.48, 0.62, 0.38, 0.1, "Blade")
-		-- Filos biselados, ricasso, cuero entre los anillos y remaches de la guarda
-		for _, s in { 1, -1 } do
-			b:add("EdgeBevel", Vector3.new(0.06, 0.05, 3.4), CFrame.new(0, 0.18 * s, 0.98 + 1.72), "Edge")
-			b:add("GuardRivet", Vector3.new(0.08, 0.08, 0.08), CFrame.new(0.18 * s, 0, 0.82), "Dark", nil, Enum.PartType.Ball)
-		end
-		b:add("Ricasso", Vector3.new(0.14, 0.3, 0.3), CFrame.new(0, 0, 1.12), "Accent")
-		for _, z in { -0.28, 0, 0.28 } do
-			b:add("Leather", Vector3.new(0.31, 0.31, 0.2), CFrame.new(0, 0, z) * CFrame.Angles(0, 0, math.rad(45)), "Leather")
-		end
-		b:add("PommelRing", Vector3.new(0.4, 0.4, 0.06), CFrame.new(0, 0, -0.62), "Dark")
-		return blade, 0.98 + 1.75
-	end,
-}
-
--- Espina del Osario: hoja de vértebras con púas, máscara como guarda y mango de pelo negro
-D.Ossuary = {
-	palette = { Bone = P(214, 204, 182, M.Limestone), Blade = P(206, 196, 174, M.Limestone), Blood = P(104, 22, 24, M.CorrodedMetal), Grip = P(18, 18, 20, M.Fabric), Accent = P(40, 34, 38, M.Metal), Dark = P(10, 10, 12, M.Metal) },
-	build = function(b, v)
-		grip(b, 1.1, 0.22, 4, "Grip", 6)
-		-- mechón de pelo: tiras que caen desde la guarda
-		for i, y in { -0.12, 0, 0.12 } do b:seg("Hair", v(y, 0.62, 0.06 * (i - 2)), v(y * 1.6, -0.2), 0.05, 0.08, "Grip") end
-		b:ball("Pommel", v(0, -0.66), 0.22, "Accent")
-		b:cyl("Cord", -0.55, 0.06, 0.25, "Blood")
-		-- máscara
-		b:add("Mask", Vector3.new(0.26, 0.5, 0.5), CFrame.new(0, 0, 0.8), "Bone")
-		b:add("MaskBrow", Vector3.new(0.3, 0.54, 0.08), CFrame.new(0, 0, 0.9), "Accent")
-		for _, s in { 1, -1 } do
-			b:ball("Eye", v(0.11 * s, 0.82, 0.12), 0.09, "Dark")
-			b:point("MaskHorn", v(0.24 * s, 0.86), v(0.5 * s, 0.82), 0.1, 0.07, "Accent")
-		end
-		b:add("MaskSeal", Vector3.new(0.28, 0.06, 0.36), CFrame.new(0, 0, 0.72), "Blood")
-		-- columna: núcleo + vértebras con púas que miran hacia la guarda
-		local core = b:seg("Spine", v(0, 1.0), v(0, 4.75), 0.1, 0.1, "Blood")
-		for i = 0, 9 do
-			local z = 1.12 + i * 0.37
-			local s = 1 - i * 0.05
-			b:add("Vertebra", Vector3.new(0.2 * s, 0.24 * s, 0.22), CFrame.new(0, 0, z), "Bone")
-			b:point("SpineThorn", v(0.1 * s, z), v(0.46 * s, z - 0.12), 0.1, 0.06, "Bone")
-			b:point("SpineThorn", v(-0.1 * s, z), v(-0.46 * s, z - 0.12), 0.1, 0.06, "Bone")
-		end
-		b:point("Tip", v(0, 4.75), v(0, 5.12), 0.18, 0.1, "Bone")
-		return core, 2.875
-	end,
-}
-
--- Corona del Alba: guarda de oro con alas caladas, hoja plateada ancha con muescas y grabado
-D.DawnCrown = {
-	palette = { Blade = P(206, 206, 212, M.Metal), Edge = P(236, 236, 240, M.Metal), Trim = P(214, 172, 72, M.Foil), Grip = P(22, 32, 28, M.Fabric), Rune = P(70, 70, 76, M.Metal), Dark = P(30, 24, 18, M.Metal) },
-	build = function(b, v)
-		grip(b, 1.1, 0.24, 7, "Grip", 35)
-		-- pomo: corona de llamas
-		b:ball("Pommel", v(0, -0.68), 0.26, "Trim")
-		for _, a in { -35, 0, 35 } do local r = math.rad(a) b:point("Flame", v(0, -0.72), v(math.sin(r) * 0.3, -0.72 - math.cos(r) * 0.32), 0.1, 0.07, "Trim") end
-		-- centro de la guarda con calavera y alas
-		b:add("GuardCore", Vector3.new(0.3, 0.34, 0.44), CFrame.new(0, 0, 0.82), "Trim")
-		b:point("GuardFang", v(0, 0.95), v(0, 1.35), 0.2, 0.12, "Trim")
-		b:ball("Skull", v(0, 0.78, 0.15), 0.14, "Dark")
-		for _, s in { 1, -1 } do
-			b:strip("Wing", { { 0.14 * s, 0.86 }, { 0.5 * s, 0.98 }, { 0.86 * s, 0.98 }, { 1.06 * s, 0.82 } }, { 0.3, 0.3, 0.24, 0.16 }, 0.12, "Trim", 0)
-			for i = 0, 2 do b:ball("WingHole", v((0.38 + i * 0.22) * s, 0.94, 0.03), 0.09, "Dark") end
-			b:point("WingClaw", v(1.02 * s, 0.82), v(1.12 * s, 0.42), 0.11, 0.08, "Trim")
-			b:point("WingClaw", v(0.78 * s, 0.9), v(0.84 * s, 0.6), 0.09, 0.07, "Trim")
-		end
-		-- hoja ancha que se afina
-		local core = b:strip("Blade", { { 0, 1.0 }, { 0, 2.1 }, { 0, 3.4 }, { 0, 4.6 } }, { 0.56, 0.44, 0.32, 0.2 }, 0.1, "Blade", 0.5)
-		faces(b, "Ridge", v(0, 1.9), v(0, 4.9), 0.04, 0.052, "Edge")
-		for i = 0, 3 do faces(b, "Engraving", v(-0.06, 1.15 + i * 0.22), v(0.06, 1.27 + i * 0.22), 0.04, 0.052, "Rune") end
-		-- muescas en flecha a los lados de la base
-		for i = 0, 2 do
-			local z = 1.25 + i * 0.32
-			for _, s in { 1, -1 } do b:point("Notch", v(0.24 * s, z), v(0.4 * s, z - 0.08), 0.1, 0.08, "Blade") end
-		end
-		return core, 1.55
-	end,
-}
-
--- Filo del Dragón: hoja de dos tramos (ancha grabada y punta fina), garras en la guarda, pomo de dragón
-D.DragonEdge = {
-	palette = { Blade = P(132, 128, 116, M.Metal), Edge = P(170, 166, 154, M.Metal), Accent = P(96, 96, 102, M.Metal), Grip = P(70, 46, 34, M.Leather), Rune = P(92, 88, 78, M.Metal), Dark = P(30, 28, 30, M.Metal) },
-	build = function(b, v)
-		grip(b, 1.1, 0.24, 8, "Grip", 10)
-		-- pomo: cabeza de dragón con cuernos
-		b:add("DragonHead", Vector3.new(0.26, 0.3, 0.32), CFrame.new(0, 0, -0.72), "Accent")
-		b:point("Snout", v(0, -0.86), v(0.04, -1.08), 0.22, 0.2, "Accent")
-		for _, s in { 1, -1 } do b:point("Horn", v(0.1 * s, -0.8), v(0.32 * s, -1.02), 0.08, 0.07, "Accent") end
-		b:cyl("Ferrule", 0.6, 0.1, 0.3, "Accent")
-		-- garras de la guarda: tres por lado, curvas
-		b:add("GuardCore", Vector3.new(0.26, 0.42, 0.3), CFrame.new(0, 0, 0.82), "Accent")
-		for _, s in { 1, -1 } do
-			b:strip("Claw", { { 0.18 * s, 0.86 }, { 0.5 * s, 0.98 }, { 0.72 * s, 0.86 }, { 0.82 * s, 0.6 } }, { 0.12, 0.1, 0.08, 0.05 }, 0.08, "Accent", 0.18)
-			b:strip("Claw", { { 0.16 * s, 0.94 }, { 0.42 * s, 1.18 }, { 0.6 * s, 1.18 } }, { 0.09, 0.07, 0.05 }, 0.07, "Accent", 0.14)
-			b:point("Claw", v(0.18 * s, 0.76), v(0.46 * s, 0.4), 0.09, 0.07, "Accent")
-		end
-		-- tramo ancho grabado y aserrado + punta fina con aletas
-		local core = b:strip("Blade", { { 0, 0.95 }, { 0, 1.5 }, { 0, 2.55 }, { 0, 2.95 } }, { 0.42, 0.62, 0.58, 0.34 }, 0.1, "Blade", 0)
-		b:strip("Blade", { { 0, 2.9 }, { 0, 4.0 }, { 0, 4.70 } }, { 0.3, 0.24, 0.16 }, 0.09, "Blade", 0.40)
-		faces(b, "Ridge", v(0, 2.9), v(0, 5.0), 0.04, 0.047, "Edge")
-		for i = 0, 3 do
-			local z = 1.45 + i * 0.3
-			for _, s in { 1, -1 } do b:point("Serration", v(0.27 * s, z), v(0.38 * s, z - 0.1), 0.14, 0.08, "Blade") end
-			faces(b, "Engraving", v(-0.12, z), v(0.12, z + 0.14), 0.035, 0.052, "Rune")
-		end
-		for _, z in { 3.15, 4.1 } do for _, s in { 1, -1 } do b:point("Fin", v(0.12 * s, z - 0.1), v(0.22 * s, z + 0.08), 0.12, 0.07, "Blade") end end
-		return core, 1.95
-	end,
-}
-
--- Diente del Exilio: espada de hierro sobria, guarda curva tachonada y pomo de corona
-D.ExileTooth = {
-	palette = { Blade = P(74, 76, 80, M.Metal), Edge = P(124, 126, 130, M.Metal), Accent = P(64, 62, 60, M.Metal), Trim = P(120, 112, 98, M.Metal), Grip = P(58, 44, 34, M.Leather), Dark = P(26, 26, 28, M.Metal) },
-	build = function(b, v)
-		grip(b, 1.0, 0.24, 7, "Grip", 40)
-		b:add("Pommel", Vector3.new(0.26, 0.44, 0.24), CFrame.new(0, 0, -0.64), "Accent")
-		for i = -1, 1 do b:ball("PommelStud", v(i * 0.13, -0.64, 0.13), 0.07, "Trim") end
-		b:add("PommelCrown", Vector3.new(0.22, 0.4, 0.06), CFrame.new(0, 0, -0.79), "Trim")
-		-- guarda curvada hacia la hoja, con tachas
-		b:strip("Guard", { { -0.95, 0.98 }, { -0.5, 0.86 }, { 0, 0.82 }, { 0.5, 0.86 }, { 0.95, 0.98 } }, { 0.2, 0.2, 0.22, 0.2, 0.2 }, 0.2, "Accent", 0)
-		for _, y in { -0.75, -0.4, 0, 0.4, 0.75 } do b:ball("Stud", v(y, 0.86 + math.abs(y) * 0.12, 0.1), 0.08, "Trim") end
-		for _, s in { 1, -1 } do b:add("GuardEnd", Vector3.new(0.22, 0.1, 0.26), CFrame.new(0, 1.02 * s, 1.0), "Trim") end
-		local core = b:strip("Blade", { { 0, 0.92 }, { 0, 2.3 }, { 0, 3.7 }, { 0, 4.65 } }, { 0.5, 0.44, 0.34, 0.22 }, 0.11, "Blade", 0.45)
-		faces(b, "Fuller", v(0, 1.0), v(0, 3.9), 0.1, 0.056, "Dark")
-		-- grabado cerca de la guarda
-		for i = 0, 2 do faces(b, "Etch", v(-0.08 + i * 0.08, 1.05), v(-0.04 + i * 0.04, 1.5), 0.025, 0.058, "Edge") end
-		return core, 2.4
-	end,
-}
-
--- Reliquia Dracónica: espada negra ornamentada con gema azul y runas que brillan en frío
-D.DraconicRelic = {
-	palette = { Blade = P(28, 28, 34, M.Metal), Accent = P(36, 36, 44, M.Metal), Glow = P(150, 180, 255, M.Neon), Edge = P(200, 205, 220, M.Metal), Grip = P(20, 20, 26, M.Fabric), Gem = P(60, 90, 230, M.Neon) },
-	build = function(b, v)
-		grip(b, 1.2, 0.22, 6, "Grip", 0)
-		for i = 0, 3 do gem(b, "GripDiamond", 0, -0.45 + i * 0.3, 0.08, 0.12, "Edge") end
-		-- pomo en forma de llama con gema
-		b:add("PommelCage", Vector3.new(0.24, 0.3, 0.3), CFrame.new(0, 0, -0.72), "Accent")
-		b:ball("PommelGem", v(0, -0.72, 0.1), 0.12, "Gem")
-		b:point("PommelFlame", v(0, -0.86), v(0, -1.2), 0.2, 0.12, "Accent")
-		for _, s in { 1, -1 } do b:point("PommelFlame", v(0.08 * s, -0.84), v(0.2 * s, -1.06), 0.1, 0.08, "Accent") end
-		-- guarda: zarcillos negros y gema azul
-		b:add("GuardCore", Vector3.new(0.3, 0.46, 0.36), CFrame.new(0, 0, 0.82), "Accent")
-		b:ball("GuardGem", v(0, 0.82, 0.13), 0.16, "Gem")
-		for _, s in { 1, -1 } do
-			b:strip("Tendril", { { 0.2 * s, 0.82 }, { 0.48 * s, 0.9 }, { 0.62 * s, 1.1 }, { 0.56 * s, 1.3 } }, { 0.12, 0.1, 0.08, 0.05 }, 0.08, "Accent", 0.15)
-			b:strip("Tendril", { { 0.2 * s, 0.76 }, { 0.42 * s, 0.6 }, { 0.46 * s, 0.38 } }, { 0.1, 0.08, 0.05 }, 0.07, "Accent", 0.12)
-			b:ball("GuardPearl", v(0.4 * s, 0.84, 0.06), 0.07, "Glow")
-		end
-		local core = b:strip("Blade", { { 0, 1.0 }, { 0, 2.6 }, { 0, 4.0 }, { 0, 4.68 } }, { 0.42, 0.4, 0.36, 0.3 }, 0.1, "Blade", 0.44)
-		for _, s in { 1, -1 } do b:seg("Edge", v(0.2 * s, 1.0), v(0.15 * s, 4.8), 0.11, 0.04, "Edge") end
-		faces(b, "Groove", v(0, 1.1), v(0, 4.6), 0.07, 0.052, "Accent")
-		for i = 0, 4 do faces(b, "Rune", v(-0.05, 1.5 + i * 0.6), v(0.05, 1.62 + i * 0.6), 0.05, 0.056, "Glow") end
-		b:light(Vector3.new(0, 0, 0.9), rgb(90, 120, 255), 5, 0.6)
-		b:emit("Wisps", 1.2, 4.6, rgb(190, 200, 255))
-		return core, 1.8
-	end,
-}
-
-----------------------------------------------------------------------
--- ESPADONES (Relic14, 15, 16, 17, 18, 19) — Escala colosal unificada (hoja 1.38 → 7.60)
-----------------------------------------------------------------------
-
--- Tumba Esmeralda: monolito de piedra oscura con un anillo verde y una vena rúnica que baja hasta la punta
-D.EmeraldTomb = {
-	palette = { Blade = P(34, 40, 44, M.Slate), Edge = P(70, 80, 84, M.Slate), Glow = P(60, 255, 120, M.Neon), Accent = P(48, 52, 56, M.Metal), Grip = P(40, 44, 48, M.Fabric) },
-	build = function(b, v)
-		grip(b, 2.30, 0.30, 6, "Grip", 0)
-		b:add("Pommel", Vector3.new(0.38, 0.38, 0.34), CFrame.new(0, 0, -1.32), "Accent")
-		b:add("PommelCap", Vector3.new(0.28, 0.28, 0.16), CFrame.new(0, 0, -1.54), "Accent")
-		-- guarda recta y ancha con remates
-		b:add("Guard", Vector3.new(0.24, 3.05, 0.20), CFrame.new(0, 0, 1.26), "Accent")
-		for _, s in { 1, -1 } do b:add("GuardEnd", Vector3.new(0.28, 0.20, 0.26), CFrame.new(0, 1.54 * s, 1.26), "Accent") end
-		b:add("Shoulder", Vector3.new(0.34, 1.66, 0.28), CFrame.new(0, 0, 1.44), "Blade")
-		local core = b:add("Blade", Vector3.new(0.30, 1.58, 5.14), CFrame.new(0, 0, 1.42 + 2.57), "Blade")
-		b:point("BladePoint", v(0, 6.55), v(0, 7.60), 1.58, 0.30, "Glow")
-		for _, s in { 1, -1 } do b:seg("Edge", v(0.79 * s, 1.48), v(0.79 * s, 6.56), 0.32, 0.08, "Edge") end
-		-- anillo esmeralda grande en las dos caras
-		for _, x in { 0.16, -0.16 } do b:arc("Ring", v(0, 2.38, x), Vector3.yAxis, Vector3.zAxis, 0.50, 0, math.pi * 2, 10, 0.04, 0.08, "Glow") end
-		-- Pilar central dentro del anillo, vena central y ramas rúnicas
-		faces(b, "RingPillar", v(0, 1.88), v(0, 2.88), 0.10, 0.16, "Accent")
-		faces(b, "Vein", v(0, 2.88), v(0, 6.60), 0.06, 0.16, "Glow")
-		for i, z in { 3.45, 4.20, 4.95, 5.70 } do
-			local s = (i % 2 == 0) and 1 or -1
-			faces(b, "Branch", v(0, z), v(0.30 * s, z - 0.32), 0.04, 0.16, "Glow")
-		end
-		-- Brillo que sube desde la punta
-		for _, s in { 1, -1 } do b:seg("TipGlow", v(0.54 * s, 6.15, 0.16), v(0.26 * s, 6.56, 0.16), 0.03, 0.07, "Glow") end
-		b:light(Vector3.new(0, 0, 2.40), rgb(60, 255, 120), 8, 0.75)
-		b:emit("Wisps", 5.0, 7.3, rgb(70, 255, 130))
-		return core, 3.99
-	end,
-}
-
--- Devorador: losa tallada con un rostro, costillas que asoman, un cuerno y un ala de plumas de hierro
-local function devourerBase(b, v, wingsBothSides)
-	grip(b, 2.30, 0.30, 9, "Grip", 45)
-	b:cyl("PommelRing", -1.22, 0.14, 0.38, "Accent")
-	b:add("Pommel", Vector3.new(0.34, 0.34, 0.28), CFrame.new(0, 0, -1.42), "Accent")
-	-- Collar de dientes alrededor de la base
-	b:arc("Collar", v(0, 1.45), Vector3.yAxis, Vector3.zAxis, 0.60, math.pi * 1.05, math.pi * 1.95, 5, 0.36, 0.15, "Accent")
-	for i = 0, 6 do
-		local t = math.pi * (1.1 + i * 0.8 / 6)
-		local p = v(math.cos(t) * 0.60, 1.45 + math.sin(t) * 0.60)
-		b:point("CollarTooth", p, p + Vector3.new(0, math.cos(t), math.sin(t)) * 0.26, 0.10, 0.24, "Accent")
-	end
-	-- Ala de plumas (lado +Y) y cuerno o ala (lado −Y)
-	local function wing(s)
-		for i = 0, 5 do
-			local a = math.rad(15 + i * 13)
-			local o = v(0.54 * s, 1.32 - i * 0.06)
-			b:seg("Feather", o, o + v(math.cos(a) * (1.28 - i * 0.08) * s, -math.sin(a) * (1.28 - i * 0.08)), 0.16, 0.15, "Accent")
-		end
-	end
-	wing(1)
-	if wingsBothSides then wing(-1) else
-		b:strip("Horn", { { -0.56, 1.35 }, { -0.92, 1.16 }, { -1.12, 0.84 }, { -1.08, 0.50 } }, { 0.28, 0.24, 0.18, 0.10 }, 0.24, "Accent", 0.24)
-		for i = 0, 3 do b:seg("HornRidge", v(-0.68 - i * 0.10, 1.34 - i * 0.20), v(-0.78 - i * 0.12, 1.20 - i * 0.22), 0.28, 0.05, "Dark") end
-	end
-	local core = b:add("Blade", Vector3.new(0.32, 1.62, 5.15), CFrame.new(0, 0, 1.40 + 2.575), "Blade")
-	b:point("BladePoint", v(0, 6.55), v(-0.10, 7.58), 1.62, 0.32, "Blade")
-	-- Canales grabados junto a los filos
-	for _, s in { 1, -1 } do faces(b, "Groove", v(0.56 * s, 2.95), v(0.56 * s, 6.50), 0.06, 0.165, "Dark") end
-	faces(b, "Groove", v(0.56, 2.95), v(-0.14, 2.45), 0.06, 0.165, "Dark")
-	return core
-end
-
-D.Devourer = {
-	palette = { Blade = P(56, 58, 62, M.Slate), Accent = P(64, 66, 70, M.Metal), Grip = P(44, 46, 50, M.Fabric), Dark = P(16, 16, 18, M.Basalt), Relief = P(112, 112, 118, M.Slate) },
-	build = function(b, v)
-		local core = devourerBase(b, v, false)
-		-- Relieve del rostro en la parte alta (lado −Y), en las dos caras
-		for _, x in { 0.18, -0.18 } do
-			b:add("Face", Vector3.new(0.10, 0.66, 0.88), CFrame.new(x, -0.34, 2.15), "Relief")
-			b:ball("Eye", v(-0.20, 2.34, x * 1.25), 0.13, "Dark")
-			b:add("Jaw", Vector3.new(0.09, 0.40, 0.26), CFrame.new(x * 1.1, -0.38, 1.72), "Relief")
-			for i = 0, 3 do b:seg("Tendon", v(-0.08 - i * 0.10, 2.55 + i * 0.08, x), v(0.08 + i * 0.14, 3.40 + i * 0.15, x), 0.06, 0.06, "Relief") end
-		end
-		-- Costillas que asoman por el filo −Y
-		for i = 0, 4 do
-			local z = 2.15 + i * 0.34
-			b:seg("Rib", v(-0.74, z), v(-1.22 + i * 0.04, z - 0.06), 0.10, 0.10, "Relief")
-		end
-		return core, 3.975
-	end,
-}
-
-D.AbyssWings = {
-	palette = { Blade = P(22, 22, 26, M.Metal), Accent = P(34, 34, 40, M.Metal), Grip = P(26, 26, 30, M.Fabric), Dark = P(8, 8, 10, M.Basalt), Glow = P(120, 90, 200, M.Neon), Edge = P(120, 120, 130, M.Metal) },
-	build = function(b, v)
-		local core = devourerBase(b, v, true)
-		for _, s in { 1, -1 } do b:seg("Edge", v(0.80 * s, 1.50), v(0.80 * s, 6.55), 0.34, 0.07, "Edge") end
-		faces(b, "Ridge", v(0, 1.65), v(0, 6.65), 0.08, 0.168, "Glow")
-		b:light(Vector3.new(0, 0, 3.6), rgb(120, 90, 200), 7, 0.55)
-		b:emit("Smoke", 1.6, 6.9, rgb(30, 26, 40))
-		return core, 3.975
-	end,
-}
-
--- Luto Real: hoja colosal en forma de hoja de árbol con un panel de filigrana plateada
-D.RoyalMourning = {
-	palette = { Blade = P(40, 40, 44, M.Metal), Edge = P(150, 150, 156, M.Metal), Trim = P(196, 190, 186, M.Metal), Accent = P(38, 38, 42, M.Metal), Grip = P(22, 22, 24, M.Leather), Dark = P(16, 16, 18, M.Metal) },
-	build = function(b, v)
-		grip(b, 2.30, 0.28, 5, "Grip", 0)
-		for _, z in { -0.75, -0.25, 0.25, 0.75 } do b:cyl("GripRing", z, 0.10, 0.36, "Accent") end
-		b:cyl("PommelNeck", -1.25, 0.22, 0.26, "Accent")
-		b:cyl("Pommel", -1.48, 0.24, 0.42, "Accent")
-		b:point("PommelTip", v(0, -1.60), v(0, -1.92), 0.30, 0.30, "Accent")
-		-- Guarda rectangular plana y pesada
-		b:add("Guard", Vector3.new(0.36, 2.24, 0.24), CFrame.new(0, 0, 1.24), "Accent")
-		b:add("GuardTrim", Vector3.new(0.40, 2.12, 0.08), CFrame.new(0, 0, 1.16), "Trim")
-		local pts = { { 0, 1.32 }, { 0, 2.85 }, { 0, 4.85 }, { 0, 6.45 } }
-		local core = b:strip("Blade", pts, { 1.38, 1.64, 1.50, 1.02 }, 0.28, "Blade", 1.15)
-		for _, s in { 1, -1 } do b:strip("Edge", { { 0.69 * s, 1.32 }, { 0.80 * s, 2.85 }, { 0.73 * s, 4.85 }, { 0.49 * s, 6.45 }, { 0, 7.60 } }, { 0.08, 0.08, 0.08, 0.07, 0.05 }, 0.30, "Edge", 0) end
-		-- Panel de filigrana: columna central y rombos reales
-		faces(b, "Filigree", v(0, 1.50), v(0, 6.75), 0.08, 0.145, "Trim")
-		for i = 0, 6 do
-			local z = 1.80 + i * 0.76
-			local w = 0.44 - math.abs(i - 3) * 0.05
-			gem(b, "Lozenge", 0, z, w, 0.145, "Trim")
-			faces(b, "Scroll", v(-w, z + 0.12), v(-w * 0.4, z + 0.38), 0.045, 0.148, "Trim")
-			faces(b, "Scroll", v(w, z + 0.12), v(w * 0.4, z + 0.38), 0.045, 0.148, "Trim")
-		end
-		return core, 2.1
-	end,
-}
-
--- Cruz del Ocaso: espadón colosal de oro con cruz en relieve, punta ensanchada y medallón corrompido
-D.DuskCross = {
-	palette = { Blade = P(196, 156, 62, M.Foil), Trim = P(232, 196, 104, M.Foil), Accent = P(176, 136, 52, M.Metal), Grip = P(160, 120, 46, M.Metal), Dark = P(14, 12, 12, M.Basalt) },
-	build = function(b, v)
-		grip(b, 2.30, 0.30, 9, "Grip", 50)
-		b:cyl("PommelNeck", -1.25, 0.18, 0.30, "Accent")
-		b:cyl("Pommel", -1.46, 0.28, 0.48, "Trim")
-		-- Guarda en cruz con ruedas de sol con rayos
-		b:add("Guard", Vector3.new(0.28, 2.32, 0.26), CFrame.new(0, 0, 1.24), "Accent")
-		b:cyl("SunWheel", 1.24, 0.36, 0.58, "Trim")
-		for i = 0, 7 do
-			local a = i * math.pi / 4
-			b:point("SunRay", v(math.cos(a) * 0.28, 1.24 + math.sin(a) * 0.28), v(math.cos(a) * 0.62, 1.24 + math.sin(a) * 0.62), 0.09, 0.06, "Trim")
-		end
-		for _, s in { 1, -1 } do
-			b:ball("GuardEnd", v(1.22 * s, 1.24), 0.30, "Trim")
-			b:point("GuardSpike", v(0.82 * s, 1.18), v(0.90 * s, 0.78), 0.10, 0.08, "Trim")
-		end
-		local core = b:add("Blade", Vector3.new(0.28, 1.48, 5.05), CFrame.new(0, 0, 1.38 + 2.525), "Blade")
-		b:add("TipBase", Vector3.new(0.28, 1.82, 0.42), CFrame.new(0, 0, 6.52), "Blade")
-		b:point("Tip", v(0, 6.72), v(0, 7.60), 1.82, 0.28, "Blade")
-		for _, s in { 1, -1 } do b:seg("Rim", v(0.71 * s, 1.42), v(0.71 * s, 6.38), 0.30, 0.07, "Trim") end
-		-- Cruz con tres travesaños y flecha
-		faces(b, "Cross", v(0, 1.85), v(0, 5.55), 0.09, 0.145, "Trim")
-		for i = 0, 2 do faces(b, "CrossBar", v(-0.28, 2.20 + i * 0.32), v(0.28, 2.20 + i * 0.32), 0.08, 0.145, "Trim") end
-		faces(b, "CrossBar", v(-0.22, 5.10), v(0.22, 5.10), 0.08, 0.145, "Trim")
-		for _, s in { 1, -1 } do faces(b, "Arrow", v(0, 5.65), v(0.20 * s, 5.42), 0.07, 0.145, "Trim") end
-		-- Medallón y corrupción negra
-		for _, x in { 0.15, -0.15 } do b:arc("Medallion", v(0, 6.35, x), Vector3.yAxis, Vector3.zAxis, 0.42, 0, math.pi * 2, 8, 0.04, 0.08, "Trim") end
-		for i = 0, 4 do
-			local a = math.rad(-60 + i * 30)
-			b:seg("Corruption", v(0.76, 6.00 + i * 0.15, 0.15), v(0.76 - math.cos(a) * 0.54, 6.00 + i * 0.15 + math.sin(a) * 0.38, 0.15), 0.04, 0.06, "Dark")
-		end
-		return core, 3.905
-	end,
-}
-
--- Sudario (Relic18): cuchilla colosal de verdugo envuelta en vendas funerarias cruzadas, con ojal circular y tiras colgantes
-D.Shroud = {
-	palette = {
-		Blade = P(32, 34, 40, M.Metal),
-		Edge = P(192, 198, 208, M.Metal),
-		Bandage = P(194, 182, 154, M.Fabric),
-		BandageDark = P(158, 146, 120, M.Fabric),
-		Accent = P(56, 60, 68, M.Metal),
-		Grip = P(98, 38, 34, M.Leather),
-		Dark = P(16, 16, 20, M.Metal),
-	},
-	build = function(b, v)
-		grip(b, 2.30, 0.28, 9, "Grip", 24)
-		b:cyl("PommelCap", -1.24, 0.14, 0.38, "Accent")
-		b:cyl("PommelRing", -1.36, 0.08, 0.44, "Dark")
-		-- Guarda industrial remachada con tiras de sudario colgando hacia abajo
-		b:add("Guard", Vector3.new(0.36, 2.22, 0.30), CFrame.new(0, 0, 1.25), "Accent")
-		for _, y in { -0.82, -0.42, 0.42, 0.82 } do
-			b:ball("GuardRivet", v(y, 1.25, 0.18), 0.10, "Dark")
-			b:ball("GuardRivet", v(y, 1.25, -0.18), 0.10, "Dark")
-		end
-		-- Dos vendas largas que cuelgan desde la guarda
-		b:strip("ShroudTail", { { -0.52, 1.15 }, { -0.78, 0.45 }, { -0.96, -0.35 }, { -1.08, -1.10 } }, { 0.18, 0.20, 0.22, 0.16 }, 0.05, "Bandage", 0)
-		b:strip("ShroudTail", { { -0.44, 1.10 }, { -0.62, 0.35 }, { -0.74, -0.45 } }, { 0.14, 0.16, 0.14 }, 0.05, "BandageDark", 0, 0.06)
-		-- Losa de cuchilla pesada (lomo negro en −Y, filo plateado ancho en +Y)
-		local core = b:add("Blade", Vector3.new(0.28, 1.56, 5.15), CFrame.new(0, 0, 1.38 + 2.575), "Blade")
-		b:seg("SilverBevel", v(0.46, 1.40), v(0.46, 6.55), 0.26, 0.66, "Edge")
-		-- Punta asimétrica de cuchilla (termina en z = 7.60)
-		b:point("BladePoint", v(0, 6.55), v(-0.18, 7.60), 1.56, 0.28, "Edge")
-		-- Ojal circular cerca de la guarda (inspiración Zabuza / verdugo)
-		b:add("CleaverHole", Vector3.new(0.32, 0.38, 0.38), CFrame.new(0, -0.22, 1.92), "Dark", nil, Enum.PartType.Cylinder)
-		-- Vendas funerarias cruzadas a lo largo de toda la hoja
-		for i = 0, 10 do
-			local z = 1.65 + i * 0.46
-			local tilt = (i % 2 == 0) and 0.28 or -0.24
-			local role = (i % 3 == 0) and "BandageDark" or "Bandage"
-			b:seg("BandageWrap", v(-0.79, z), v(0.79, z + tilt), 0.33, 0.20, role)
-		end
-		return core, 3.955
-	end,
-}
-
-----------------------------------------------------------------------
--- ESTOQUES (Relic21 – Relic26)
-----------------------------------------------------------------------
-
--- Corte de Plata: sable de hoja curva con arco de nudillos y anillo lateral
-D.SilverCut = {
-	palette = { Blade = P(66, 66, 70, M.Metal), Edge = P(150, 150, 156, M.Metal), Accent = P(54, 52, 52, M.Metal), Grip = P(36, 32, 30, M.Leather) },
-	build = function(b, v)
-		grip(b, 0.95, 0.2, 6, "Grip", 30)
-		b:cyl("Pommel", -0.58, 0.22, 0.3, "Accent")
-		b:cyl("PommelCap", -0.72, 0.08, 0.2, "Accent")
-		b:cyl("GuardDisc", 0.56, 0.06, 0.5, "Accent")
-		b:cyl("Collar", 0.66, 0.14, 0.18, "Accent")
-		-- arco de nudillos que baja hasta el pomo, con remate de hoja
-		b:strip("KnuckleBow", { { 0.12, 0.58 }, { 0.42, 0.42 }, { 0.5, 0.05 }, { 0.44, -0.32 }, { 0.22, -0.56 } }, { 0.06, 0.06, 0.06, 0.06, 0.05 }, 0.07, "Accent", 0)
-		b:strip("Quillon", { { -0.12, 0.6 }, { -0.4, 0.66 }, { -0.5, 0.56 }, { -0.44, 0.46 } }, { 0.06, 0.06, 0.05, 0.04 }, 0.07, "Accent", 0.1)
-		b:arc("SideRing", v(0, 0.48, 0.1), Vector3.xAxis, Vector3.zAxis, 0.18, -math.pi * 0.2, math.pi * 1.2, 5, 0.04, 0.04, "Accent")
-		local pts = { { 0, 0.7 }, { 0.01, 1.8 }, { 0.06, 2.9 }, { 0.16, 3.9 }, { 0.3, 4.8 }, { 0.42, 5.3 } }
-		local core = b:strip("Blade", pts, { 0.17, 0.17, 0.16, 0.14, 0.11, 0.08 }, 0.06, "Blade", 0.35)
-		local back = {}
-		for i, p in pts do back[i] = { p[1] - 0.07, p[2] } end
-		b:strip("Spine", back, { 0.03, 0.03, 0.03, 0.03, 0.02, 0.02 }, 0.07, "Edge", 0)
-		return core, 1.25
-	end,
-}
-
--- Lengua de Fuego: estoque retorcido, dos hebras en espiral alrededor de una aguja, brasas
-D.FireTongue = {
-	palette = { Blade = P(116, 100, 82, M.CorrodedMetal), Accent = P(92, 78, 64, M.CorrodedMetal), Glow = P(255, 120, 40, M.Neon), Grip = P(70, 58, 48, M.Wood) },
-	build = function(b, v)
-		b.handle.Size = Vector3.new(0.2, 0.2, 0.95)
-		-- mango nudoso: tramos torcidos
-		for i = 0, 3 do b:seg("Gnarl", v(0.04 * (i % 2 == 0 and 1 or -1), -0.5 + i * 0.25, 0.03), v(-0.04 * (i % 2 == 0 and 1 or -1), -0.25 + i * 0.25, -0.03), 0.16, 0.16, "Grip") end
-		b:point("PommelSpike", v(0, -0.5), v(0.05, -0.95), 0.14, 0.12, "Accent")
-		-- guarda corta con dos ganchos
-		b:add("Guard", Vector3.new(0.18, 0.6, 0.16), CFrame.new(0, 0, 0.55), "Accent")
-		b:point("GuardHook", v(0.28, 0.55), v(0.42, 0.4), 0.1, 0.08, "Accent")
-		b:point("GuardHook", v(-0.28, 0.55), v(-0.38, 0.7), 0.1, 0.08, "Accent")
-		local core = b:strip("Blade", { { 0, 0.6 }, { 0, 2.4 }, { 0, 4.2 }, { 0, 5.0 } }, { 0.13, 0.1, 0.07, 0.04 }, 0.08, "Blade", 0.5)
-		-- dos hebras en espiral que se cierran hacia la punta
-		for k = 0, 1 do
-			local prev
-			for i = 0, 10 do
-				local z = 0.65 + i * 0.3
-				local r = 0.16 * (1 - i / 12)
-				local a = i * 0.9 + k * math.pi
-				local p = Vector3.new(math.cos(a) * r, math.sin(a) * r, z)
-				if prev then b:seg("Strand", prev, p, 0.07, 0.07, "Blade", 0.04) end
-				prev = p
-			end
-		end
-		for _, z in { 1.2, 2.1, 3.0 } do b:ball("Ember", Vector3.new(0, 0, z), 0.09, "Glow") end
-		b:light(Vector3.new(0, 0, 2), rgb(255, 120, 40), 5, 0.6)
-		b:emit("Embers", 0.8, 4.4, rgb(255, 130, 50))
-		return core, 1.5
-	end,
-}
-
--- Duelo del Crepúsculo: espada de duelo larga, cazoleta de media concha y gavilanes rectos
-D.TwilightDuel = {
-	palette = { Blade = P(150, 150, 156, M.Metal), Edge = P(196, 196, 202, M.Metal), Accent = P(92, 90, 92, M.Metal), Trim = P(130, 126, 120, M.Metal), Grip = P(74, 58, 48, M.Leather) },
-	build = function(b, v)
-		grip(b, 0.95, 0.2, 7, "Grip", 40)
-		b:ball("Pommel", v(0, -0.62), 0.26, "Accent")
-		b:point("PommelTip", v(0, -0.72), v(0, -0.92), 0.12, 0.12, "Accent")
-		-- media concha
-		b:arc("Shell", v(0, 0.6), Vector3.yAxis, Vector3.zAxis, 0.42, 0, math.pi, 6, 0.36, 0.12, "Accent")
-		b:add("ShellFace", Vector3.new(0.4, 0.7, 0.06), CFrame.new(0, 0, 0.66), "Accent")
-		gem(b, "ShellOrnament", 0, 0.82, 0.16, 0.2, "Trim")
-		-- gavilanes rectos con remates retorcidos
-		b:add("Quillon", Vector3.new(0.09, 2.0, 0.09), CFrame.new(0, 0, 0.58), "Accent")
-		for _, s in { 1, -1 } do b:add("QuillonEnd", Vector3.new(0.14, 0.3, 0.14), CFrame.new(0, 1.0 * s, 0.58) * CFrame.Angles(math.rad(45 * s), 0, 0), "Trim") end
-		local core = b:strip("Blade", { { 0, 0.6 }, { 0, 2.6 }, { 0, 4.6 }, { 0, 5.2 } }, { 0.16, 0.13, 0.1, 0.07 }, 0.07, "Blade", 0.4)
-		faces(b, "Ridge", v(0, 0.9), v(0, 5.2), 0.025, 0.037, "Edge")
-		return core, 1.6
-	end,
-}
-
--- Aguijón Espectral: hoja fina oscura con filos lilas y alas negras en la guarda
-D.SpectralSting = {
-	palette = { Blade = P(38, 36, 46, M.Metal), Glow = P(196, 160, 240, M.Neon), Accent = P(20, 20, 24, M.Metal), Trim = P(196, 196, 206, M.Metal), Grip = P(22, 22, 26, M.Leather) },
-	build = function(b, v)
-		grip(b, 0.9, 0.18, 5, "Grip", 20)
-		b:point("Pommel", v(0, -0.48), v(0, -0.78), 0.2, 0.14, "Trim")
-		-- alas negras curvas, todas hacia atrás del lado −Y
-		for i = 0, 3 do
-			local spread = 0.25 + i * 0.12
-			b:strip("Wing", { { -0.06, 0.55 }, { -spread, 0.45 - i * 0.05 }, { -spread - 0.12, 0.15 - i * 0.12 }, { -spread - 0.06, -0.1 - i * 0.16 } }, { 0.12, 0.1, 0.07, 0.04 }, 0.05, "Accent", 0.15)
-		end
-		b:strip("Crest", { { 0.06, 0.55 }, { 0.26, 0.5 }, { 0.32, 0.3 } }, { 0.08, 0.06, 0.04 }, 0.05, "Accent", 0.12)
-		b:strip("KnuckleBow", { { 0.08, 0.5 }, { 0.3, 0.2 }, { 0.3, -0.2 }, { 0.12, -0.45 } }, { 0.05, 0.05, 0.05, 0.05 }, 0.06, "Accent", 0)
-		local core = b:strip("Blade", { { 0, 0.55 }, { 0, 1.35 }, { 0, 3.3 }, { 0, 5.25 } }, { 0.22, 0.13, 0.13, 0.1 }, 0.06, "Blade", 0.3)
-		for _, s in { 1, -1 } do b:strip("GlowEdge", { { 0.1 * s, 0.6 }, { 0.068 * s, 1.35 }, { 0.068 * s, 3.3 }, { 0.052 * s, 5.25 } }, { 0.025, 0.025, 0.025, 0.02 }, 0.065, "Glow", 0) end
-		for _, z in { 1.3, 3.35 } do
-			b:point("Node", v(0, z), v(0, z + 0.3), 0.22, 0.09, "Trim")
-			b:point("Node", v(0, z), v(0, z - 0.3), 0.22, 0.09, "Trim")
-		end
-		b:light(Vector3.new(0, 0, 3), rgb(196, 160, 240), 4, 0.4)
-		return core, 1.5
-	end,
-}
-
--- Velo Amatista: hoja violeta con gemas, cazoleta de alambre en espiral y pomo de cristal
-D.AmethystVeil = {
-	palette = { Blade = P(116, 74, 138, M.Metal), Edge = P(150, 108, 170, M.Metal), Accent = P(84, 104, 104, M.Metal), Gem = P(236, 110, 210, M.Neon), Grip = P(44, 54, 56, M.Leather), Crystal = P(200, 230, 240, M.Glass) },
-	build = function(b, v)
-		grip(b, 0.9, 0.18, 4, "Grip", 0)
-		for _, z in { -0.2, 0.15 } do gem(b, "GripGem", 0, z, 0.08, 0.1, "Gem") end
-		b:cyl("PommelRing", -0.5, 0.06, 0.24, "Gem")
-		b:cyl("PommelBand", -0.57, 0.08, 0.2, "Accent")
-		b:ball("Crystal", v(0, -0.68), 0.2, "Crystal")
-		b:point("CrystalTip", v(0, -0.72), v(0, -0.9), 0.12, 0.12, "Crystal")
-		-- cazoleta: dos anillos inclinados y rizos
-		b:ring("CageRing", 0.42, 0.36, 0.04, 8, "Accent")
-		b:arc("CageLoop", v(0, 0.2), Vector3.yAxis, Vector3.zAxis, 0.38, -math.pi * 0.4, math.pi * 1.4, 7, 0.04, 0.04, "Accent")
-		for _, s in { 1, -1 } do
-			b:strip("Curl", { { 0.08 * s, 0.62 }, { 0.3 * s, 0.68 }, { 0.42 * s, 0.82 }, { 0.36 * s, 0.94 } }, { 0.05, 0.05, 0.04, 0.03 }, 0.05, "Accent", 0)
-			b:ball("Eye", v(0.08 * s, 0.68, 0.06), 0.06, "Gem")
-		end
-		b:strip("Vine", { { 0.08, 0.7 }, { -0.08, 1.0 }, { 0.06, 1.3 } }, { 0.035, 0.035, 0.03 }, 0.035, "Accent", 0, 0.05)
-		local core = b:strip("Blade", { { 0, 0.62 }, { 0, 2.6 }, { 0, 4.8 } }, { 0.18, 0.17, 0.15 }, 0.08, "Blade", 0.55)
-		faces(b, "Ridge", v(0, 0.7), v(0, 5.0), 0.04, 0.045, "Edge")
-		for _, z in { 1.9, 2.6, 3.3 } do gem(b, "BladeGem", 0, z, 0.07, 0.045, "Gem") end
-		return core, 1.6
-	end,
-}
-
--- Lamento Oscuro: hoja negra muy curva tipo sable, tsuba pequeña, mango nudoso con espina y humo
-D.DarkLament = {
-	palette = { Blade = P(14, 14, 16, M.Metal), Edge = P(46, 46, 52, M.Metal), Accent = P(34, 36, 44, M.Metal), Grip = P(30, 34, 44, M.Slate) },
-	build = function(b, v)
-		grip(b, 0.95, 0.2, 6, "Grip", 55)
-		for i = 0, 2 do b:point("GripThorn", v(0.1, -0.3 + i * 0.25), v(0.2, -0.36 + i * 0.25), 0.06, 0.05, "Accent") end
-		b:point("PommelSpike", v(0, -0.45), v(0.08, -1.1), 0.18, 0.14, "Accent")
-		b:point("PommelSpike", v(-0.06, -0.55), v(-0.2, -0.85), 0.08, 0.07, "Accent")
-		b:cyl("Tsuba", 0.52, 0.06, 0.42, "Accent")
-		b:cyl("Habaki", 0.6, 0.12, 0.17, "Edge")
-		local pts = { { 0, 0.6 }, { 0.03, 1.5 }, { 0.12, 2.4 }, { 0.28, 3.3 }, { 0.5, 4.15 }, { 0.78, 4.9 } }
-		local core = b:strip("Blade", pts, { 0.2, 0.2, 0.19, 0.17, 0.14, 0.1 }, 0.07, "Blade", 0.5)
-		local edge = {}
-		for i, p in pts do edge[i] = { p[1] + 0.085, p[2] - 0.01 } end
-		b:strip("Edge", edge, { 0.03, 0.03, 0.03, 0.03, 0.025, 0.02 }, 0.075, "Edge", 0)
-		b:emit("Smoke", 1.0, 4.6, rgb(40, 40, 48))
-		return core, 1.6
-	end,
-}
-
-----------------------------------------------------------------------
--- MAZAS / MARTILLOS / HACHAS (Relic28, 29, 31, 32)
-----------------------------------------------------------------------
-
--- Espinas Carmesí: martillo de cristales oscuros con calavera y aletas, mango retorcido con gancho
-D.CrimsonShards = {
-	palette = { Blade = P(58, 36, 44, M.Metal), Shard = P(92, 46, 70, M.Glass), Accent = P(124, 96, 64, M.Metal), Bone = P(150, 130, 100, M.Limestone), Glow = P(220, 40, 100, M.Neon), Grip = P(78, 50, 46, M.Wood), Dark = P(16, 10, 12, M.Metal) },
-	build = function(b, v)
-		b.handle.Size = Vector3.new(0.26, 0.26, 1.4)
-		-- mango retorcido con gancho y collar de púas abajo
-		b:strip("Haft", { { 0, 0.6 }, { 0.06, 1.4 }, { -0.04, 2.2 }, { 0, 3.1 } }, { 0.24, 0.24, 0.22, 0.22 }, 0.24, "Grip", 0)
-		b:wrap(-0.65, 0.65, 6, 0.3, "Grip", 30)
-		b:strip("Hook", { { 0, -0.7 }, { 0.06, -0.95 }, { 0.22, -1.12 }, { 0.38, -1.12 } }, { 0.22, 0.18, 0.12, 0.07 }, 0.2, "Grip", 0.15)
-		b:cyl("SpikeCollar", -0.78, 0.14, 0.34, "Accent")
-		for i = 0, 3 do
-			local a = i * math.pi / 2 + 0.4
-			b:point("CollarSpike", Vector3.new(math.cos(a) * 0.15, math.sin(a) * 0.15, -0.78), Vector3.new(math.cos(a) * 0.42, math.sin(a) * 0.42, -0.7), 0.1, 0.08, "Accent")
-		end
-		b:cyl("Langet", 3.05, 0.4, 0.34, "Accent")
-		-- cabeza: bloque con cristales que salen en todas direcciones
-		local head = b:add("Head", Vector3.new(0.92, 1.9, 1.0), CFrame.new(0, 0, 3.75), "Blade")
-		local shards = {
-			{ v(0.6, 3.9), v(1.2, 4.25) }, { v(0.85, 3.6), v(1.25, 3.3) }, { v(0.5, 4.2), v(0.8, 4.75) },
-			{ v(-0.6, 3.95), v(-1.05, 4.4) }, { v(-0.8, 3.55), v(-1.25, 3.4) }, { v(-0.3, 4.2), v(-0.45, 4.8) },
-			{ v(0.1, 4.2), v(0.15, 4.65) }, { v(0.95, 3.75), v(1.3, 3.8) },
-		}
-		for _, sh in shards do b:point("Shard", sh[1], sh[2], 0.32, 0.3, "Shard") end
-		-- calavera con aletas en las dos caras
-		for _, s in { 1, -1 } do
-			local x = 0.5 * s
-			b:ball("Skull", Vector3.new(x, -0.1, 3.75), 0.4, "Bone")
-			b:ball("SkullEye", Vector3.new(x * 1.32, -0.18, 3.82), 0.1, "Glow")
-			b:ball("SkullEye", Vector3.new(x * 1.32, -0.02, 3.82), 0.1, "Glow")
-			for i = 0, 3 do
-				local a = math.rad(-60 + i * 40)
-				b:point("Fin", Vector3.new(x, -0.1, 3.75), Vector3.new(x, -0.1 + math.sin(a) * 0.75, 3.75 + math.cos(a) * 0.75), 0.18, 0.06, "Accent")
-			end
-		end
-		b:add("Face", Vector3.new(0.96, 0.12, 1.04), CFrame.new(0, 0.98, 3.75), "Dark")
-		b:light(Vector3.new(0, 0, 3.75), rgb(220, 40, 100), 5, 0.5)
-		return head, 3.75
-	end,
-}
-
--- Verdugo del Norte: martillo doble plateado con calavera, alas y sellos; mango con cuero rojo en espiral
-D.NorthExecutioner = {
-	palette = { Blade = P(58, 60, 70, M.Metal), Trim = P(196, 196, 200, M.Metal), Accent = P(84, 86, 96, M.Metal), Leather = P(118, 54, 40, M.Leather), Grip = P(54, 56, 66, M.Metal), Dark = P(18, 18, 22, M.Metal) },
-	build = function(b, v)
-		b.handle.Size = Vector3.new(0.24, 0.24, 1.4)
-		b:cyl("Haft", 1.9, 2.6, 0.24, "Grip")
-		b:wrap(-0.65, 2.4, 9, 0.27, "Leather", 14)
-		for _, z in { 2.55, 2.7, 3.0 } do b:cyl("Collar", z, 0.08, 0.34, "Trim") end
-		b:cyl("ButtCap", -0.8, 0.16, 0.32, "Trim")
-		b:point("ButtSpike", v(0, -0.88), v(0, -1.25), 0.2, 0.2, "Trim")
-		-- cabeza doble
-		local head = b:add("Head", Vector3.new(0.9, 1.4, 0.95), CFrame.new(0, 0, 3.75), "Blade")
-		for _, s in { 1, -1 } do
-			b:add("Block", Vector3.new(1.0, 0.36, 1.05), CFrame.new(0, 0.86 * s, 3.75), "Accent")
-			b:add("Seal", Vector3.new(0.12, 0.62, 0.62), CFrame.new(0, 1.08 * s, 3.75) * CFrame.Angles(0, 0, math.pi / 2), "Trim", nil, Enum.PartType.Cylinder)
-			b:add("SealMark", Vector3.new(0.06, 0.1, 0.36), CFrame.new(0, 1.15 * s, 3.75), "Dark")
-			-- alas sobre la cabeza
-			for i = 0, 3 do
-				local a = math.rad(20 + i * 20)
-				local o = v(0.35 * s, 4.25)
-				b:seg("WingFeather", o, o + v(math.cos(a) * (0.95 - i * 0.12) * s, math.sin(a) * (0.95 - i * 0.12)), 0.18, 0.16, "Trim")
-			end
-		end
-		-- calavera en las dos caras
-		for _, s in { 1, -1 } do
-			b:ball("Skull", Vector3.new(0.47 * s, 0, 3.82), 0.38, "Trim")
-			b:add("SkullJaw", Vector3.new(0.12, 0.22, 0.16), CFrame.new(0.52 * s, 0, 3.58), "Trim")
-			b:ball("SkullEye", Vector3.new(0.62 * s, -0.08, 3.86), 0.09, "Dark")
-			b:ball("SkullEye", Vector3.new(0.62 * s, 0.08, 3.86), 0.09, "Dark")
-		end
-		return head, 3.75
-	end,
-}
-
--- Mandíbula Antigua: cuchilla envuelta en vendas con lomo aserrado, sobre un mango curvo vendado
-D.AncientMaw = {
-	palette = { Blade = P(66, 60, 54, M.Metal), Grip = P(152, 136, 110, M.Fabric), Bandage = P(170, 152, 120, M.Fabric), Accent = P(70, 64, 60, M.Metal), Dark = P(30, 26, 22, M.Metal), Glow = P(220, 190, 120, M.Neon) },
-	build = function(b, v)
-		b.handle.Size = Vector3.new(0.26, 0.26, 1.4)
-		b:strip("Haft", { { 0, 0.6 }, { -0.12, 1.3 }, { -0.04, 2.0 }, { 0.06, 2.6 } }, { 0.26, 0.26, 0.24, 0.24 }, 0.26, "Grip", 0)
-		b:wrap(-0.65, 0.65, 7, 0.3, "Bandage", 25)
-		for i = 0, 3 do b:seg("Rag", v(-0.12 + i * 0.03, 1.0 + i * 0.35), v(-0.42 - i * 0.04, 0.9 + i * 0.3), 0.04, 0.1, "Bandage") end
-		b:add("Hub", Vector3.new(0.3, 0.42, 0.42), CFrame.new(0, 0.08, 2.75) * CFrame.Angles(0, math.pi / 2, 0), "Accent", nil, Enum.PartType.Cylinder)
-		b:ball("HubBolt", v(0.08, 2.75, 0.17), 0.12, "Dark")
-		-- cuchilla grande hacia +Y, inclinada
-		local head = b:add("Cleaver", Vector3.new(0.14, 1.05, 2.0), CFrame.new(0, 0.38, 3.75) * CFrame.Angles(math.rad(-8), 0, 0), "Blade")
-		b:point("CleaverHook", v(0.62, 4.65), v(0.95, 4.8), 0.5, 0.14, "Blade")
-		-- lomo aserrado (lado −Y)
-		for i = 0, 6 do
-			local z = 2.95 + i * 0.26
-			b:point("Serration", v(-0.12 - (z - 2.95) * 0.14, z), v(-0.36 - (z - 2.95) * 0.14, z - 0.08), 0.16, 0.1, "Blade")
-		end
-		-- vendas cruzadas en las dos caras
-		for i = 0, 4 do
-			local z = 3.0 + i * 0.36
-			for _, x in { 0.08, -0.08 } do b:seg("Bandage", v(-0.12, z, x), v(0.85, z + 0.28 * (i % 2 == 0 and 1 or -1), x), 0.03, 0.1, "Bandage") end
-		end
-		-- runas cosidas
-		for i = 0, 2 do b:seg("Stitch", v(0.15 + i * 0.12, 3.4, 0.09), v(0.15 + i * 0.12, 3.6, 0.09), 0.02, 0.03, "Glow") end
-		return head, 3.75
-	end,
-}
-
--- Hacha del Osario: hacha doble de hueso con púas, núcleo de hierro mecánico y mango de vértebras
-D.OssuaryAxe = {
-	palette = { Bone = P(196, 170, 132, M.Limestone), Blade = P(186, 160, 124, M.Limestone), Iron = P(40, 40, 48, M.Metal), Rope = P(88, 64, 40, M.Fabric), Grip = P(176, 152, 118, M.Limestone), Dark = P(60, 44, 30, M.Wood) },
-	build = function(b, v)
-		b.handle.Size = Vector3.new(0.24, 0.24, 1.4)
-		-- mango de hueso con nudos de vértebra y cuerda
-		b:cyl("Haft", 1.9, 2.6, 0.22, "Grip")
-		for _, z in { 0.9, 1.5, 2.1, 2.7 } do b:ball("Knuckle", v(0, z), 0.32, "Bone") end
-		b:wrap(-0.3, 0.6, 5, 0.27, "Rope", 30)
-		b:ball("ButtKnuckle", v(0, -0.75), 0.34, "Bone")
-		b:point("ButtClaw", v(0.1, -0.8), v(0.4, -1.15), 0.12, 0.1, "Bone")
-		b:point("ButtClaw", v(-0.1, -0.8), v(-0.35, -1.2), 0.12, 0.1, "Bone")
-		b:point("ButtSpike", v(0, -0.85), v(0, -1.3), 0.14, 0.14, "Iron")
-		-- núcleo de hierro con púas
-		local head = b:add("Core", Vector3.new(0.4, 0.5, 0.9), CFrame.new(0, 0, 3.85), "Iron")
-		b:point("TopSpike", v(0, 4.3), v(0, 4.95), 0.22, 0.2, "Iron")
-		for _, s in { 1, -1 } do b:point("SideSpike", Vector3.new(0.2 * s, 0, 3.55), Vector3.new(0.65 * s, 0, 3.4), 0.18, 0.12, "Iron") end
-		b:add("Bracket", Vector3.new(0.44, 0.7, 0.12), CFrame.new(0, 0, 3.45), "Iron")
-		-- dos hojas de hueso en abanico con púas en el borde
-		for _, s in { 1, -1 } do
-			b:strip("AxeBlade", { { 0.22 * s, 3.85 }, { 0.6 * s, 3.85 }, { 0.95 * s, 3.85 } }, { 0.7, 1.05, 1.35 }, 0.14, "Blade", 0)
-			for i = 0, 4 do
-				local z = 3.25 + i * 0.3
-				b:point("EdgeSpike", v(1.0 * s, z), v(1.28 * s, z + (z - 3.85) * 0.5), 0.16, 0.1, "Dark")
-			end
-			b:ball("Hole", v(0.7 * s, 4.2, 0.06), 0.1, "Dark")
-		end
-		return head, 3.85
-	end,
-}
-
-----------------------------------------------------------------------
--- DISEÑOS REHECHOS DE SKINS ANTIGUAS (Solar, Violet, Void, Duel, Flange, Forge)
-----------------------------------------------------------------------
-
--- Juramento Solar (Relic06): espada de caballero solar con halo radiante en la guarda, cuero carmesí y hoja de oro bruñido
-D.Solar = {
-	palette = { Blade = P(214, 178, 102, M.Metal), Edge = P(248, 224, 152, M.Foil), Accent = P(178, 134, 58, M.Metal), Grip = P(84, 34, 28, M.Leather), Glow = P(255, 198, 92, M.Neon), Dark = P(42, 30, 20, M.Metal) },
-	build = function(b, v)
-		grip(b, 1.18, 0.24, 7, "Grip", 18)
-		b:cyl("PommelCollar", -0.64, 0.08, 0.28, "Accent")
-		b:cyl("SunPommel", -0.78, 0.14, 0.42, "Accent")
-		b:ball("PommelSunCore", v(0, -0.78), 0.20, "Glow")
-		-- Guarda en cruz con halo solar calado y rayos laterales
-		b:add("GuardCore", Vector3.new(0.28, 0.44, 0.32), CFrame.new(0, 0, 0.80), "Accent")
-		b:arc("SolarHalo", v(0, 0.84), Vector3.yAxis, Vector3.zAxis, 0.42, 0, math.pi * 2, 10, 0.08, 0.08, "Accent")
-		for _, s in { 1, -1 } do
-			b:strip("SunQuillon", { { 0.18 * s, 0.80 }, { 0.58 * s, 0.84 }, { 0.96 * s, 0.92 } }, { 0.20, 0.16, 0.10 }, 0.14, "Accent", 0.18)
-			b:point("SolarRay", v(0.32 * s, 0.92), v(0.56 * s, 1.24), 0.12, 0.08, "Edge")
-		end
-		local core = b:strip("Blade", { { 0, 0.96 }, { 0, 2.40 }, { 0, 3.80 }, { 0, 4.62 } }, { 0.46, 0.42, 0.34, 0.24 }, 0.10, "Blade", 0.48)
-		faces(b, "SolarFuller", v(0, 1.08), v(0, 3.70), 0.10, 0.052, "Dark")
-		faces(b, "SunVein", v(0, 1.14), v(0, 4.10), 0.035, 0.056, "Glow")
-		for _, s in { 1, -1 } do
-			b:seg("EdgeBevel", v(0.21 * s, 1.00), v(0.14 * s, 4.60), 0.07, 0.04, "Edge")
-		end
-		b:light(Vector3.new(0, 0, 1.8), rgb(255, 198, 92), 5, 0.55)
-		return core, 2.80
-	end,
-}
-
--- Vigilia Violeta (Relic10): espada de centinela nocturno con guarda en V invertida, cuero oscuro y fuller amatista
-D.Violet = {
-	palette = { Blade = P(64, 54, 86, M.Metal), Edge = P(168, 152, 204, M.Metal), Accent = P(98, 76, 134, M.Metal), Grip = P(32, 24, 42, M.Leather), Glow = P(186, 118, 255, M.Neon), Dark = P(22, 18, 30, M.Metal) },
-	build = function(b, v)
-		grip(b, 1.16, 0.23, 6, "Grip", 22)
-		b:add("Pommel", Vector3.new(0.24, 0.38, 0.32), CFrame.new(0, 0, -0.74) * CFrame.Angles(math.rad(45), 0, 0), "Accent")
-		gem(b, "PommelGem", 0, -0.74, 0.14, 0.13, "Glow")
-		b:add("GuardHub", Vector3.new(0.28, 0.46, 0.34), CFrame.new(0, 0, 0.80), "Accent")
-		gem(b, "GuardAmethyst", 0, 0.82, 0.18, 0.15, "Glow")
-		for _, s in { 1, -1 } do
-			b:strip("WingGuard", { { 0.18 * s, 0.80 }, { 0.56 * s, 0.92 }, { 0.92 * s, 1.12 } }, { 0.22, 0.16, 0.10 }, 0.14, "Accent", 0.16)
-			b:point("GuardSpur", v(0.38 * s, 0.76), v(0.58 * s, 0.56), 0.10, 0.08, "Edge")
-		end
-		local core = b:strip("Blade", { { 0, 0.96 }, { 0, 2.35 }, { 0, 3.75 }, { 0, 4.62 } }, { 0.44, 0.40, 0.32, 0.22 }, 0.10, "Blade", 0.48)
-		faces(b, "Fuller", v(0, 1.06), v(0, 3.65), 0.11, 0.052, "Dark")
-		for i = 0, 4 do
-			gem(b, "VigilRune", 0, 1.35 + i * 0.52, 0.08, 0.055, "Glow")
-		end
-		for _, s in { 1, -1 } do
-			b:seg("EdgeBevel", v(0.20 * s, 1.00), v(0.13 * s, 4.60), 0.07, 0.04, "Edge")
-		end
-		b:light(Vector3.new(0, 0, 2.0), rgb(186, 118, 255), 5, 0.5)
-		return core, 2.80
-	end,
-}
-
--- Aguja del Vacío (Relic11): espada de estocada y corte con ventana abisal en el recazo y nervio estelar
-D.Void = {
-	palette = { Blade = P(24, 24, 34, M.Metal), Edge = P(128, 122, 168, M.Metal), Accent = P(46, 42, 66, M.Metal), Grip = P(18, 18, 26, M.Leather), Glow = P(158, 92, 248, M.Neon), Dark = P(10, 10, 16, M.Metal) },
-	build = function(b, v)
-		grip(b, 1.18, 0.22, 7, "Grip", 28)
-		b:ball("VoidPommel", v(0, -0.74), 0.26, "Accent")
-		b:point("PommelTail", v(0, -0.82), v(0, -1.12), 0.16, 0.12, "Accent")
-		b:add("GuardCore", Vector3.new(0.26, 0.42, 0.34), CFrame.new(0, 0, 0.80), "Accent")
-		for _, s in { 1, -1 } do
-			b:strip("VoidHorn", { { 0.16 * s, 0.82 }, { 0.48 * s, 1.02 }, { 0.72 * s, 1.34 }, { 0.64 * s, 1.68 } }, { 0.18, 0.14, 0.10, 0.06 }, 0.10, "Accent", 0.16)
-			b:seg("LowerQuillon", v(0.16 * s, 0.76), v(0.56 * s, 0.58), 0.10, 0.12, "Accent")
-		end
-		-- Ventana abisal en la base de la hoja + aguja larga hasta z = 5.10
-		b:ball("VoidEye", v(0, 1.24), 0.18, "Glow")
-		for _, s in { 1, -1 } do
-			b:seg("RicassoArch", v(0.18 * s, 0.94), v(0.16 * s, 1.56), 0.11, 0.12, "Blade")
-		end
-		local core = b:strip("Blade", { { 0, 1.52 }, { 0, 2.80 }, { 0, 4.00 }, { 0, 4.60 } }, { 0.38, 0.32, 0.24, 0.18 }, 0.10, "Blade", 0.50)
-		faces(b, "VoidVein", v(0, 1.58), v(0, 4.55), 0.04, 0.054, "Glow")
-		b:light(Vector3.new(0, 0, 1.4), rgb(158, 92, 248), 5, 0.55)
-		return core, 3.00
-	end,
-}
-
--- Duelo Dorado (Relic20): estoque real con cazoleta de filigrana imperial, lazos barridos y hoja adamantina (z = 5.55)
-D.Duel = {
-	palette = { Blade = P(210, 198, 172, M.Metal), Edge = P(244, 236, 214, M.Foil), Accent = P(204, 162, 74, M.Foil), Grip = P(72, 26, 28, M.Leather), Dark = P(38, 28, 18, M.Metal) },
-	build = function(b, v)
-		grip(b, 0.98, 0.20, 7, "Grip", 32)
-		b:ball("Pommel", v(0, -0.64), 0.28, "Accent")
-		b:point("PommelFinial", v(0, -0.74), v(0, -0.96), 0.14, 0.14, "Accent")
-		b:arc("RoyalCup", v(0, 0.58), Vector3.yAxis, Vector3.zAxis, 0.40, 0, math.pi, 7, 0.36, 0.10, "Accent")
-		b:ring("CupRim", 0.58, 0.40, 0.06, 10, "Accent")
-		b:strip("KnuckleBow", { { 0.14, 0.58 }, { 0.44, 0.38 }, { 0.48, -0.04 }, { 0.38, -0.42 }, { 0.16, -0.60 } }, { 0.06, 0.06, 0.06, 0.05, 0.05 }, 0.06, "Accent", 0)
-		b:add("Quillon", Vector3.new(0.08, 1.86, 0.08), CFrame.new(0, 0, 0.58), "Accent")
-		local core = b:strip("Blade", { { 0, 0.64 }, { 0, 2.40 }, { 0, 4.10 }, { 0, 5.05 } }, { 0.16, 0.13, 0.10, 0.07 }, 0.07, "Blade", 0.50)
-		faces(b, "GoldRidge", v(0, 0.80), v(0, 5.00), 0.03, 0.038, "Accent")
-		return core, 2.80
-	end,
-}
-
--- Juicio de Hierro (Relic27): maza de armas bridada de 6 aletas biseladas con corona de impacto (z = 4.90)
-D.Flange = {
-	palette = { Blade = P(84, 88, 96, M.Metal), Edge = P(146, 150, 160, M.Metal), Accent = P(56, 58, 66, M.Metal), Grip = P(58, 42, 32, M.Leather), Wood = P(64, 46, 34, M.Wood), Dark = P(24, 26, 30, M.Metal) },
-	build = function(b, v)
-		b.handle.Size = Vector3.new(0.28, 0.28, 1.40)
-		b:wrap(-0.62, 0.62, 6, 0.32, "Grip", 24)
-		b:cyl("PommelRing", -0.78, 0.14, 0.38, "Accent")
-		b:point("ButtSpike", v(0, -0.84), v(0, -1.18), 0.22, 0.22, "Accent")
-		b:cyl("Haft", 1.95, 2.50, 0.26, "Wood")
-		for _, z in { 1.25, 2.05, 2.85 } do b:cyl("HaftBand", z, 0.08, 0.32, "Accent") end
-		local head = b:cyl("HeadCore", 3.75, 1.35, 0.52, "Accent")
-		for i = 0, 5 do
-			local a = (i / 6) * math.pi * 2
-			local cf = CFrame.new(math.cos(a) * 0.36, math.sin(a) * 0.36, 3.75) * CFrame.Angles(0, 0, a)
-			b:add("FlangeWing", Vector3.new(0.46, 0.10, 1.18), cf, "Blade")
-			b:add("FlangeEdge", Vector3.new(0.14, 0.07, 1.12), cf * CFrame.new(0.22, 0, 0), "Edge")
-		end
-		b:cyl("TopCollar", 4.46, 0.12, 0.44, "Accent")
-		b:point("TopSpike", v(0, 4.50), v(0, 4.92), 0.28, 0.28, "Edge")
-		return head, 3.75
-	end,
-}
-
--- Corazón de Forja (Relic30): gran martillo de herrero con cámara de magma incandescente y chimeneas (z = 4.90)
-D.Forge = {
-	palette = { Blade = P(52, 48, 50, M.Metal), Edge = P(138, 108, 76, M.Metal), Accent = P(92, 68, 48, M.CorrodedMetal), Grip = P(68, 44, 32, M.Leather), Glow = P(255, 112, 34, M.Neon), Dark = P(22, 18, 18, M.Metal) },
-	build = function(b, v)
-		b.handle.Size = Vector3.new(0.28, 0.28, 1.40)
-		b:wrap(-0.62, 0.62, 6, 0.32, "Grip", 20)
-		b:cyl("PommelAnvil", -0.80, 0.18, 0.42, "Accent")
-		b:cyl("Haft", 1.95, 2.50, 0.26, "Accent")
-		b:cyl("NeckCollar", 3.10, 0.24, 0.42, "Edge")
-		local head = b:add("ForgeHead", Vector3.new(1.06, 2.04, 1.12), CFrame.new(0, 0, 3.75), "Blade")
-		b:add("MagmaHeart", Vector3.new(1.12, 0.68, 0.56), CFrame.new(0, 0, 3.75), "Glow")
-		for _, s in { 1, -1 } do
-			b:add("StrikeFace", Vector3.new(1.16, 0.22, 1.20), CFrame.new(0, 0.98 * s, 3.75), "Edge")
-			b:add("GrateBar", Vector3.new(1.16, 0.10, 0.62), CFrame.new(0, 0.22 * s, 3.75), "Blade")
-		end
-		b:point("AnvilCrown", v(0, 4.32), v(0, 4.90), 0.46, 0.36, "Edge")
-		b:light(Vector3.new(0, 0, 3.75), rgb(255, 112, 34), 6, 0.65)
-		b:emit("Embers", 3.2, 4.4, rgb(255, 120, 40))
-		return head, 3.75
-	end,
-}
-
-----------------------------------------------------------------------
--- 3 NUEVAS MAZAS ÓSEAS / MONSTRUOSAS (Fase 5: inspiradas en AncientMaw / Relic31)
-----------------------------------------------------------------------
-
--- 1) Vértebra del Abismo (Maw02): columna curva de hueso fosilizado, quijada monstruosa abierta con colmillos
---    dorsales, corazón abisal carmesí enjaulado en costillas y vendas cosidas con runas (punta en z = 4.88)
-D.AbyssVertebra = {
-	palette = {
-		Blade   = P(44, 40, 42, M.Slate),
-		Bone    = P(198, 184, 158, M.Limestone),
-		Bandage = P(146, 132, 110, M.Fabric),
-		Grip    = P(122, 108, 90, M.Fabric),
-		Accent  = P(58, 50, 48, M.Metal),
-		Dark    = P(20, 16, 18, M.Metal),
-		Glow    = P(235, 52, 46, M.Neon),
-	},
-	build = function(b, v)
-		b.handle.Size = Vector3.new(0.26, 0.26, 1.40)
-		b:wrap(-0.65, 0.65, 7, 0.31, "Bandage", 26)
-		b:ball("ButtSkull", v(0, -0.78), 0.34, "Bone")
-		b:point("ButtFang", v(0.08, -0.84), v(0.24, -1.18), 0.14, 0.10, "Bone")
-		b:point("ButtFang", v(-0.08, -0.84), v(-0.24, -1.18), 0.14, 0.10, "Bone")
-
-		-- Astil curvo de vértebras con nudos óseos y jirones de venda colgantes
-		b:strip("SpineHaft", { { 0, 0.62 }, { -0.14, 1.35 }, { -0.06, 2.05 }, { 0.08, 2.75 } }, { 0.26, 0.28, 0.26, 0.28 }, 0.26, "Grip", 0)
-		for _, z in { 0.95, 1.55, 2.15, 2.68 } do
-			b:ball("VertebraNode", v(-0.06, z), 0.34, "Bone")
-		end
-		for i = 0, 2 do
-			b:seg("TatteredBandage", v(-0.10, 1.15 + i * 0.48), v(-0.46 - i * 0.05, 0.96 + i * 0.42), 0.04, 0.11, "Bandage")
-		end
-
-		-- Núcleo abisal enjaulado entre costillas de hueso y cuchilla de mandíbula hacia +Y
-		local head = b:add("JawCore", Vector3.new(0.26, 0.92, 1.85), CFrame.new(0, 0.28, 3.78) * CFrame.Angles(math.rad(-6), 0, 0), "Blade")
-		b:ball("AbyssHeart", v(0.18, 3.68), 0.38, "Glow")
-		for i = 0, 3 do
-			local z = 3.12 + i * 0.42
+			-- Guarda en media luna con guardamonte y recazo con 2 gemas
+			local gSpan = cfg.guardSpan or 0.48
+			local gSweep = cfg.guardSweep or 0.18
 			for _, s in { 1, -1 } do
-				b:seg("RibCage", Vector3.new(0.16 * s, -0.10, z), Vector3.new(0.22 * s, 0.68, z + 0.14), 0.09, 0.12, "Bone")
+				b:seg("GuardWing", v(0, 0.50), v(s * gSpan * 0.65, 0.50 + gSweep * 0.5), 0.18, 0.14, "Accent", 0.04)
+				b:point("GuardClaw", v(s * gSpan * 0.60, 0.50 + gSweep * 0.45), v(s * gSpan, 0.50 + gSweep), 0.13, 0.12, "Edge")
 			end
-		end
+			-- Arco guardamonte asimétrico (-Y) estilo referencia
+			b:arc("KnuckleBow", v(-0.10, 0.05), v(0, 1), v(-1, 0), 0.34, rad(-15), rad(175), 3, 0.10, 0.08, "Accent")
 
-		-- Quijada superior con colmillos curvos hacia adelante (+Y) y sierra dorsal (−Y)
-		for i = 0, 4 do
-			local z = 3.02 + i * 0.36
-			b:point("MawFang", v(0.68, z), v(1.12, z - 0.10), 0.22, 0.14, "Bone")
-			b:point("DorsalSpine", v(-0.18, z), v(-0.52, z - 0.14), 0.18, 0.12, "Bone")
-		end
-		b:point("ApexFang", v(0.32, 4.45), v(0.56, 4.88), 0.44, 0.18, "Bone")
+			-- Recazo romboidal con 2 gemas
+			addDiamondBolsterGems(b, v, 0.48, 0.78, 0.30, 0.16, "Edge", "Dark", "Gem")
 
-		-- Vendas cruzadas y puntadas rúnicas carmesí
-		for i = 0, 3 do
-			local z = 3.10 + i * 0.38
-			for _, x in { 0.14, -0.14 } do
-				b:seg("MawWrap", v(-0.14, z, x), v(0.66, z + (i % 2 == 0 and 0.24 or -0.24), x), 0.04, 0.10, "Bandage")
+			-- Hoja multicapa: núcleo oscuro + biseles de filo plateados/metálicos + punta en TipZ ~ 2.88
+			local pts = cfg.pts
+			local widths = cfg.widths
+			local tipLen = cfg.tip or 0.44
+			local coreWidths = {}
+			local edgePts = {}
+			local edgeWidths = {}
+			for i = 1, #pts do
+				coreWidths[i] = widths[i] * 0.68
+				edgePts[i] = { pts[i][1] + widths[i] * 0.16, pts[i][2] }
+				edgeWidths[i] = widths[i] * 0.46
 			end
-		end
-		b:light(Vector3.new(0, 0.2, 3.75), rgb(235, 52, 46), 5, 0.55)
-		return head, 3.78
-	end,
-}
+			-- Bisel de filo exterior pulido ("Edge") y núcleo contrastado ("Blade" / "Dark")
+			b:strip("EdgeBevel", pts, widths, 0.062, "Edge", tipLen)
+			b:strip("BladeCore", pts, coreWidths, 0.088, "Blade", tipLen * 0.72)
 
--- 2) Fauces del Sepulcro (Maw03): maza pesada de doble quijada de bestia ancestral atada con hierro de verdugo
---    y vendas funerarias, con colmillos de marfil contrapuestos y remaches oscuros (punta en z = 4.88)
-D.SepulcherJaws = {
+			-- Acanaladura oscura y vena de relámpago luminosa hasta la punta
+			local fPts = { pts[1], pts[math.ceil(#pts / 2)], pts[#pts - 1] }
+			b:strip("Fuller", fPts, { 0.08, 0.06, 0.04 }, 0.098, "Dark", 0)
+			addLightningVein(b, v, 0.78, 2.48, 5, 0.032, 0.106, 0.028, "Glow", true)
+
+			-- Variantes específicas de cada daga
+			if cfg.hooks then
+				for i = 1, cfg.hooks do
+					local z = 0.92 + i * 0.32
+					b:point("BackHookBase", v(-0.10, z), v(-0.24, z - 0.12), 0.10, 0.08, "Blade")
+					b:point("BackHookEdge", v(-0.18, z - 0.06), v(-0.30, z - 0.20), 0.08, 0.06, "Edge")
+				end
+			end
+			if cfg.thorns then
+				b:curve("ThornVine", { { 0.0, 0.70 }, { 0.15, 1.15 }, { -0.13, 1.60 }, { 0.11, 2.05 }, { -0.05, 2.45 } }, 0.07, 0.04, "Accent")
+				for _, th in { { 0.15, 1.12, 0.30, 0.98 }, { -0.13, 1.56, -0.28, 1.42 }, { 0.11, 2.00, 0.25, 1.86 }, { -0.07, 2.32, -0.20, 2.20 } } do
+					b:point("VineThorn", v(th[1], th[2]), v(th[3], th[4]), 0.08, 0.065, "Edge")
+				end
+			end
+			if cfg.crescent then
+				b:arc("CrescentMoon", v(0.04, 1.45), v(0, 1), v(1, 0), 0.36, rad(-125), rad(55), 5, 0.09, 0.08, "Accent")
+				b:ball("MoonOrb", v(0.08, 1.45), 0.14, "Gem")
+			end
+			if cfg.filigree then
+				for _, s in { 1, -1 } do
+					b:arc("FiligreeCurl", v(s * 0.20, 0.78), v(0, 1), v(s, 0), 0.18, rad(-60), rad(150), 4, 0.08, 0.06, "Trim")
+				end
+			end
+			if cfg.claws then
+				for _, s in { 1, -1 } do
+					b:point("SideClaw", v(s * 0.16, 1.02), v(s * 0.40, 1.68), 0.11, 0.065, "Edge")
+					b:point("InnerClaw", v(s * 0.12, 0.84), v(s * 0.30, 1.32), 0.09, 0.075, "Accent")
+				end
+			end
+
+			b:light(v(0, 1.6), cfg.light, 5, 0.75)
+			if cfg.emit then b:emit(cfg.emit, 0.75, 2.65, cfg.light) end
+		end,
+	}
+end
+
+-- Relic01: Colmillos Carmesí (Dagas)
+SkinDesigns.Fangs = dagger({
 	palette = {
-		Blade   = P(56, 54, 58, M.Metal),
-		Bone    = P(212, 198, 172, M.Limestone),
-		Bandage = P(164, 148, 122, M.Fabric),
-		Grip    = P(136, 120, 98, M.Fabric),
-		Accent  = P(76, 70, 66, M.CorrodedMetal),
-		Dark    = P(24, 22, 24, M.Metal),
-		Glow    = P(228, 196, 128, M.Neon),
+		Blade = { rgb(20, 16, 20), M.Slate },
+		Edge = { rgb(225, 228, 236), M.Foil },
+		Accent = { rgb(48, 20, 24), M.Metal },
+		Trim = { rgb(175, 180, 192), M.Metal },
+		Dark = { rgb(12, 10, 14), M.Slate },
+		Grip = { rgb(26, 16, 18), M.Leather },
+		Gem = { rgb(245, 28, 38), M.Neon },
+		Glow = { rgb(255, 38, 44), M.Neon },
+	},
+	pts = { { 0, 0.56 }, { 0.05, 0.96 }, { 0.12, 1.42 }, { 0.10, 1.88 }, { -0.02, 2.24 }, { 0.04, 2.48 } },
+	widths = { 0.36, 0.40, 0.36, 0.30, 0.24, 0.16 },
+	tip = 0.40,
+	guardSpan = 0.52,
+	guardSweep = 0.22,
+	hooks = 4,
+	light = rgb(240, 40, 36),
+	emit = "Embers",
+})
+
+-- Relic02: Espinas Vivas (Dagas)
+SkinDesigns.LivingThorns = dagger({
+	palette = {
+		Blade = { rgb(22, 20, 26), M.Slate },
+		Edge = { rgb(232, 228, 220), M.Foil },
+		Accent = { rgb(198, 192, 182), M.Metal },
+		Trim = { rgb(140, 32, 38), M.Metal },
+		Dark = { rgb(14, 12, 16), M.Slate },
+		Grip = { rgb(30, 22, 24), M.Leather },
+		Gem = { rgb(235, 34, 42), M.Neon },
+		Glow = { rgb(245, 48, 56), M.Neon },
+	},
+	pts = { { 0, 0.56 }, { -0.03, 1.00 }, { 0.05, 1.48 }, { -0.03, 1.94 }, { 0.02, 2.44 } },
+	widths = { 0.32, 0.30, 0.27, 0.23, 0.16 },
+	tip = 0.44,
+	guardSpan = 0.46,
+	guardSweep = -0.14,
+	thorns = true,
+	 hooks = 3,
+	light = rgb(230, 45, 45),
+	emit = "Embers",
+})
+
+-- Relic03: Lunas del Vacío (Dagas)
+SkinDesigns.VoidMoons = dagger({
+	palette = {
+		Blade = { rgb(22, 18, 34), M.Slate },
+		Edge = { rgb(216, 206, 248), M.Foil },
+		Accent = { rgb(68, 52, 108), M.Metal },
+		Trim = { rgb(168, 132, 245), M.Foil },
+		Dark = { rgb(12, 10, 20), M.Slate },
+		Grip = { rgb(22, 18, 32), M.Leather },
+		Gem = { rgb(185, 130, 255), M.Neon },
+		Glow = { rgb(172, 118, 255), M.Neon },
+	},
+	pts = { { 0, 0.56 }, { 0.07, 0.98 }, { 0.15, 1.44 }, { 0.11, 1.92 }, { 0.02, 2.42 } },
+	widths = { 0.36, 0.38, 0.34, 0.26, 0.16 },
+	tip = 0.46,
+	guardSpan = 0.50,
+	guardSweep = 0.24,
+	crescent = true,
+	hooks = 3,
+	light = rgb(165, 115, 255),
+	emit = "Wisps",
+})
+
+-- Relic04: Crecientes de Plata (Dagas)
+SkinDesigns.SilverCrescent = dagger({
+	palette = {
+		Blade = { rgb(28, 30, 38), M.Slate },
+		Edge = { rgb(240, 242, 250), M.Foil },
+		Accent = { rgb(192, 198, 212), M.Metal },
+		Trim = { rgb(232, 236, 245), M.Foil },
+		Dark = { rgb(16, 18, 24), M.Slate },
+		Grip = { rgb(24, 24, 30), M.Leather },
+		Gem = { rgb(210, 232, 255), M.Neon },
+		Glow = { rgb(195, 225, 255), M.Neon },
+	},
+	pts = { { 0, 0.56 }, { 0.04, 1.02 }, { 0.08, 1.52 }, { 0.05, 2.00 }, { 0.0, 2.44 } },
+	widths = { 0.34, 0.34, 0.30, 0.24, 0.15 },
+	tip = 0.44,
+	guardSpan = 0.48,
+	guardSweep = 0.16,
+	filigree = true,
+	hooks = 3,
+	light = rgb(210, 225, 250),
+})
+
+-- Relic05: Garras del Eclipse (Dagas — Piloto Tanda 1 de Blender)
+SkinDesigns.EclipseClaws = dagger({
+	palette = {
+		Blade = { rgb(20, 22, 28), M.Slate },
+		Edge = { rgb(228, 232, 242), M.Foil },
+		Accent = { rgb(64, 68, 78), M.Metal },
+		Trim = { rgb(190, 196, 210), M.Foil },
+		Dark = { rgb(12, 14, 18), M.Slate },
+		Grip = { rgb(22, 22, 26), M.Leather },
+		Gem = { rgb(235, 36, 52), M.Neon },
+		Glow = { rgb(235, 42, 58), M.Neon },
+	},
+	pts = { { 0, 0.56 }, { 0.05, 1.00 }, { 0.11, 1.48 }, { 0.07, 1.96 }, { 0.0, 2.42 } },
+	widths = { 0.38, 0.40, 0.34, 0.26, 0.16 },
+	tip = 0.46,
+	guardSpan = 0.54,
+	guardSweep = 0.26,
+	claws = true,
+	hooks = 4,
+	light = rgb(235, 48, 62),
+	emit = "Embers",
+})
+
+-- ============================================================================
+-- 2. GRAN PREMIO DE LA RULETA: FILO DEL ECLIPSE CARMESÍ (Notas/Referencias/espada-concepto.png)
+-- ============================================================================
+SkinDesigns.CrimsonEclipse = {
+	palette = {
+		Blade = { rgb(18, 18, 24), M.Slate },      -- Núcleo de obsidiana mate profunda
+		Edge = { rgb(232, 236, 246), M.Foil },     -- Bisel de filo de plata espejo
+		Accent = { rgb(52, 54, 64), M.Metal },     -- Acero oscuro de guarda y pomo
+		Trim = { rgb(196, 202, 216), M.Foil },     -- Reborde plateado de la guarda y engastes
+		Dark = { rgb(10, 10, 14), M.Slate },       -- Acanaladura interior negra
+		Grip = { rgb(20, 18, 22), M.Leather },     -- Cuero negro estriado
+		Gem = { rgb(245, 18, 34), M.Neon },        -- Rubíes carmesí engarzados
+		Glow = { rgb(255, 28, 42), M.Neon },       -- Vena de relámpago carmesí
 	},
 	build = function(b, v)
-		b.handle.Size = Vector3.new(0.26, 0.26, 1.40)
-		b:wrap(-0.65, 0.65, 7, 0.31, "Bandage", 22)
-		b:cyl("IronPommel", -0.78, 0.16, 0.38, "Accent")
-		b:point("PommelClaw", v(0, -0.84), v(0, -1.22), 0.24, 0.18, "Bone")
+		b.handle.Size = Vector3.new(0.22, 0.26, 1.15)
+		b.basePos = v(0, 0.82)
 
-		-- Mango curvo envuelto en tiras de mortaja y abrazaderas de hierro
-		b:strip("Haft", { { 0, 0.62 }, { 0.10, 1.32 }, { 0.03, 2.02 }, { -0.05, 2.72 } }, { 0.26, 0.26, 0.25, 0.28 }, 0.26, "Grip", 0)
-		for _, z in { 1.15, 1.85, 2.55 } do
-			b:cyl("IronClamp", z, 0.10, 0.34, "Accent")
-		end
-		for i = 0, 2 do
-			b:seg("ShroudTail", v(0.08, 1.30 + i * 0.45), v(0.44 + i * 0.05, 1.08 + i * 0.40), 0.04, 0.10, "Bandage")
-		end
+		-- 1. Empuñadura negra estriada con 5 costillas en chevrón y virolas biseladas
+		b:add("GripCore", Vector3.new(0.21, 0.28, 1.06), cf(0, 0, 0), "Grip")
+		b:wrap(-0.44, 0.44, 5, 0.29, "Accent", 18)
+		b:add("GripCollarB", Vector3.new(0.25, 0.34, 0.10), cf(0, 0, -0.54), "Trim")
+		b:add("GripCollarF", Vector3.new(0.27, 0.38, 0.12), cf(0, 0, 0.56), "Trim")
 
-		-- Bloque central de hierro de verdugo con dos quijadas monstruosas opuestas (+Y y −Y)
-		local head = b:add("IronBlock", Vector3.new(0.38, 0.76, 1.72), CFrame.new(0, 0, 3.76), "Blade")
-		for _, s in { 1, -1 } do
-			b:strip("BeastJaw", { { 0.26 * s, 2.96 }, { 0.58 * s, 3.45 }, { 0.72 * s, 4.05 }, { 0.48 * s, 4.58 } }, { 0.28, 0.36, 0.34, 0.22 }, 0.24, "Bone", 0.24)
-			for i = 0, 3 do
-				local z = 3.12 + i * 0.36
-				b:point("JawTooth", v(0.68 * s, z), v(1.06 * s, z - 0.08), 0.20, 0.14, "Bone")
-			end
-			b:ball("EyeSocket", Vector3.new(0.20 * s, 0, 3.95), 0.18, "Glow")
-		end
+		-- 2. Pomo de tres púas/garras con 1 rubí carmesí engarzado (fiel a espada-concepto.png)
+		addClawedGemPommel(b, v, -0.72, 0.22, 0.24, 0.38, "Accent", "Edge", "Gem")
 
-		-- Vendas funerarias cruzadas sobre el hierro y aguja de hueso en la cima
-		for i = 0, 3 do
-			local z = 3.12 + i * 0.38
-			for _, x in { 0.20, -0.20 } do
-				b:seg("CrossBandage", v(-0.46, z, x), v(0.46, z + (i % 2 == 0 and 0.26 or -0.26), x), 0.04, 0.11, "Bandage")
-			end
-		end
-		b:point("CrownSpike", v(0, 4.46), v(0, 4.88), 0.34, 0.22, "Bone")
-		return head, 3.76
+		-- 3. Guarda asimétrica en media luna + guardamonte envolvente (-Y) y gavilán afilado (+Y)
+		b:add("GuardHeart", Vector3.new(0.30, 0.52, 0.28), cf(0, 0, 0.72), "Accent")
+		-- Gavilán delantero superior (+Y) con bisel de plata
+		b:seg("QuillonTop", v(0.18, 0.70), v(0.76, 1.02), 0.22, 0.18, "Accent", 0.04)
+		b:point("QuillonTopBlade", v(0.68, 0.96), v(1.12, 1.24), 0.18, 0.14, "Edge")
+		-- Guardamonte curvo en media luna (-Y) que baja protegiendo la empuñadura
+		b:arc("CrescentKnuckleGuard", v(-0.14, 0.14), v(0, 1), v(-1, 0), 0.58, rad(-12), rad(168), 5, 0.18, 0.13, "Accent")
+		b:arc("CrescentKnuckleTrim", v(-0.14, 0.14), v(0, 1), v(-1, 0), 0.62, rad(-8), rad(162), 4, 0.12, 0.07, "Edge")
+		b:point("KnuckleTailSpike", v(-0.48, -0.34), v(-0.78, -0.58), 0.14, 0.12, "Edge")
+
+		-- 4. Recazo romboidal con 2 rubíes carmesí engarzados en bisel de plata (z = 0.74 y z = 1.06)
+		addDiamondBolsterGems(b, v, 0.66, 1.18, 0.48, 0.24, "Edge", "Blade", "Gem")
+
+		-- 5. Hoja asimétrica de obsidiana con bisel de filo de plata espejo (+Y) y barrido hacia la punta (TipZ = 5.10)
+		local edgePts = {
+			{ 0.08, 0.86 },
+			{ 0.12, 1.65 },
+			{ 0.14, 2.55 },
+			{ 0.13, 3.45 },
+			{ 0.08, 4.22 },
+		}
+		local edgeWidths = { 0.34, 0.38, 0.38, 0.34, 0.26 }
+		b:strip("SilverRazorBevel", edgePts, edgeWidths, 0.068, "Edge", 0.88)
+
+		-- Núcleo de obsidiana negra escalonado sobre el bisel de plata
+		local corePts = {
+			{ -0.03, 0.90 },
+			{ -0.02, 1.70 },
+			{ -0.01, 2.60 },
+			{ -0.01, 3.48 },
+			{ 0.01, 4.18 },
+		}
+		local coreWidths = { 0.36, 0.38, 0.36, 0.30, 0.20 }
+		b:strip("ObsidianCore", corePts, coreWidths, 0.105, "Blade", 0.68)
+
+		-- Acanaladura profunda de obsidiana
+		b:strip("ObsidianFuller", { { -0.02, 1.10 }, { -0.01, 2.55 }, { 0.0, 3.95 } }, { 0.14, 0.12, 0.07 }, 0.118, "Dark", 0)
+
+		-- 6. Cinco dientes/colmillos dorsales ganchudos en el lomo (-Y) con punta de plata
+		addDorsalHooks(b, v, { 1.52, 2.08, 2.64, 3.20, 3.76 }, -0.16, -1, 0.24, 0.28, 0.095, "Blade", "Edge")
+
+		-- 7. Vena de relámpago carmesí quebrada desde las gemas del recazo hasta la punta (con ramificaciones)
+		addLightningVein(b, v, 1.08, 4.68, 7, 0.048, 0.126, 0.036, "Glow", true)
+
+		b:light(v(0, 2.75), rgb(245, 24, 40), 7, 1.0)
+		b:emit("Embers", 1.05, 4.85, rgb(245, 28, 44))
 	end,
 }
 
--- 3) Corona de Osario (Maw04): cráneo de leviatán astado con aletas de costillas petrificadas,
---    quijada inferior dentada y fulgor espectral pálido (punta en z = 4.90)
-D.OssuaryCrown = {
+-- ============================================================================
+-- 3. CONSTRUCTOR DE ESPADAS (9 SKINS: Requiem + Relic06 - Relic13)
+-- ============================================================================
+local function sword(cfg)
+	return {
+		palette = cfg.palette,
+		build = function(b, v)
+			b.handle.Size = Vector3.new(0.22, 0.26, 1.15)
+			b.basePos = v(0, 0.82)
+
+			-- Empuñadura ergonómica con costillas metálicas
+			b:add("GripCore", Vector3.new(0.21, 0.28, 1.06), cf(0, 0, 0), "Grip")
+			b:wrap(-0.44, 0.44, 5, 0.28, "Trim", 16)
+			b:add("GripCollarB", Vector3.new(0.24, 0.32, 0.10), cf(0, 0, -0.54), "Accent")
+			b:add("GripCollarF", Vector3.new(0.26, 0.36, 0.12), cf(0, 0, 0.56), "Accent")
+
+			-- Pomo astado con gema engarzada
+			addClawedGemPommel(b, v, -0.72, 0.21, 0.23, 0.34, "Accent", "Edge", "Gem")
+
+			-- Guarda esculpida con gavilanes en cuña y recazo con 2 gemas
+			local gSpan = cfg.guardSpan or 0.88
+			local gSweep = cfg.guardSweep or 0.24
+			b:add("GuardCenter", Vector3.new(0.28, 0.52, 0.26), cf(0, 0, 0.72), "Accent")
+			for _, s in { 1, -1 } do
+				b:seg("GuardArm", v(0, 0.72), v(s * gSpan * 0.65, 0.72 + gSweep * 0.55), 0.20, 0.18, "Accent", 0.05)
+				b:point("GuardQuillonTip", v(s * gSpan * 0.60, 0.72 + gSweep * 0.50), v(s * gSpan, 0.72 + gSweep), 0.16, 0.14, "Edge")
+			end
+			addDiamondBolsterGems(b, v, 0.66, 1.16, 0.46, 0.22, "Edge", "Dark", "Gem")
+
+			-- Hoja multicapa (TipZ = 5.10): bisel de filo exterior ("Edge") + núcleo contrastado ("Blade")
+			local w0 = cfg.w0 or 0.40
+			local w1 = cfg.w1 or 0.34
+			local tipLen = cfg.tipLen or 0.90
+			local zTipStart = 5.10 - tipLen
+			local zMid = (0.86 + zTipStart) * 0.5
+			local bladeLen = zTipStart - 0.86
+
+			-- Bisel de filo exterior en cuña y núcleo escalonado
+			for _, s in { 1, -1 } do
+				b:add("EdgeBevel", Vector3.new(0.064, w0 * 0.32, bladeLen), cf(0, s * (w0 * 0.34), zMid), "Edge", "Wedge")
+			end
+			b:add("BladeCore", Vector3.new(0.098, w0 * 0.66, bladeLen), cf(0, 0, zMid), "Blade")
+			b:tip("RazorTipEdge", zTipStart, tipLen, w1, 0.068, "Edge")
+			b:tip("RazorTipCore", zTipStart, tipLen * 0.76, w1 * 0.66, 0.098, "Blade")
+
+			-- Acanaladura oscura y vena de relámpago luminosa hasta la punta
+			b:add("Fuller", Vector3.new(0.112, w0 * 0.28, bladeLen * 0.82), cf(0, 0, 1.02 + bladeLen * 0.41), "Dark")
+			addLightningVein(b, v, 1.12, 4.62, 6, 0.042, 0.122, 0.032, "Glow", true)
+
+			-- Dientes dorsales en el lomo para silueta agresiva
+			addDorsalHooks(b, v, { 1.65, 2.45, 3.25 }, -w0 * 0.42, -1, 0.16, 0.22, 0.085, "Blade", "Edge")
+
+			-- Variantes icónicas por skin
+			if cfg.variant == "horns" then
+				for _, s in { 1, -1 } do
+					b:curve("GothicHornF", { { s * 0.24, 0.72 }, { s * 0.64, 0.96 }, { s * 0.86, 1.38 }, { s * 0.68, 1.78 } }, 0.18, 0.06, "Accent")
+					b:curve("GothicHornB", { { s * 0.22, 0.66 }, { s * 0.56, 0.44 }, { s * 0.70, 0.12 } }, 0.15, 0.05, "Edge")
+				end
+			elseif cfg.variant == "sun" then
+				b:ring("SolarHalo", 0.90, 0.54, 0.08, 10, "Trim")
+				for i = 0, 5 do
+					local a = rad(-75 + i * 30)
+					local r0, r1 = 0.54, 0.82
+					b:point("SunRay", v(math.sin(a) * r0, 0.90 + math.cos(a) * r0 * 0.45), v(math.sin(a) * r1, 0.90 + math.cos(a) * r1 * 0.45), 0.10, 0.08, "Edge")
+				end
+			elseif cfg.variant == "bones" then
+				for i = 1, 5 do
+					local z = 1.30 + i * 0.52
+					b:add("BoneVertebra", Vector3.new(0.15, w0 + 0.14, 0.14), cf(0, 0, z) * ang(rad(8), 0, 0), "Trim")
+					for _, s in { 1, -1 } do
+						b:point("RibBarb", v(s * (w0 * 0.46), z), v(s * (w0 * 0.46 + 0.22), z - 0.16), 0.10, 0.08, "Edge")
+					end
+				end
+			elseif cfg.variant == "crown" then
+				for _, s in { 1, -1 } do
+					b:arc("CrownWing", v(0, 0.82), v(0, 1), v(s, 0), 0.58, rad(-20), rad(85), 4, 0.16, 0.10, "Trim")
+				end
+				for _, dy in { -0.26, 0, 0.26 } do
+					b:point("CrownSpire", v(dy, 1.06), v(dy * 1.15, 1.56), 0.11, 0.09, "Edge")
+				end
+			elseif cfg.variant == "scales" then
+				for i = 1, 6 do
+					local z = 1.25 + i * 0.45
+					b:point("DragonScale", v(0, z - 0.16), v(0, z + 0.22), w0 * 0.86, 0.125, "Trim")
+				end
+			elseif cfg.variant == "crystal" then
+				for _, s in { 1, -1 } do
+					b:point("CrystalWing", v(s * 0.18, 0.76), v(s * 0.68, 1.48), 0.20, 0.13, "Gem")
+					b:point("CrystalSub", v(s * 0.22, 0.68), v(s * 0.54, 0.30), 0.15, 0.11, "Trim")
+				end
+			elseif cfg.variant == "split" then
+				for _, s in { 1, -1 } do
+					b:seg("VoidBladeProng", v(s * 0.16, 1.05), v(s * 0.13, 4.15), 0.09, 0.14, "Edge", 0.02)
+				end
+				for i = 1, 4 do
+					b:ball("VoidNode", v(0, 1.20 + i * 0.65), 0.12, "Gem")
+				end
+			elseif cfg.variant == "serrated" then
+				addDorsalHooks(b, v, { 1.40, 1.95, 2.50, 3.05, 3.60, 4.10 }, w0 * 0.44, 1, 0.18, 0.22, 0.085, "Blade", "Edge")
+			elseif cfg.variant == "dragon" then
+				for _, s in { 1, -1 } do
+					b:curve("DragonWing", { { s * 0.16, 0.72 }, { s * 0.58, 0.94 }, { s * 0.94, 0.68 }, { s * 1.12, 0.28 } }, 0.20, 0.08, "Accent")
+					b:point("DragonClaw", v(s * 0.58, 0.94), v(s * 0.82, 1.38), 0.14, 0.11, "Edge")
+				end
+			end
+
+			b:light(v(0, 2.6), cfg.light, 6, 0.85)
+			if cfg.emit then b:emit(cfg.emit, 1.0, 4.8, cfg.light) end
+		end,
+	}
+end
+
+-- Requiem: Réquiem Astado (Espada — Piloto Tanda 1 de Blender)
+SkinDesigns.RequiemHorns = sword({
 	palette = {
-		Blade   = P(48, 52, 50, M.Slate),
-		Bone    = P(204, 194, 174, M.Limestone),
-		Bandage = P(148, 138, 118, M.Fabric),
-		Grip    = P(54, 40, 32, M.Leather),
-		Accent  = P(68, 72, 68, M.Metal),
-		Dark    = P(18, 20, 18, M.Metal),
-		Glow    = P(158, 232, 196, M.Neon),
+		Blade = { rgb(22, 22, 28), M.Slate },
+		Edge = { rgb(218, 214, 232), M.Foil },
+		Accent = { rgb(42, 40, 50), M.Metal },
+		Trim = { rgb(156, 142, 198), M.Foil },
+		Dark = { rgb(12, 12, 16), M.Slate },
+		Grip = { rgb(20, 18, 24), M.Leather },
+		Gem = { rgb(185, 138, 255), M.Neon },
+		Glow = { rgb(172, 128, 245), M.Neon },
 	},
-	build = function(b, v)
-		b.handle.Size = Vector3.new(0.26, 0.26, 1.40)
-		b:wrap(-0.65, 0.65, 7, 0.31, "Grip", 24)
-		b:ball("BonePommel", v(0, -0.78), 0.34, "Bone")
-		b:point("PommelSpike", v(0, -0.86), v(0, -1.24), 0.20, 0.20, "Bone")
+	w0 = 0.42, w1 = 0.36, tipLen = 0.90,
+	guardSpan = 0.92, guardSweep = 0.30,
+	variant = "horns",
+	light = rgb(170, 135, 235),
+	emit = "Wisps",
+})
 
-		-- Astil de hierro y vértebras con vendas cruzadas en el cuello
-		b:cyl("Haft", 1.88, 2.40, 0.24, "Accent")
-		for _, z in { 1.05, 1.75, 2.45 } do
-			b:ball("SpineRing", v(0, z), 0.34, "Bone")
-		end
-		b:wrap(2.55, 3.05, 4, 0.32, "Bandage", 28)
+-- Relic06: Juramento Solar
+SkinDesigns.Solar = sword({
+	palette = {
+		Blade = { rgb(38, 36, 32), M.Slate },
+		Edge = { rgb(245, 238, 215), M.Foil },
+		Accent = { rgb(198, 162, 78), M.Metal },
+		Trim = { rgb(245, 212, 118), M.Foil },
+		Dark = { rgb(24, 20, 16), M.Slate },
+		Grip = { rgb(48, 32, 22), M.Leather },
+		Gem = { rgb(255, 215, 95), M.Neon },
+		Glow = { rgb(255, 200, 80), M.Neon },
+	},
+	w0 = 0.38, w1 = 0.32, tipLen = 0.88,
+	guardSpan = 0.88, guardSweep = 0.14,
+	variant = "sun",
+	light = rgb(255, 205, 95),
+	emit = "Embers",
+})
 
-		-- Cráneo colosal en z = 3.78 con cuernos curvos y costillas radiales
-		local head = b:add("SkullCore", Vector3.new(0.84, 0.96, 1.38), CFrame.new(0, 0, 3.78), "Bone")
-		b:add("IronCrown", Vector3.new(0.90, 1.02, 0.22), CFrame.new(0, 0, 4.22), "Accent")
-		for _, s in { 1, -1 } do
-			b:ball("SpectralEye", Vector3.new(0.36 * s, 0.22, 4.02), 0.20, "Glow")
-			-- Cuernos grandes curvados hacia arriba y afuera
-			b:strip("LeviathanHorn", { { 0.28 * s, 4.18 }, { 0.68 * s, 4.36 }, { 0.96 * s, 4.62 }, { 0.84 * s, 4.88 } }, { 0.24, 0.20, 0.14, 0.08 }, 0.18, "Bone", 0.18)
-			-- 4 costillas petrificadas que sobresalen como aletas de maza
-			for i = 0, 3 do
-				local z = 3.22 + i * 0.32
-				b:point("PetrifiedRib", v(0.42 * s, z), v(1.04 * s, z - 0.06), 0.20, 0.14, "Bone")
+-- Relic07: Espina del Osario
+SkinDesigns.Ossuary = sword({
+	palette = {
+		Blade = { rgb(32, 26, 24), M.Slate },
+		Edge = { rgb(232, 222, 202), M.Foil },
+		Accent = { rgb(124, 24, 28), M.Metal },
+		Trim = { rgb(212, 198, 174), M.Limestone },
+		Dark = { rgb(18, 14, 14), M.Slate },
+		Grip = { rgb(42, 18, 20), M.Leather },
+		Gem = { rgb(235, 38, 44), M.Neon },
+		Glow = { rgb(225, 34, 40), M.Neon },
+	},
+	w0 = 0.40, w1 = 0.34, tipLen = 0.88,
+	guardSpan = 0.90, guardSweep = -0.22,
+	variant = "bones",
+	light = rgb(220, 45, 45),
+	emit = "Smoke",
+})
+
+-- Relic08: Corona del Alba
+SkinDesigns.DawnCrown = sword({
+	palette = {
+		Blade = { rgb(34, 36, 44), M.Slate },
+		Edge = { rgb(242, 244, 250), M.Foil },
+		Accent = { rgb(218, 176, 74), M.Metal },
+		Trim = { rgb(250, 220, 128), M.Foil },
+		Dark = { rgb(20, 22, 28), M.Slate },
+		Grip = { rgb(34, 30, 42), M.Leather },
+		Gem = { rgb(255, 230, 140), M.Neon },
+		Glow = { rgb(255, 222, 125), M.Neon },
+	},
+	w0 = 0.40, w1 = 0.34, tipLen = 0.90,
+	guardSpan = 0.92, guardSweep = 0.28,
+	variant = "crown",
+	light = rgb(255, 220, 130),
+})
+
+-- Relic09: Filo del Dragón
+SkinDesigns.DragonEdge = sword({
+	palette = {
+		Blade = { rgb(28, 26, 24), M.Slate },
+		Edge = { rgb(216, 212, 198), M.Foil },
+		Accent = { rgb(82, 80, 86), M.Metal },
+		Trim = { rgb(178, 168, 148), M.Metal },
+		Dark = { rgb(16, 15, 14), M.Slate },
+		Grip = { rgb(38, 28, 22), M.Leather },
+		Gem = { rgb(255, 132, 42), M.Neon },
+		Glow = { rgb(255, 118, 36), M.Neon },
+	},
+	w0 = 0.44, w1 = 0.36, tipLen = 0.86,
+	guardSpan = 0.94, guardSweep = -0.26,
+	variant = "scales",
+	light = rgb(245, 125, 45),
+	emit = "Embers",
+})
+
+-- Relic10: Vigilia Violeta
+SkinDesigns.Violet = sword({
+	palette = {
+		Blade = { rgb(24, 20, 34), M.Slate },
+		Edge = { rgb(228, 214, 248), M.Foil },
+		Accent = { rgb(118, 68, 178), M.Metal },
+		Trim = { rgb(198, 142, 250), M.Foil },
+		Dark = { rgb(14, 12, 22), M.Slate },
+		Grip = { rgb(24, 18, 34), M.Leather },
+		Gem = { rgb(215, 135, 255), M.Neon },
+		Glow = { rgb(198, 115, 255), M.Neon },
+	},
+	w0 = 0.40, w1 = 0.34, tipLen = 0.90,
+	guardSpan = 0.86, guardSweep = 0.32,
+	variant = "crystal",
+	light = rgb(190, 120, 255),
+	emit = "Wisps",
+})
+
+-- Relic11: Aguja del Vacío
+SkinDesigns.Void = sword({
+	palette = {
+		Blade = { rgb(16, 16, 24), M.Slate },
+		Edge = { rgb(210, 205, 238), M.Foil },
+		Accent = { rgb(68, 58, 96), M.Metal },
+		Trim = { rgb(152, 132, 212), M.Foil },
+		Dark = { rgb(10, 10, 16), M.Slate },
+		Grip = { rgb(18, 16, 26), M.Leather },
+		Gem = { rgb(168, 120, 255), M.Neon },
+		Glow = { rgb(150, 105, 245), M.Neon },
+	},
+	w0 = 0.38, w1 = 0.30, tipLen = 0.94,
+	guardSpan = 0.82, guardSweep = 0.34,
+	variant = "split",
+	light = rgb(155, 115, 245),
+	emit = "Wisps",
+})
+
+-- Relic12: Diente del Exilio
+SkinDesigns.ExileTooth = sword({
+	palette = {
+		Blade = { rgb(28, 30, 34), M.Slate },
+		Edge = { rgb(212, 216, 224), M.Foil },
+		Accent = { rgb(118, 108, 92), M.Metal },
+		Trim = { rgb(172, 162, 144), M.Metal },
+		Dark = { rgb(16, 18, 20), M.Slate },
+		Grip = { rgb(44, 34, 26), M.Leather },
+		Gem = { rgb(235, 155, 65), M.Neon },
+		Glow = { rgb(225, 140, 55), M.Neon },
+	},
+	w0 = 0.44, w1 = 0.38, tipLen = 0.84,
+	guardSpan = 0.86, guardSweep = -0.18,
+	variant = "serrated",
+	light = rgb(215, 150, 75),
+})
+
+-- Relic13: Reliquia Dracónica
+SkinDesigns.DraconicRelic = sword({
+	palette = {
+		Blade = { rgb(18, 20, 28), M.Slate },
+		Edge = { rgb(222, 232, 252), M.Foil },
+		Accent = { rgb(48, 76, 198), M.Metal },
+		Trim = { rgb(125, 168, 255), M.Foil },
+		Dark = { rgb(10, 12, 18), M.Slate },
+		Grip = { rgb(18, 22, 34), M.Leather },
+		Gem = { rgb(110, 175, 255), M.Neon },
+		Glow = { rgb(90, 160, 255), M.Neon },
+	},
+	w0 = 0.42, w1 = 0.36, tipLen = 0.90,
+	guardSpan = 0.96, guardSweep = 0.26,
+	variant = "dragon",
+	light = rgb(100, 165, 255),
+	emit = "Frost",
+})
+
+-- ============================================================================
+-- 4. CONSTRUCTOR DE ESPADONES (6 SKINS + RULETA BloodMoonCleaver, TipZ = 7.60)
+-- ============================================================================
+local function greatsword(cfg)
+	return {
+		palette = cfg.palette,
+		build = function(b, v)
+			b.handle.Size = Vector3.new(0.28, 0.34, 2.30)
+			b.basePos = v(0, 1.40)
+
+			-- Mango a dos manos con 7 anillos en chevrón
+			b:add("GripCore", Vector3.new(0.26, 0.34, 2.18), cf(0, 0, 0), "Grip")
+			b:wrap(-0.96, 0.96, 7, 0.35, "Trim", 16)
+			b:add("GripCollarB", Vector3.new(0.32, 0.42, 0.14), cf(0, 0, -1.10), "Accent")
+			b:add("GripCollarF", Vector3.new(0.36, 0.48, 0.16), cf(0, 0, 1.12), "Accent")
+
+			-- Pomo colosal de tres garras con gema engarzada
+			addClawedGemPommel(b, v, -1.36, 0.30, 0.32, 0.46, "Accent", "Edge", "Gem")
+
+			-- Guarda monumental (ancho ~2.80 studs) y recazo romboidal con 2 gemas
+			local gSpan = cfg.guardSpan or 1.42
+			local gSweep = cfg.guardSweep or 0.32
+			b:add("GuardBlock", Vector3.new(0.44, 0.94, 0.38), cf(0, 0, 1.30), "Accent")
+			for _, s in { 1, -1 } do
+				b:seg("GreatGuardWing", v(0, 1.30), v(s * gSpan * 0.68, 1.30 + gSweep * 0.55), 0.32, 0.28, "Accent", 0.06)
+				b:point("GreatGuardTalon", v(s * gSpan * 0.62, 1.30 + gSweep * 0.50), v(s * gSpan, 1.30 + gSweep), 0.26, 0.22, "Edge")
 			end
-		end
+			-- Arco guardamonte pesado (-Y)
+			b:arc("GreatKnuckleBow", v(-0.22, 0.32), v(0, 1), v(-1, 0), 0.92, rad(-10), rad(165), 4, 0.20, 0.14, "Accent")
+			addDiamondBolsterGems(b, v, 1.24, 2.02, 0.96, 0.34, "Edge", "Dark", "Gem")
 
-		-- Corona de espinas óseas en el remate superior (z = 4.90)
-		b:point("ApexCrown", v(0, 4.42), v(0, 4.90), 0.38, 0.26, "Bone")
-		b:light(Vector3.new(0, 0, 3.85), rgb(158, 232, 196), 5, 0.5)
-		return head, 3.78
-	end,
-}
+			-- Losa colosal multicapa (ancho 1.48 - 1.58, TipZ = 7.60)
+			local w0 = cfg.w0 or 1.52
+			local w1 = cfg.w1 or 1.38
+			local tipLen = cfg.tipLen or 1.15
+			local zTipStart = 7.60 - tipLen
+			local bladeLen = zTipStart - 1.45
+			local zMid = (1.45 + zTipStart) * 0.5
 
-return D
+			-- Bisel de filo exterior plateado/metálico ("Edge") y núcleo de obsidiana/acero ("Blade")
+			for _, s in { 1, -1 } do
+				b:add("GreatEdgeBevel", Vector3.new(0.14, w0 * 0.30, bladeLen), cf(0, s * (w0 * 0.35), zMid), "Edge", "Wedge")
+			end
+			b:add("GreatBladeCore", Vector3.new(0.24, w0 * 0.64, bladeLen), cf(0, 0, zMid), "Blade")
+			b:tip("GreatTipEdge", zTipStart, tipLen, w1, 0.16, "Edge")
+			b:tip("GreatTipCore", zTipStart, tipLen * 0.78, w1 * 0.64, 0.24, "Blade")
+
+			-- Acanaladura profunda y vena de relámpago quebrada hasta la punta
+			b:add("GreatFuller", Vector3.new(0.26, w0 * 0.28, bladeLen * 0.82), cf(0, 0, 1.65 + bladeLen * 0.41), "Dark")
+			addLightningVein(b, v, 1.85, 6.95, 7, 0.085, 0.28, 0.055, "Glow", true)
+
+			-- Sierra dorsal de colmillos ganchudos (5 dientes)
+			local hookCount = cfg.dorsalHooks or 5
+			local hookZs = {}
+			for i = 1, hookCount do
+				hookZs[i] = 2.15 + (i - 1) * 0.78
+			end
+			addDorsalHooks(b, v, hookZs, -w0 * 0.44, -1, 0.32, 0.38, 0.18, "Blade", "Edge")
+
+			-- Variantes por skin
+			if cfg.variant == "tomb" then
+				for i = 1, 3 do
+					local z = 2.40 + i * 1.10
+					b:add("TombSeal", Vector3.new(0.29, w0 * 0.52, 0.32), cf(0, 0, z) * ang(rad(45), 0, 0), "Trim")
+				end
+			elseif cfg.variant == "jaws" then
+				addDorsalHooks(b, v, { 2.35, 3.15, 3.95, 4.75, 5.55 }, w0 * 0.44, 1, 0.30, 0.36, 0.18, "Blade", "Edge")
+			elseif cfg.variant == "mourning" then
+				b:ring("MourningHalo", 1.55, 0.72, 0.12, 10, "Trim")
+			elseif cfg.variant == "cross" then
+				b:ring("SolarCrossHalo", 1.55, 0.78, 0.12, 10, "Trim")
+				for _, s in { 1, -1 } do
+					b:point("CrossSideFlange", v(s * (w0 * 0.48), 2.75), v(s * (w0 * 0.82), 3.15), 0.28, 0.20, "Edge")
+				end
+			elseif cfg.variant == "shroud" then
+				for i = 1, 6 do
+					local z = 2.15 + i * 0.68
+					b:add("ShroudWrap", Vector3.new(0.28, w0 * 0.96, 0.16), cf(0, 0, z) * ang(rad((i % 2 == 0 and 1 or -1) * 10), 0, 0), "Trim")
+				end
+			elseif cfg.variant == "wings" then
+				for _, s in { 1, -1 } do
+					b:curve("AbyssWing", { { s * 0.30, 1.32 }, { s * 0.96, 1.68 }, { s * 1.48, 2.28 }, { s * 1.24, 2.95 } }, 0.30, 0.10, "Trim")
+				end
+			end
+
+			b:light(v(0, 4.2), cfg.light, 8, 0.95)
+			if cfg.emit then b:emit(cfg.emit, 1.6, 7.2, cfg.light) end
+		end,
+	}
+end
+
+-- Relic14: Tumba Esmeralda
+SkinDesigns.EmeraldTomb = greatsword({
+	palette = {
+		Blade = { rgb(20, 26, 28), M.Slate },
+		Edge = { rgb(210, 242, 224), M.Foil },
+		Accent = { rgb(42, 58, 52), M.Metal },
+		Trim = { rgb(72, 245, 138), M.Foil },
+		Dark = { rgb(12, 16, 18), M.Slate },
+		Grip = { rgb(18, 24, 22), M.Leather },
+		Gem = { rgb(65, 255, 135), M.Neon },
+		Glow = { rgb(60, 255, 128), M.Neon },
+	},
+	w0 = 1.54, w1 = 1.40, tipLen = 1.15,
+	guardSpan = 1.44, guardSweep = 0.24,
+	variant = "tomb",
+	light = rgb(65, 255, 130),
+	emit = "Wisps",
+})
+
+-- Relic15: Devorador
+SkinDesigns.Devourer = greatsword({
+	palette = {
+		Blade = { rgb(24, 22, 24), M.Slate },
+		Edge = { rgb(220, 222, 228), M.Foil },
+		Accent = { rgb(58, 54, 58), M.Metal },
+		Trim = { rgb(172, 174, 182), M.Metal },
+		Dark = { rgb(14, 12, 14), M.Slate },
+		Grip = { rgb(32, 20, 22), M.Leather },
+		Gem = { rgb(235, 52, 42), M.Neon },
+		Glow = { rgb(240, 60, 45), M.Neon },
+	},
+	w0 = 1.56, w1 = 1.42, tipLen = 1.15,
+	guardSpan = 1.46, guardSweep = -0.28,
+	variant = "jaws",
+	light = rgb(235, 58, 45),
+	emit = "Embers",
+})
+
+-- Relic16: Luto Real
+SkinDesigns.RoyalMourning = greatsword({
+	palette = {
+		Blade = { rgb(20, 20, 26), M.Slate },
+		Edge = { rgb(236, 234, 242), M.Foil },
+		Accent = { rgb(48, 48, 56), M.Metal },
+		Trim = { rgb(206, 202, 198), M.Foil },
+		Dark = { rgb(12, 12, 16), M.Slate },
+		Grip = { rgb(22, 20, 26), M.Leather },
+		Gem = { rgb(225, 225, 245), M.Neon },
+		Glow = { rgb(215, 218, 240), M.Neon },
+	},
+	w0 = 1.50, w1 = 1.36, tipLen = 1.15,
+	guardSpan = 1.42, guardSweep = 0.22,
+	variant = "mourning",
+	light = rgb(215, 215, 235),
+})
+
+-- Relic17: Cruz del Ocaso
+SkinDesigns.DuskCross = greatsword({
+	palette = {
+		Blade = { rgb(36, 28, 20), M.Slate },
+		Edge = { rgb(248, 228, 172), M.Foil },
+		Accent = { rgb(196, 152, 58), M.Metal },
+		Trim = { rgb(245, 206, 108), M.Foil },
+		Dark = { rgb(22, 16, 12), M.Slate },
+		Grip = { rgb(46, 30, 20), M.Leather },
+		Gem = { rgb(255, 212, 95), M.Neon },
+		Glow = { rgb(255, 198, 82), M.Neon },
+	},
+	w0 = 1.54, w1 = 1.40, tipLen = 1.15,
+	guardSpan = 1.48, guardSweep = 0.16,
+	variant = "cross",
+	light = rgb(255, 205, 95),
+	emit = "Embers",
+})
+
+-- Relic18: Sudario
+SkinDesigns.Shroud = greatsword({
+	palette = {
+		Blade = { rgb(22, 24, 30), M.Slate },
+		Edge = { rgb(226, 222, 212), M.Foil },
+		Accent = { rgb(62, 60, 56), M.Metal },
+		Trim = { rgb(216, 210, 193), M.Fabric },
+		Dark = { rgb(12, 14, 18), M.Slate },
+		Grip = { rgb(34, 30, 26), M.Leather },
+		Gem = { rgb(235, 220, 185), M.Neon },
+		Glow = { rgb(225, 210, 175), M.Neon },
+	},
+	w0 = 1.52, w1 = 1.38, tipLen = 1.15,
+	guardSpan = 1.38, guardSweep = -0.18,
+	variant = "shroud",
+	light = rgb(220, 205, 175),
+	emit = "Smoke",
+})
+
+-- Relic19: Alas del Abismo (Espadón — Piloto Tanda 1 de Blender)
+SkinDesigns.AbyssWings = greatsword({
+	palette = {
+		Blade = { rgb(16, 16, 22), M.Slate },
+		Edge = { rgb(224, 216, 248), M.Foil },
+		Accent = { rgb(52, 42, 86), M.Metal },
+		Trim = { rgb(154, 122, 236), M.Foil },
+		Dark = { rgb(10, 10, 14), M.Slate },
+		Grip = { rgb(18, 16, 26), M.Leather },
+		Gem = { rgb(175, 128, 255), M.Neon },
+		Glow = { rgb(162, 112, 250), M.Neon },
+	},
+	w0 = 1.56, w1 = 1.42, tipLen = 1.15,
+	guardSpan = 1.50, guardSweep = 0.38,
+	variant = "wings",
+	light = rgb(160, 115, 245),
+	emit = "Wisps",
+})
+
+-- Ruleta D15: Mandoble de Sangre Lunar (Espadón compañero de la espada de referencia)
+SkinDesigns.BloodMoonCleaver = greatsword({
+	palette = {
+		Blade = { rgb(16, 16, 22), M.Slate },
+		Edge = { rgb(234, 238, 248), M.Foil },
+		Accent = { rgb(48, 50, 60), M.Metal },
+		Trim = { rgb(202, 208, 222), M.Foil },
+		Dark = { rgb(10, 10, 14), M.Slate },
+		Grip = { rgb(20, 16, 20), M.Leather },
+		Gem = { rgb(245, 18, 36), M.Neon },
+		Glow = { rgb(255, 26, 44), M.Neon },
+	},
+	w0 = 1.58, w1 = 1.44, tipLen = 1.18,
+	guardSpan = 1.52, guardSweep = 0.36,
+	dorsalHooks = 6,
+	variant = "wings",
+	light = rgb(245, 24, 42),
+	emit = "Embers",
+})
+
+-- ============================================================================
+-- 5. CONSTRUCTOR DE ESTOQUES (7 SKINS: Relic20 - Relic26, TipZ = 5.56)
+-- ============================================================================
+local function rapier(cfg)
+	return {
+		palette = cfg.palette,
+		build = function(b, v)
+			b.handle.Size = Vector3.new(0.18, 0.22, 1.05)
+			b.basePos = v(0, 0.92)
+
+			-- Empuñadura fina con costillas en chevrón
+			b:add("GripCore", Vector3.new(0.18, 0.22, 0.98), cf(0, 0, 0), "Grip")
+			b:wrap(-0.40, 0.40, 5, 0.23, "Trim", 18)
+			b:add("GripCollarB", Vector3.new(0.22, 0.26, 0.08), cf(0, 0, -0.48), "Accent")
+			b:add("GripCollarF", Vector3.new(0.24, 0.30, 0.10), cf(0, 0, 0.50), "Accent")
+
+			-- Pomo de tres garras con gema
+			addClawedGemPommel(b, v, -0.66, 0.18, 0.20, 0.32, "Accent", "Edge", "Gem")
+
+			-- Cazoleta real con costillas en espiral, gavilanes afilados y guardamonte
+			local cupR = cfg.cupR or 0.44
+			b:add("CupBase", Vector3.new(0.24, cupR * 1.45, 0.18), cf(0, 0, 0.64), "Accent")
+			for i = 0, 5 do
+				local a = (i / 6) * math.pi * 2
+				local py = math.sin(a) * cupR * 0.85
+				local px = math.cos(a) * cupR * 0.65
+				b:seg("BasketRib", Vector3.new(px * 0.35, py * 0.35, 0.54), Vector3.new(px, py, 0.94), 0.07, 0.09, i % 2 == 0 and "Edge" or "Trim", 0.02)
+			end
+			for _, s in { 1, -1 } do
+				b:point("SweptQuillon", v(0, 0.62), v(s * 0.92, 0.62 + s * 0.12), 0.12, 0.10, "Edge")
+			end
+			b:arc("RapierKnuckleBow", v(0.12, 0.08), v(0, 1), v(1, 0), 0.52, rad(-12), rad(168), 4, 0.09, 0.08, "Trim")
+
+			-- Recazo romboidal con 2 gemas engarzadas
+			addDiamondBolsterGems(b, v, 0.68, 1.18, 0.28, 0.16, "Edge", "Dark", "Gem")
+
+			-- Aguja de sección romboidal multicapa (TipZ = 5.56)
+			local zTipStart = 4.78
+			local tipLen = 0.78
+			local bladeLen = zTipStart - 0.96
+			local zMid = (0.96 + zTipStart) * 0.5
+
+			for _, s in { 1, -1 } do
+				b:add("NeedleEdgeBevel", Vector3.new(0.052, 0.075, bladeLen), cf(0, s * 0.052, zMid), "Edge", "Wedge")
+			end
+			b:add("NeedleCore", Vector3.new(0.082, 0.11, bladeLen), cf(0, 0, zMid), "Blade")
+			b:tip("NeedleTipEdge", zTipStart, tipLen, 0.14, 0.058, "Edge")
+			b:tip("NeedleTipCore", zTipStart, tipLen * 0.75, 0.09, 0.082, "Blade")
+
+			-- Espolones cerca del recazo y vena de relámpago fina a lo largo del estoque
+			addDorsalHooks(b, v, { 1.38, 1.78, 2.18 }, -0.07, -1, 0.14, 0.18, 0.065, "Blade", "Edge")
+			addLightningVein(b, v, 1.18, 5.05, 6, 0.024, 0.096, 0.022, "Glow", false)
+
+			b:light(v(0, 2.8), cfg.light, 6, 0.80)
+			if cfg.emit then b:emit(cfg.emit, 1.1, 5.3, cfg.light) end
+		end,
+	}
+end
+
+-- Relic20: Duelo Dorado
+SkinDesigns.Duel = rapier({
+	palette = {
+		Blade = { rgb(32, 30, 28), M.Slate },
+		Edge = { rgb(245, 242, 232), M.Foil },
+		Accent = { rgb(196, 158, 72), M.Metal },
+		Trim = { rgb(248, 214, 118), M.Foil },
+		Dark = { rgb(18, 16, 14), M.Slate },
+		Grip = { rgb(44, 28, 20), M.Leather },
+		Gem = { rgb(255, 215, 95), M.Neon },
+		Glow = { rgb(255, 202, 85), M.Neon },
+	},
+	cupR = 0.46,
+	light = rgb(255, 210, 100),
+})
+
+-- Relic21: Corte de Plata
+SkinDesigns.SilverCut = rapier({
+	palette = {
+		Blade = { rgb(24, 26, 32), M.Slate },
+		Edge = { rgb(242, 245, 252), M.Foil },
+		Accent = { rgb(168, 174, 186), M.Metal },
+		Trim = { rgb(228, 234, 245), M.Foil },
+		Dark = { rgb(14, 16, 20), M.Slate },
+		Grip = { rgb(22, 24, 30), M.Leather },
+		Gem = { rgb(205, 232, 255), M.Neon },
+		Glow = { rgb(190, 222, 255), M.Neon },
+	},
+	cupR = 0.42,
+	light = rgb(205, 225, 250),
+})
+
+-- Relic22: Lengua de Fuego
+SkinDesigns.FireTongue = rapier({
+	palette = {
+		Blade = { rgb(32, 22, 18), M.Slate },
+		Edge = { rgb(255, 218, 172), M.Foil },
+		Accent = { rgb(142, 68, 32), M.Metal },
+		Trim = { rgb(255, 138, 48), M.Foil },
+		Dark = { rgb(20, 12, 10), M.Slate },
+		Grip = { rgb(42, 20, 16), M.Leather },
+		Gem = { rgb(255, 120, 35), M.Neon },
+		Glow = { rgb(255, 105, 28), M.Neon },
+	},
+	cupR = 0.45,
+	light = rgb(255, 125, 42),
+	emit = "Embers",
+})
+
+-- Relic23: Duelo del Crepúsculo
+SkinDesigns.TwilightDuel = rapier({
+	palette = {
+		Blade = { rgb(28, 28, 36), M.Slate },
+		Edge = { rgb(226, 224, 236), M.Foil },
+		Accent = { rgb(118, 110, 104), M.Metal },
+		Trim = { rgb(188, 182, 174), M.Foil },
+		Dark = { rgb(16, 16, 22), M.Slate },
+		Grip = { rgb(30, 26, 32), M.Leather },
+		Gem = { rgb(215, 195, 245), M.Neon },
+		Glow = { rgb(198, 180, 235), M.Neon },
+	},
+	cupR = 0.44,
+	light = rgb(200, 190, 230),
+})
+
+-- Relic24: Aguijón Espectral
+SkinDesigns.SpectralSting = rapier({
+	palette = {
+		Blade = { rgb(20, 18, 30), M.Slate },
+		Edge = { rgb(228, 212, 252), M.Foil },
+		Accent = { rgb(82, 64, 122), M.Metal },
+		Trim = { rgb(196, 160, 245), M.Foil },
+		Dark = { rgb(12, 10, 18), M.Slate },
+		Grip = { rgb(22, 18, 32), M.Leather },
+		Gem = { rgb(205, 155, 255), M.Neon },
+		Glow = { rgb(192, 142, 250), M.Neon },
+	},
+	cupR = 0.46,
+	light = rgb(195, 150, 250),
+	emit = "Wisps",
+})
+
+-- Relic25: Velo Amatista
+SkinDesigns.AmethystVeil = rapier({
+	palette = {
+		Blade = { rgb(28, 18, 36), M.Slate },
+		Edge = { rgb(246, 210, 242), M.Foil },
+		Accent = { rgb(128, 62, 148), M.Metal },
+		Trim = { rgb(236, 118, 214), M.Foil },
+		Dark = { rgb(16, 10, 22), M.Slate },
+		Grip = { rgb(32, 18, 36), M.Leather },
+		Gem = { rgb(248, 115, 225), M.Neon },
+		Glow = { rgb(240, 102, 215), M.Neon },
+	},
+	cupR = 0.45,
+	light = rgb(238, 115, 215),
+	emit = "Wisps",
+})
+
+-- Relic26: Lamento Oscuro (Estoque — Piloto Tanda 1 de Blender)
+SkinDesigns.DarkLament = rapier({
+	palette = {
+		Blade = { rgb(14, 14, 18), M.Slate },
+		Edge = { rgb(218, 224, 236), M.Foil },
+		Accent = { rgb(42, 44, 52), M.Metal },
+		Trim = { rgb(172, 178, 194), M.Foil },
+		Dark = { rgb(8, 8, 12), M.Slate },
+		Grip = { rgb(16, 16, 20), M.Leather },
+		Gem = { rgb(235, 28, 46), M.Neon },
+		Glow = { rgb(245, 34, 52), M.Neon },
+	},
+	cupR = 0.48,
+	light = rgb(235, 36, 54),
+	emit = "Smoke",
+})
+
+-- ============================================================================
+-- 6. CONSTRUCTOR DE MAZAS Y HACHAS DE GUERRA (9 SKINS + RULETA CataclysmMaw, TipZ = 4.90)
+-- ============================================================================
+local function mace(cfg)
+	return {
+		palette = cfg.palette,
+		build = function(b, v)
+			b.handle.Size = Vector3.new(0.28, 0.28, 1.40)
+			b.basePos = v(0, 3.05)
+
+			-- Empuñadura reforzada con costillas en chevrón
+			b:add("GripCore", Vector3.new(0.28, 0.30, 1.32), cf(0, 0, 0), "Grip")
+			b:wrap(-0.56, 0.56, 5, 0.32, "Trim", 16)
+			b:add("GripCollarB", Vector3.new(0.34, 0.36, 0.12), cf(0, 0, -0.68), "Accent")
+			b:add("GripCollarF", Vector3.new(0.36, 0.38, 0.14), cf(0, 0, 0.70), "Accent")
+
+			-- Pomo de tres garras con gema
+			addClawedGemPommel(b, v, -0.88, 0.24, 0.26, 0.36, "Accent", "Edge", "Gem")
+
+			-- Vara larga octogonal con anillos de refuerzo, recazo con 2 gemas y vena de energía
+			b:cyl("MainShaft", 1.95, 2.40, 0.26, "Blade")
+			for _, rz in { 1.15, 1.75, 2.35, 2.95 } do
+				b:cyl("ShaftNode", rz, 0.14, 0.34, "Accent")
+			end
+			addDiamondBolsterGems(b, v, 2.85, 3.32, 0.44, 0.32, "Edge", "Dark", "Gem")
+			addLightningVein(b, v, 1.10, 4.35, 6, 0.038, 0.30, 0.032, "Glow", true)
+
+			-- Cabeza de impacto (z = 3.25 .. 4.42) + espolón apical afilado hasta TipZ = 4.90
+			local hz = 3.82
+			b:add("HeadCore", Vector3.new(0.76, 0.82, 1.08), cf(0, 0, hz), "Blade")
+			b:add("HeadDarkInlay", Vector3.new(0.80, 0.48, 0.86), cf(0, 0, hz), "Dark")
+
+			if cfg.variant == "flanges" or cfg.variant == "cataclysm" then
+				local count = 6
+				for i = 0, count - 1 do
+					local a = (i / count) * math.pi * 2
+					local cFrame = cf(0, 0, hz) * ang(0, 0, a)
+					b:add("FlangeCore", Vector3.new(0.14, 0.64, 1.02), cFrame * cf(0, 0.48, 0), "Blade", "Wedge")
+					b:add("FlangeRazorEdge", Vector3.new(0.10, 0.76, 1.08), cFrame * cf(0, 0.58, 0), "Edge", "Wedge")
+				end
+				if cfg.variant == "cataclysm" then
+					addDorsalHooks(b, v, { 2.05, 2.50, 3.48, 4.12 }, -0.22, -1, 0.28, 0.30, 0.14, "Blade", "Edge")
+				end
+			elseif cfg.variant == "shards" then
+				for i = 0, 7 do
+					local a = (i / 8) * math.pi * 2
+					local dir = Vector3.new(math.cos(a), math.sin(a), 0)
+					b:point("CrimsonShard", dir * 0.32 + Vector3.new(0, 0, hz - 0.12), dir * 0.96 + Vector3.new(0, 0, hz + 0.18), 0.24, 0.18, i % 2 == 0 and "Edge" or "Gem")
+				end
+			elseif cfg.variant == "executioner" or cfg.variant == "axe" then
+				-- Filo de hacha en media luna (+Y) con bisel de plata y pico rompecascos (-Y)
+				local bladeArc = { { 0.48, 3.22 }, { 0.96, 3.50 }, { 1.12, 3.82 }, { 0.96, 4.14 }, { 0.48, 4.40 } }
+				b:strip("AxeRazorBevel", bladeArc, { 0.32, 0.44, 0.48, 0.44, 0.32 }, 0.11, "Edge", 0)
+				b:strip("AxeDarkBack", { { 0.36, 3.30 }, { 0.74, 3.82 }, { 0.36, 4.32 } }, { 0.28, 0.38, 0.28 }, 0.16, "Blade", 0)
+				b:point("BackBeakCore", v(-0.36, hz), v(-1.12, hz - 0.16), 0.32, 0.22, "Blade")
+				b:point("BackBeakEdge", v(-0.68, hz - 0.06), v(-1.28, hz - 0.22), 0.24, 0.16, "Edge")
+			elseif cfg.variant == "forge" then
+				b:add("HammerHead", Vector3.new(0.96, 1.78, 1.08), cf(0, 0, hz), "Blade")
+				for _, s in { 1, -1 } do
+					b:add("HammerFaceBevel", Vector3.new(0.88, 0.20, 1.14), cf(0, s * 0.92, hz), "Edge")
+					b:add("ForgeVent", Vector3.new(1.00, 0.24, 0.24), cf(0, s * 0.48, hz) * ang(rad(45), 0, 0), "Glow")
+				end
+			elseif cfg.variant == "maw" or cfg.variant == "vertebra" or cfg.variant == "jaws" or cfg.variant == "crown" then
+				for _, s in { 1, -1 } do
+					b:curve("BoneJaw", { { s * 0.32, 3.28 }, { s * 0.78, 3.62 }, { s * 0.84, 4.02 }, { s * 0.46, 4.36 } }, 0.28, 0.16, "Accent")
+					for k = 1, 3 do
+						local zk = 3.38 + (k - 1) * 0.34
+						b:point("JawFang", v(s * 0.56, zk), v(s * 1.06, zk - 0.12), 0.18, 0.14, "Edge")
+					end
+				end
+				b:ball("MawCoreGem", v(0, hz), 0.46, "Gem")
+			end
+
+			-- Gemas laterales en las mejillas de la cabeza
+			b:add("HeadGemBezel", Vector3.new(0.84, 0.26, 0.26), cf(0, 0, hz) * ang(rad(45), 0, 0), "Trim")
+			b:add("HeadGem", Vector3.new(0.88, 0.16, 0.16), cf(0, 0, hz) * ang(rad(45), 0, 0), "Gem")
+
+			-- Espolón apical afilado hasta TipZ = 4.90
+			b:cyl("ApicalCollar", 4.40, 0.14, 0.44, "Accent")
+			b:tip("ApicalSpikeEdge", 4.42, 0.48, 0.34, 0.18, "Edge")
+			b:tip("ApicalSpikeCore", 4.42, 0.36, 0.22, 0.24, "Blade")
+
+			b:light(v(0, 3.82), cfg.light, 7, 0.95)
+			if cfg.emit then b:emit(cfg.emit, 3.15, 4.85, cfg.light) end
+		end,
+	}
+end
+
+-- Relic27: Juicio de Hierro
+SkinDesigns.Flange = mace({
+	palette = {
+		Blade = { rgb(30, 30, 34), M.Slate },
+		Edge = { rgb(238, 240, 246), M.Foil },
+		Accent = { rgb(186, 152, 74), M.Metal },
+		Trim = { rgb(242, 206, 112), M.Foil },
+		Dark = { rgb(18, 18, 22), M.Slate },
+		Grip = { rgb(42, 28, 20), M.Leather },
+		Gem = { rgb(255, 208, 92), M.Neon },
+		Glow = { rgb(255, 195, 78), M.Neon },
+	},
+	variant = "flanges",
+	light = rgb(255, 205, 95),
+})
+
+-- Relic28: Espinas Carmesí
+SkinDesigns.CrimsonShards = mace({
+	palette = {
+		Blade = { rgb(26, 18, 22), M.Slate },
+		Edge = { rgb(236, 222, 232), M.Foil },
+		Accent = { rgb(92, 28, 52), M.Metal },
+		Trim = { rgb(225, 48, 108), M.Foil },
+		Dark = { rgb(14, 10, 14), M.Slate },
+		Grip = { rgb(28, 16, 22), M.Leather },
+		Gem = { rgb(255, 42, 105), M.Neon },
+		Glow = { rgb(245, 38, 98), M.Neon },
+	},
+	variant = "shards",
+	light = rgb(240, 48, 105),
+	emit = "Embers",
+})
+
+-- Relic29: Verdugo del Norte
+SkinDesigns.NorthExecutioner = mace({
+	palette = {
+		Blade = { rgb(24, 28, 36), M.Slate },
+		Edge = { rgb(238, 244, 252), M.Foil },
+		Accent = { rgb(92, 102, 118), M.Metal },
+		Trim = { rgb(198, 212, 232), M.Foil },
+		Dark = { rgb(14, 16, 22), M.Slate },
+		Grip = { rgb(28, 24, 22), M.Leather },
+		Gem = { rgb(165, 225, 255), M.Neon },
+		Glow = { rgb(150, 215, 255), M.Neon },
+	},
+	variant = "executioner",
+	light = rgb(165, 220, 255),
+	emit = "Frost",
+})
+
+-- Relic30: Corazón de Forja
+SkinDesigns.Forge = mace({
+	palette = {
+		Blade = { rgb(24, 22, 26), M.Slate },
+		Edge = { rgb(228, 224, 220), M.Foil },
+		Accent = { rgb(78, 52, 38), M.Metal },
+		Trim = { rgb(245, 132, 48), M.Foil },
+		Dark = { rgb(14, 12, 14), M.Slate },
+		Grip = { rgb(36, 22, 18), M.Leather },
+		Gem = { rgb(255, 138, 42), M.Neon },
+		Glow = { rgb(255, 118, 32), M.Neon },
+	},
+	variant = "forge",
+	light = rgb(255, 130, 42),
+	emit = "Embers",
+})
+
+-- Relic31: Mandíbula Antigua
+SkinDesigns.AncientMaw = mace({
+	palette = {
+		Blade = { rgb(32, 28, 24), M.Slate },
+		Edge = { rgb(232, 222, 198), M.Foil },
+		Accent = { rgb(168, 150, 118), M.Limestone },
+		Trim = { rgb(214, 196, 162), M.Limestone },
+		Dark = { rgb(18, 16, 14), M.Slate },
+		Grip = { rgb(38, 28, 22), M.Leather },
+		Gem = { rgb(235, 175, 78), M.Neon },
+		Glow = { rgb(225, 162, 68), M.Neon },
+	},
+	variant = "maw",
+	light = rgb(225, 170, 82),
+	emit = "Smoke",
+})
+
+-- Relic32: Hacha del Osario
+SkinDesigns.OssuaryAxe = mace({
+	palette = {
+		Blade = { rgb(26, 24, 28), M.Slate },
+		Edge = { rgb(236, 224, 198), M.Foil },
+		Accent = { rgb(176, 152, 118), M.Limestone },
+		Trim = { rgb(218, 198, 164), M.Foil },
+		Dark = { rgb(14, 14, 18), M.Slate },
+		Grip = { rgb(32, 24, 22), M.Leather },
+		Gem = { rgb(235, 58, 48), M.Neon },
+		Glow = { rgb(225, 48, 42), M.Neon },
+	},
+	variant = "axe",
+	light = rgb(225, 62, 52),
+	emit = "Smoke",
+})
+
+-- Maw02: Vértebra del Abismo
+SkinDesigns.AbyssVertebra = mace({
+	palette = {
+		Blade = { rgb(26, 22, 22), M.Slate },
+		Edge = { rgb(232, 220, 196), M.Foil },
+		Accent = { rgb(178, 160, 128), M.Limestone },
+		Trim = { rgb(212, 192, 158), M.Limestone },
+		Dark = { rgb(16, 12, 12), M.Slate },
+		Grip = { rgb(34, 20, 22), M.Leather },
+		Gem = { rgb(235, 38, 46), M.Neon },
+		Glow = { rgb(225, 32, 42), M.Neon },
+	},
+	variant = "vertebra",
+	light = rgb(225, 42, 48),
+	emit = "Embers",
+})
+
+-- Maw03: Fauces del Sepulcro
+SkinDesigns.SepulcherJaws = mace({
+	palette = {
+		Blade = { rgb(28, 24, 22), M.Slate },
+		Edge = { rgb(238, 226, 202), M.Foil },
+		Accent = { rgb(186, 168, 134), M.Limestone },
+		Trim = { rgb(224, 204, 168), M.Foil },
+		Dark = { rgb(16, 14, 12), M.Slate },
+		Grip = { rgb(38, 26, 20), M.Leather },
+		Gem = { rgb(255, 158, 52), M.Neon },
+		Glow = { rgb(245, 142, 44), M.Neon },
+	},
+	variant = "jaws",
+	light = rgb(245, 150, 52),
+	emit = "Embers",
+})
+
+-- Maw04: Corona del Osario (Maza — Piloto Tanda 1 de Blender)
+SkinDesigns.OssuaryCrown = mace({
+	palette = {
+		Blade = { rgb(28, 26, 24), M.Slate },
+		Edge = { rgb(244, 234, 208), M.Foil },
+		Accent = { rgb(194, 176, 140), M.Limestone },
+		Trim = { rgb(238, 198, 102), M.Foil },
+		Dark = { rgb(16, 14, 14), M.Slate },
+		Grip = { rgb(36, 26, 22), M.Leather },
+		Gem = { rgb(255, 198, 78), M.Neon },
+		Glow = { rgb(245, 185, 68), M.Neon },
+	},
+	variant = "crown",
+	light = rgb(245, 190, 80),
+	emit = "Embers",
+})
+
+-- Ruleta D15: Quebrantahuesos del Eclipse (Maza compañera de la espada de referencia)
+SkinDesigns.CataclysmMaw = mace({
+	palette = {
+		Blade = { rgb(18, 18, 24), M.Slate },
+		Edge = { rgb(234, 238, 248), M.Foil },
+		Accent = { rgb(48, 50, 60), M.Metal },
+		Trim = { rgb(202, 208, 222), M.Foil },
+		Dark = { rgb(10, 10, 14), M.Slate },
+		Grip = { rgb(20, 16, 20), M.Leather },
+		Gem = { rgb(245, 18, 36), M.Neon },
+		Glow = { rgb(255, 26, 44), M.Neon },
+	},
+	variant = "cataclysm",
+	light = rgb(245, 24, 42),
+	emit = "Embers",
+})
+
+return SkinDesigns

@@ -1,4 +1,4 @@
--- Deterministic daily rotation; midnight UTC, manually claimed rewards.
+-- Deterministic daily rotation; midnight Argentina (UTC-3), manually claimed rewards.
 return {
  DailyCount = 3, RotationStep = 3,
  Order = { "wins", "knockdowns", "parries", "guards", "throws", "greatsword", "matches", "kills", "damage", "daggers" },

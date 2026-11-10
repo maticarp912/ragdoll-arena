@@ -38,10 +38,7 @@ Pedido confirmado: continuar conversaciones entre Claude, Gemini y Codex, conser
 - Las IA no tienen acceso automático a chats privados de otras apps: la continuidad depende de los archivos. Sin acceso, decirlo y entregar resumen para pegar, sin fingir lectura o guardado.
 - Solo Claude hace commits/push según C0b. Codex/Gemini dejan cambios locales e indican qué sincronizar. Desde otra máquina, verificar sincronización.
 
-### Contexto actual — Codex, 10/11/2026 12:50 (Argentina, UTC-3)
-Tema: retención, skins, recompensas y almas; [[Versión 0.2]], sección 12.
-Usuario: quiere motivos para reentrar y le gusta sumar algo como las almas de Dark Souls.
-Confirmado: explorar almas y continuidad entre IA. Propuestas de Codex: meta cosmética visible, progreso garantizado, misiones breves, maestría y ruleta existente como extra.
-Sin decidir: almas reemplazan monedas o tienen otra utilidad; pérdida/recuperación al morir; costes y cantidades. No asumir pérdida o robo en PvP.
-Próximo paso: definir función de almas frente a monedas y diseñar un primer circuito pequeño.
-Hecho: investigación y protocolo documentados. Código/Studio: sin cambios ni pruebas nuevas. Pendiente: Claude revisar y sincronizar notas en GitHub.
+### Contexto actual — Codex, 10/11/2026 14:11 (Argentina, UTC-3)
+Tema actual: desarrollo 0.2 ronda 1 backend según [[0.2 Ronda 1 - Codex]]. Decisiones D1-D22 ya aprobadas en [[Decisiones pendientes 0.2]]; almas son el mismo saldo Coins, sin pérdida al morir (D5). El contexto anterior de dudas de diseño queda superado por esas decisiones.
+Entrega y pruebas pendientes: [[Reporte 0.2 Codex]]. APIs finales C17-C22: [[Contratos 0.2]]. Implementados archivos de backend, sin abrir Studio ni modificar place ni hacer commit. Falta integrar el permiso Debug de Tester en CombatService (Claude), overhead/cinemática (Claude) y previews/UI (Gemini); pruebas enumeradas en reporte. Rewards completo se hace en ronda 2.
+Próximo paso: Claude revisar, integrar los pedidos y sincronizar GitHub; luego sesión de pruebas separada. No confundir revisión estática con comprobación en Studio.

@@ -11,9 +11,12 @@ if not folder then
 end
 
 local Remotes = {}
+local classes = { Admin = "RemoteFunction", Shop = "RemoteFunction", Settings = "RemoteFunction", Missions = "RemoteFunction" }
 
 function Remotes.get(name: string, className: string?)
-	local r = folder:FindFirstChild(name)
+	className = className or classes[name] or "RemoteEvent"
+ local r = folder:FindFirstChild(name)
+ if r then assert(r:IsA(className), "Remote type mismatch: " .. name) end
 	if not r then
 		r = Instance.new(className or "RemoteEvent")
 		r.Name = name

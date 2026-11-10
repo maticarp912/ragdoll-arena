@@ -1,6 +1,6 @@
-# Guía de Subida de Mallas 3D (`modelos_armas/` → `ReplicatedStorage/WeaponMeshes.lua`)
+# Guía de Subida de Mallas 3D y Texturas (`modelos_armas/` → `ReplicatedStorage/WeaponMeshes.lua`)
 
-Esta carpeta contiene las mallas 3D en formato `.fbx` y `.obj` generadas de forma reproducible mediante:
+Esta carpeta contiene las mallas 3D de alta resolución (`.fbx` y `.obj`, entre **1 000 y 2 300 triángulos** pensadas para móvil) junto con sus texturas atlas `1024x1024` (`*_tex.png`), generadas de forma reproducible mediante:
 
 ```powershell
 & "$env:LOCALAPPDATA\Microsoft\WindowsApps\blender-launcher.exe" -b --python "F:\RobloxJuegos\Plataforme 2v2\tools\blender\generate_weapons.py"
@@ -8,45 +8,64 @@ Esta carpeta contiene las mallas 3D en formato `.fbx` y `.obj` generadas de form
 
 ## Convenciones técnicas de cada malla
 
-- **Presupuesto de polígonos**: Todas las mallas tienen entre **300 y 1 200 triángulos** (muy por debajo del máximo de 5 000 triángulos de Roblox).
+- **Presupuesto de polígonos para móvil**: Entre **998 y 2 272 triángulos** (muy por debajo del límite de 5 000 triángulos de Roblox).
+- **Textura (`*_tex.png`)**: Resolución `1024 x 1024 px` con 8 zonas UV separadas por material (`Edge` plata espejo, `Blade` obsidiana, `Glow` vena de relámpago carmesí, `Gem` rubí engarzado, `Accent` acero de guarda, `Trim` filigrana, `Grip` cuero estriado y `Dark` acanaladura).
 - **Origen `(0, 0, 0)`**: Centrado exactamente en el mango (`Handle`), listo para soldarse (`Weld`) sin desfases.
 - **Orientación de ejes**:
-  - `+Z`: Dirección de la hoja / cabeza hacia la punta (`BladeTip`).
+  - `+Z`: Dirección de la hoja / cabeza hacia la punta (`BladeTip` en `TipZ`).
   - `Y`: Ancho del filo / guarda.
   - `X`: Grosor de la hoja.
 - **Escala**: `1 unidad = 1 stud` de Roblox.
 
-## Catálogo de archivos exportados
+## Tanda 1 de Blender (0.2 D6 / D15): 3 Skins de la Ruleta + 1 Skin Piloto por Arma
 
-| Clave en `WeaponMeshes.lua` | Archivo `.fbx` / `.obj` | Tipo / Skin | Punta `TipZ` (studs) |
-| :--- | :--- | :--- | :---: |
-| `Dagger` | `Dagger.fbx` / `.obj` | Arma base (Dagas) | `2.87` |
-| `Sword` | `Sword.fbx` / `.obj` | Arma base (Espada caballeresca) | `5.10` |
-| `Greatsword` | `Greatsword.fbx` / `.obj` | Arma base (Espadón colosal) | `7.60` |
-| `Rapier` | `Rapier.fbx` / `.obj` | Arma base (Estoque) | `5.56` |
-| `Mace` | `Mace.fbx` / `.obj` | Arma base (Maza / Martillo) | `4.90` |
-| `RequiemHorns` | `RequiemHorns.fbx` / `.obj` | Skin `Requiem` (Espada gótica) | `5.14` |
-| `EmeraldTomb` | `EmeraldTomb.fbx` / `.obj` | Skin `Relic14` (Espadón) | `7.60` |
-| `Devourer` | `Devourer.fbx` / `.obj` | Skin `Relic15` (Espadón) | `7.60` |
-| `RoyalMourning` | `RoyalMourning.fbx` / `.obj` | Skin `Relic16` (Espadón) | `7.60` |
-| `DuskCross` | `DuskCross.fbx` / `.obj` | Skin `Relic17` (Espadón) | `7.60` |
-| `Shroud` | `Shroud.fbx` / `.obj` | Skin `Relic18` (Espadón) | `7.58` |
-| `AbyssWings` | `AbyssWings.fbx` / `.obj` | Skin `Relic19` (Espadón) | `7.60` |
-| `AncientMaw` | `AncientMaw.fbx` / `.obj` | Skin `Relic31` (Maza ósea base) | `4.85` |
-| `AbyssVertebra` | `AbyssVertebra.fbx` / `.obj` | Skin `Maw02` (Maza ósea nueva) | `4.90` |
-| `SepulcherJaws` | `SepulcherJaws.fbx` / `.obj` | Skin `Maw03` (Maza ósea nueva) | `4.88` |
-| `OssuaryCrown` | `OssuaryCrown.fbx` / `.obj` | Skin `Maw04` (Maza ósea nueva) | `4.90` |
+| Clave en `WeaponMeshes.lua` | Archivo `.fbx` / `.obj` | Textura `1024x1024` | Arma / Rol en 0.2 | Triángulos | Punta `TipZ` |
+| :--- | :--- | :--- | :--- | :---: | :---: |
+| `CrimsonEclipse` | `CrimsonEclipse.fbx` | `CrimsonEclipse_tex.png` | **Espada (`Sword`) — Gran premio semanal Ruleta (`espada-concepto.png`)** | `1 554` | `5.10` |
+| `BloodMoonCleaver` | `BloodMoonCleaver.fbx` | `BloodMoonCleaver_tex.png` | **Espadón (`Greatsword`) — Premio de la Ruleta** | `1 554` | `7.60` |
+| `CataclysmMaw` | `CataclysmMaw.fbx` | `CataclysmMaw_tex.png` | **Maza (`Mace`) — Premio de la Ruleta** | `2 272` | `4.90` |
+| `EclipseClaws` | `EclipseClaws.fbx` | `EclipseClaws_tex.png` | **Piloto Dagas (`Dagger`, skin `Relic05`)** | `1 194` | `2.88` |
+| `RequiemHorns` | `RequiemHorns.fbx` | `RequiemHorns_tex.png` | **Piloto Espada (`Sword`, skin `Requiem`)** | `1 342` | `5.10` |
+| `AbyssWings` | `AbyssWings.fbx` | `AbyssWings_tex.png` | **Piloto Espadón (`Greatsword`, skin `Relic19`)** | `1 570` | `7.60` |
+| `DarkLament` | `DarkLament.fbx` | `DarkLament_tex.png` | **Piloto Estoque (`Rapier`, skin `Relic26`)** | `1 574` | `5.56` |
+| `OssuaryCrown` | `OssuaryCrown.fbx` | `OssuaryCrown_tex.png` | **Piloto Maza (`Mace`, skin `Maw04`)** | `2 076` | `4.90` |
 
-## Pasos para subir en Roblox Studio y activar en el juego
+## Armas Base y Variantes Adicionales en `modelos_armas/`
+
+| Clave en `WeaponMeshes.lua` | Archivo `.fbx` / `.obj` | Textura `1024x1024` | Tipo / Skin | Triángulos | Punta `TipZ` |
+| :--- | :--- | :--- | :--- | :---: | :---: |
+| `Dagger` | `Dagger.fbx` | `Dagger_tex.png` | Arma base (Dagas) | `998` | `2.87` |
+| `Sword` | `Sword.fbx` | `Sword_tex.png` | Arma base (Espada) | `1 106` | `5.10` |
+| `Greatsword` | `Greatsword.fbx` | `Greatsword_tex.png` | Arma base (Espadón) | `1 278` | `7.60` |
+| `Rapier` | `Rapier.fbx` | `Rapier_tex.png` | Arma base (Estoque) | `1 250` | `5.56` |
+| `Mace` | `Mace.fbx` | `Mace_tex.png` | Arma base (Maza) | `1 036` | `4.90` |
+| `EmeraldTomb` | `EmeraldTomb.fbx` | `EmeraldTomb_tex.png` | Skin `Relic14` (Espadón) | `1 546` | `7.60` |
+| `Devourer` | `Devourer.fbx` | `Devourer_tex.png` | Skin `Relic15` (Espadón) | `1 594` | `7.60` |
+| `RoyalMourning` | `RoyalMourning.fbx` | `RoyalMourning_tex.png` | Skin `Relic16` (Espadón) | `1 538` | `7.60` |
+| `DuskCross` | `DuskCross.fbx` | `DuskCross_tex.png` | Skin `Relic17` (Espadón) | `1 538` | `7.60` |
+| `Shroud` | `Shroud.fbx` | `Shroud_tex.png` | Skin `Relic18` (Espadón) | `1 570` | `7.58` |
+| `AncientMaw` | `AncientMaw.fbx` | `AncientMaw_tex.png` | Skin `Relic31` (Maza ósea) | `1 796` | `4.85` |
+| `AbyssVertebra` | `AbyssVertebra.fbx` | `AbyssVertebra_tex.png` | Skin `Maw02` (Maza ósea) | `1 868` | `4.90` |
+| `SepulcherJaws` | `SepulcherJaws.fbx` | `SepulcherJaws_tex.png` | Skin `Maw03` (Maza ósea) | `1 748` | `4.88` |
+
+## Pasos para subir con el Importador 3D de Roblox Studio y pegar cada ID
 
 1. Abrí el proyecto en **Roblox Studio**.
-2. Abrí **View → Asset Manager** (o **Import 3D** desde la pestaña *Home* / *Avatar*).
-3. Hacé clic en **Bulk Import** y seleccioná los archivos `.fbx` (o `.obj`) de `modelos_armas/`.
-   - Desmarcá *Rescale if too large* para conservar la escala exacta en studs (`1:1`).
-   - Confirmá la importación.
-4. En **Asset Manager → Meshes**, hacé clic derecho sobre cada malla subida y elegí **Copy ID to Clipboard** (obtendrás un número como `1234567890`).
-5. Abrí `ReplicatedStorage/WeaponMeshes.lua` y pegá ese número en el campo `MeshId` correspondiente:
+2. En la cinta superior (*Home* o *Avatar*), hacé clic en **Import 3D** (o abrí **View → Asset Manager → Bulk Import**).
+3. Seleccioná los archivos `.fbx` de la Tanda 1 en `modelos_armas/`:
+   - `CrimsonEclipse.fbx`, `BloodMoonCleaver.fbx`, `CataclysmMaw.fbx`
+   - `EclipseClaws.fbx`, `RequiemHorns.fbx`, `AbyssWings.fbx`, `DarkLament.fbx`, `OssuaryCrown.fbx`
+4. En el panel del **Importador 3D**:
+   - En *Transform / File Dimensions*, **desmarcá** *Rescale if too large* y verificá que *Scale Unit* sea **Studs (1:1)**.
+   - Verificá que *Import Only As Model* o *Upload to Roblox* esté activo (el `.fbx` ya lleva incrustada su textura `<Nombre>_tex.png`; si subís el `.obj`, importá también `<Nombre>_tex.png` en *Images*).
+   - Hacé clic en **Import**.
+5. En **Asset Manager → Meshes** (y **Images**), hacé clic derecho sobre cada malla y textura subida y elegí **Copy ID to Clipboard**.
+6. Abrí `ReplicatedStorage/WeaponMeshes.lua` y pegá los números en `MeshId` y `TextureId` de la clave correspondiente:
    ```lua
-   Sword = { MeshId = 1234567890, TextureId = 0, Scale = Vector3.new(1, 1, 1), Offset = CFrame.new(0, 0, 0), TipZ = 5.10 },
+   CrimsonEclipse = {
+       MeshId = 1234567890,    -- <-- Pegá acá el MeshId copiado
+       TextureId = 9876543210, -- <-- Pegá acá el TextureId copiado
+       ...
+   },
    ```
-6. Mientras `MeshId = 0` (por defecto), `WeaponBuilder` construye automáticamente el modelo por piezas procedural sin errores ni dependencias externas.
+7. Mientras `MeshId = 0`, `WeaponBuilder` construye automáticamente el modelo procedural de alta definición de `SkinDesigns.lua` sin errores.
