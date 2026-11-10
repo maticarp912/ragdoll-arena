@@ -27,8 +27,9 @@ return {
  },
  -- 0.2 (Claude): triángulo del combate direccional (DirectionalHUD.client). Tamaños en píxeles, tiempos en s.
  Directional = {
-  Side = 92, Thickness = 7, Gap = 6, OffsetY = -10, Edge = 60,
-  IdleTransparency = 0.72, StanceTransparency = 0.05, GuardGlow = 2.5,
+  -- Integración 0.2: en Studio a 92 px y 0,72 de transparencia casi no se veía; más grande y más opaco
+  Side = 140, Thickness = 10, Gap = 8, OffsetY = -10, Edge = 80,
+  IdleTransparency = 0.5, StanceTransparency = 0.05, GuardGlow = 2.5,
   Idle = Color3.fromRGB(235, 228, 214), Stance = Color3.fromRGB(255, 255, 255), Guard = Color3.fromRGB(150, 205, 255),
   Attack = Color3.fromRGB(255, 40, 32), Unblockable = Color3.fromRGB(255, 196, 64), Kick = Color3.fromRGB(255, 140, 30),
   Parry = Color3.fromRGB(255, 226, 120), ParryTime = 0.35, ParryScale = 1.35,

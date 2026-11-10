@@ -70,7 +70,8 @@ end
 local shopAt, shopBusy = {}, {}
 Players.PlayerRemoving:Connect(function(player) shopAt[player]=nil shopBusy[player]=nil end)
 local function shopAction(player, action, id)
-	if type(action) ~= "string" or type(id) ~= "string" then
+	-- Integración 0.2: GetFeatured no lleva id (la tienda lo pide sin argumento y antes se rechazaba)
+	if type(action) ~= "string" or (type(id) ~= "string" and action ~= "GetFeatured") then
 		return false, { key = "invalid" }
 	end
 	if player:GetAttribute("InMatch") and player:GetAttribute("MatchPhase") ~= "Prematch" and (action == "SelectWeapon" or action == "SelectInfusion" or action == "Equip") then

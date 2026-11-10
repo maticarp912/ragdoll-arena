@@ -266,37 +266,20 @@ local function getDailyFeaturedIds()
 		if #list >= 4 then return list end
 	end
 
-	local daySeed = math.floor(os.time() / 86400)
-	local poolSkins = {}
-	for _, id in Skins.Order do
-		local s = Skins.Data[id]
-		if s and not s.comingSoon and id ~= "Default" and id ~= "CrimsonEclipse" and (s.rarity == "Epic" or s.rarity == "Legendary" or s.rarity == "Rare") then
-			table.insert(poolSkins, id)
-		end
+	-- Respaldo: el MISMO cálculo que ShopService (GetFeatured), para que nunca muestre otra lista.
+	-- Sin skins de la ruleta (D23), día de Argentina (Economy.DayOffset).
+	local E = require(RS:WaitForChild("Economy"))
+	local ids = {}
+	for skinId, skin in Skins.Data do
+		if skinId ~= "Default" and not skin.comingSoon and not skin.roulette then table.insert(ids, skinId) end
 	end
-	local poolAuras = Auras and Auras.Order or {}
-
-	local featured = { "CrimsonEclipse" } -- El gran premio / espada de referencia encabeza el escaparate
-	local rouletteCompanions = { "BloodMoonCleaver", "CataclysmMaw" }
-	table.insert(featured, rouletteCompanions[(daySeed % #rouletteCompanions) + 1])
-
-	if #poolSkins > 0 then
-		local idx1 = ((daySeed * 7 + 3) % #poolSkins) + 1
-		local idx2 = ((daySeed * 13 + 11) % #poolSkins) + 1
-		if idx2 == idx1 then idx2 = (idx2 % #poolSkins) + 1 end
-		if not table.find(featured, poolSkins[idx1]) then
-			table.insert(featured, poolSkins[idx1])
-		end
-		if not table.find(featured, poolSkins[idx2]) then
-			table.insert(featured, poolSkins[idx2])
-		end
+	table.sort(ids)
+	local featured = {}
+	if #ids == 0 then return featured end
+	local day = math.floor((os.time() - E.DayOffset) / E.DaySeconds)
+	for i = 1, math.min(E.FeaturedCount, #ids) do
+		table.insert(featured, ids[(day * E.FeaturedCount + i - 1) % #ids + 1])
 	end
-
-	if #poolAuras > 0 then
-		local aIdx = ((daySeed * 5 + 1) % #poolAuras) + 1
-		table.insert(featured, poolAuras[aIdx])
-	end
-
 	return featured
 end
 
@@ -730,7 +713,7 @@ local function inspect(id)
 			anchor = Vector2.new(0.5, 1),
 			position = UDim2.new(0.5, 0, 1, -6),
 			size = UDim2.new(1, -12, 0, 16),
-			text = L.t("rotateHint"),
+			text = L.t("ui.armory.rotateHint"),
 			font = "Body",
 			textSize = UiTheme.TextSizes.XS,
 			color = C.TextMuted,

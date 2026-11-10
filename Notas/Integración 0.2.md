@@ -30,7 +30,7 @@ Reportes: [[Reporte 0.2 Claude]], [[Reporte 0.2 Codex]], [[Reporte 0.2 Gemini]].
 ## Orden de la sesión de integración
 1. ✅ Arreglar I1 a I5 y los pedidos de arriba (10/11/2026; `check_lua` OK 82 archivos, LihFolk 0/0).
 2. `check_lua` + LihFolk; Rojo o regenerar el place.
-3. Probar en Studio con las listas de los tres reportes: primero `Directional.Enabled = false` (debe quedar como la 0.1 más la sensación), después `true`; 1v1 y 2v2 con varios clientes; celular y mando.
+3. ✅ (10/11 15:22, salvo lo pendiente del reporte) Probar en Studio con las listas de los tres reportes: primero `Directional.Enabled = false` (debe quedar como la 0.1 más la sensación), después `true`; 1v1 y 2v2 con varios clientes; celular y mando.
 4. Commit con el resultado de las pruebas.
 
 ## Decidido por el usuario
@@ -41,4 +41,5 @@ Reportes: [[Reporte 0.2 Claude]], [[Reporte 0.2 Codex]], [[Reporte 0.2 Gemini]].
 - La pestaña «Almas y Monedas» usa `DebugCoins` (solo depuración). Sin Robux en la 0.2 (D20): decidir si la pestaña se quita o queda solo para Tester.
 
 ## Pruebas en Studio
-Prompt para la sesión nueva: [[0.2 Integración - pruebas en Studio]].
+Prompt: [[0.2 Integración - pruebas en Studio]].
+**10/11/2026 15:22:** probado en Studio, resultados en [[Reporte 0.2 Integración]]. A, B, C y la mayor parte de D ✅. Arreglados: Destacado del servidor, clave `rotateHint`, campos del panel de administración, Owner de prueba en Studio y tamaño del triángulo. Pendiente: stick, fijado permanente con el direccional, ping simulado, Maza/Estoque y 2v2.

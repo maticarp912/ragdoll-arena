@@ -22,7 +22,8 @@ panel.BackgroundColor3 = UI.Colors.BgPanel panel.Visible = false panel.Parent = 
 local function text(class, key, y)
  local obj = Instance.new(class) obj.Size = UDim2.fromScale(0.9, 0.09) obj.Position = UDim2.fromScale(0.05, y)
  obj.BackgroundColor3 = UI.Colors.BgPanelLight obj.TextColor3 = UI.Colors.TextPrimary obj.TextSize = 16 obj.Text = L.t(key) obj.Parent = panel
- if class == "TextBox" then obj.ClearTextOnFocus = false end
+ -- Integración 0.2: en los campos la ayuda va como PlaceholderText (antes era el texto y se mezclaba con lo escrito)
+ if class == "TextBox" then obj.ClearTextOnFocus = false obj.PlaceholderText = obj.Text obj.Text = "" obj.PlaceholderColor3 = UI.Colors.TextMuted or UI.Colors.TextPrimary end
  return obj
 end
 local toggle = Instance.new("TextButton") toggle.Size = UDim2.fromOffset(110, 36) toggle.Position = UDim2.fromScale(0.01, 0.12)
@@ -64,5 +65,5 @@ apply.Activated:Connect(function()
  invoke(a, id, (a == "Coins" or a == "Level") and tonumber(value.Text) or value.Text)
 end)
 player:GetAttributeChangedSignal("ModerateAllowed"):Connect(refresh)
-L.Changed:Connect(function() toggle.Text = L.t("cx.admin.title") apply.Text = L.t("cx.admin.apply") search.Text = L.t("cx.admin.search") refresh() end)
+L.Changed:Connect(function() target.PlaceholderText = L.t("cx.admin.target") value.PlaceholderText = L.t("cx.admin.value") toggle.Text = L.t("cx.admin.title") apply.Text = L.t("cx.admin.apply") search.Text = L.t("cx.admin.search") refresh() end)
 refresh()

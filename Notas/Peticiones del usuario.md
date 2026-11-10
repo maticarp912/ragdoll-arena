@@ -27,3 +27,5 @@ Leyenda: ✅ comprobado en Studio · 🟡 implementado, sin probar jugando · �
 | 10/11/2026 | Revisar los reportes de la ronda 1 | [[Integración 0.2]] | ✅ revisados; 5 desajustes para la integración |
 | 10/11/2026 | Integrar la ronda 1 | [[Integración 0.2]] | ✅ código integrado (I1 a I5 y pedidos); ⬜ pruebas en Studio en sesión nueva |
 | 10/11/2026 | Skins de la ruleta: solo ruleta (D23) | [[Integración 0.2]] | 🟡 implementado, sin probar |
+| 10/11/2026 15:22 | Integración de la ronda 1 en Studio (el usuario jugó la 1v1; Claude probó el resto) | [[Reporte 0.2 Integración]] | ✅ mayormente; pendientes listados |
+| 10/11/2026 15:15 | Seguir solo, aplicar todo directo y continuar con la ronda 2 usando Codex y Gemini por sus CLI | [[Plan de desarrollo 0.2]] | 🔧 en curso |

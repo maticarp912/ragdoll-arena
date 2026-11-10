@@ -7,6 +7,9 @@ local CombatConfig = require(RS:WaitForChild("CombatConfig"))
 local Service = {}
 local resolved, attempted = {}, {}
 function Service.isOwner(player)
+ -- Integración 0.2: en Studio el place sin publicar tiene CreatorId = 0 y nadie sería Owner. Para probar el panel
+ -- y los cosméticos, poné en edición workspace:SetAttribute("StudioOwnerUserId", <tu UserId>). Solo vale en Studio.
+ if RunService:IsStudio() and workspace:GetAttribute("StudioOwnerUserId") == player.UserId then return true end
  return game.CreatorType == Enum.CreatorType.User and player.UserId == game.CreatorId
 end
 -- I4 (integración 0.2): Studio, la opción de depuración en vivo y la lista de IDs de CombatConfig
