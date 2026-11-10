@@ -56,3 +56,30 @@ Propuestas de diseño, NO cambios a WeaponData ni pruebas en Studio. Ver [[Dise�
 - Dagas: agilidad de cambio no equivale a ataque sin anticipación; estudiar lectura con ping. Espadón mantiene alcance/empuje y compromiso.
 - No aumentar velocidad de defensa ni ventana de parry por ser celular; propuesta de misma regla y compensación acotada, pendiente de validar con mando conectado al teléfono.
 **Implementado:** sin cambios. **Comprobado en Studio:** sin pruebas nuevas. **Pendiente:** aprobación, prototipo y mediciones por arma/dispositivo.
+
+## Propuesta de números para la 0.2 (Claude, 10/11) — pendiente de aprobar
+**Pedido del usuario:**
+- más alcance para todas las armas;
+- reforzar la maza y bajar las dagas y el estoque;
+- las armas grandes se sienten muy débiles y hay mucha diferencia de velocidad.
+
+Lo habló con Gemini Pro desde el celular, sin acceso al vault ni al código. Estos números salen de `WeaponData`.
+
+**Objetivo:** todas las armas en una franja de **20 a 24 de daño por segundo** en combo. Las grandes compensan su lentitud con empuje, aturdimiento e hiperarmadura, no con menos daño. La espada (21,9) es la referencia.
+
+**Alcance:** el general sube con `CombatConfig.Directional.ReachMult = 1,25`. Las armas grandes además suben su alcance propio:
+
+| Arma | Daño combo (antes → propuesta) | Duración por golpe (antes → propuesta) | Daño por segundo (antes → propuesta) | Alcance propio (antes → propuesta) | Otros |
+|---|---|---|---|---|---|
+| Espada | 11·12·16 (sin cambio) | 0,55·0,55·0,68 (sin cambio) | 21,9 | 7 | Referencia. |
+| Espadón | 17·19·26 → **19·21·29** | sin cambio | 21,5 → **23,9** | 9,5 → **10** | Fuerte: 45 → **50**. |
+| Maza | 13·15·20 → **17·19·26** | sin cambio | 15,4 → **19,9** | 7 → **8** | Golpe 3 más ancho (5 → 6,5). Fuerte: 40 → **46**. |
+| Dagas | 7·8·12 → **6·7·11** | 0,32·0,32·0,42 → **0,32·0,40·0,48** | 25,5 → **20,0** | 5 | El primer golpe sigue en 0,15 s. El 2 y el 3 impactan más tarde (0,15 → **0,19**, 0,21 → **0,25**), así queda lugar para el parry. |
+| Estoque | 9·11·15 → **8·10·14** | 0,40·0,40·0,50 → **0,40·0,45·0,55** | 26,9 → **22,9** | 10 | Punta: +25 % → **+15 %** (en la punta queda en 26,3, antes 33,7). Fallar un golpe gasta +50 % de resistencia. |
+
+**Por qué:**
+- La maza era la única muy por debajo de la franja (15,4).
+- Las dagas y el estoque estaban por arriba, y además son las más rápidas. Con ping eso se siente injusto.
+- Las grandes ganan daño **por golpe**, que es lo que se siente al pegar (encaja con el pedido de sensación de combate).
+
+**A medir en la beta:** qué arma eligen y cuál gana más. La 0.2 debería guardar esa estadística.

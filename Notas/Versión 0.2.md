@@ -63,7 +63,15 @@ Leyenda: ✅ comprobado en Studio · 🟡 implementado · 🔧 en curso · ⬜ p
 - dagas: más tiempo entre el golpe 2 y el 3;
 - maza: barrido más ancho o seguimiento del rival.
 
-Revisar con datos de la beta. | Claude | ⬜ |
+Revisar con datos de la beta.
+
+Pedido del 10/11 (habló con Gemini Pro):
+- más alcance;
+- reforzar la maza;
+- bajar dagas y estoque;
+- que las armas grandes no se sientan débiles.
+
+Números propuestos en [[Equilibrio de armas]] («Propuesta de números para la 0.2»), pendientes de aprobar. | Claude | ⬜ |
 | Arena de la Mano | Fuera de la rotación porque no se entiende como mano. Rehacerla. | Gemini (Argon) | ⬜ |
 | Revisión de Codex, ronda 6 | Pendientes: hallazgo 5 (sesión perdida), 7 (estadísticas al abandonar una partida), 8 (precios reales si vuelve Robux) y 9 (rendimiento de `CityLife` y de la caché de nombres). | Codex | ⬜ |
 | Cielo | Más estrellas usando imágenes de cielo (6 caras), si hace falta. | Claude | ⬜ |
