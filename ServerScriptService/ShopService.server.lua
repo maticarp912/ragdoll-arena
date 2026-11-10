@@ -79,7 +79,7 @@ local function shopAction(player, action, id)
  local data = PlayerData.get(player)
 	if not data then return false, { key = "loading" } end
  if action == "GetFeatured" then
-  local ids = {} for skinId, skin in Skins.Data do if skinId ~= "Default" and not skin.comingSoon then table.insert(ids, skinId) end end
+  local ids = {} for skinId, skin in Skins.Data do if skinId ~= "Default" and not skin.comingSoon and not skin.roulette then table.insert(ids, skinId) end end
   table.sort(ids) local result = {} local day = math.floor((os.time() - E.DayOffset) / E.DaySeconds)
   for i = 1, math.min(E.FeaturedCount, #ids) do table.insert(result, ids[(day * E.FeaturedCount + i - 1) % #ids + 1]) end
   return true, { ids = result, resetAt = (day + 1) * E.DaySeconds + E.DayOffset }
@@ -156,6 +156,8 @@ local function shopAction(player, action, id)
 		local skin = Skins.Data[id]
 		if not skin then return false, { key = "invalid" } end
 		if skin.comingSoon then return false, { key = "soon" } end
+		-- Decisión del usuario (10/11/2026): las skins de la ruleta solo salen de la ruleta y las cajas.
+		if skin.roulette then return false, { key = "rouletteOnly" } end
 		if PlayerData.owns(player, "OwnedSkins", id) then return false, { key = "alreadyOwned" } end
 
 		if skin.currency == "Coins" then

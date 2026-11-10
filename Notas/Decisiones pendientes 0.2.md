@@ -36,3 +36,4 @@ Si una respuesta cambia, se edita acá con fecha y hora, sin borrar la anterior.
 | D20 | Robux | ✅ Nada en la 0.2. |
 | D21 | Rojo | ✅ En la sesión de integración; el usuario instala el plugin. |
 | D22 | Hachas | ✅ Después de la 1.0. |
+| D23 | ¿Las skins de la ruleta también se venden en la tienda? | ✅ **Solo ruleta** (y cajas). Respondido el 10/11/2026. |

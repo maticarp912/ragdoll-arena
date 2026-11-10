@@ -782,7 +782,12 @@ local function inspect(id)
 	local variant = "primary"
 	local disabled = false
 
-	if st == "buy" then
+	if st == "buy" and kind == "Skin" and rec.roulette then
+		-- Solo ruleta (decisión del usuario, 10/11/2026): no se compra.
+		labelText = L.t("ui.shop.rouletteOnly")
+		variant = "secondary"
+		disabled = true
+	elseif st == "buy" then
 		labelText = L.t("buy") .. " · " .. priceText(rec)
 		variant = "gold"
 	elseif st == "equipped" then
@@ -1151,7 +1156,8 @@ function render()
 			truncate = Enum.TextTruncate.AtEnd,
 		})
 
-		local subText = (st == "buy" or kind == "Souls") and priceText(rec) or L.t(st)
+		local rouletteOnly = kind == "Skin" and rec.roulette and st == "buy"
+		local subText = rouletteOnly and L.t("ui.shop.rouletteOnly") or ((st == "buy" or kind == "Souls") and priceText(rec) or L.t(st))
 		local subColor = st == "equipped" and C.Success or ((st == "buy" or kind == "Souls") and C.Coins or C.TextSecondary)
 		UiTheme.label({
 			parent = card,

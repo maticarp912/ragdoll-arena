@@ -33,8 +33,12 @@ Reportes: [[Reporte 0.2 Claude]], [[Reporte 0.2 Codex]], [[Reporte 0.2 Gemini]].
 3. Probar en Studio con las listas de los tres reportes: primero `Directional.Enabled = false` (debe quedar como la 0.1 más la sensación), después `true`; 1v1 y 2v2 con varios clientes; celular y mando.
 4. Commit con el resultado de las pruebas.
 
-## Para decidir el usuario
-- **Skins de la ruleta a la venta:** hoy `CrimsonEclipse`, `BloodMoonCleaver` y `CataclysmMaw` también se pueden comprar en la tienda (9500 almas). Propuesta de Claude: que sean **exclusivas de la ruleta** (y de las cajas), para que el premio grande valga la pena; en la tienda se muestran con «Solo en la ruleta».
+## Decidido por el usuario
+- ✅ **Skins de la ruleta: solo ruleta** (10/11/2026, D23). El servidor rechaza su compra (`rouletteOnly`), no entran en el Destacado y la tienda las muestra con «Solo en la Ruleta». Sin probar en Studio.
+
+## Para la ronda 2 (Codex)
+- En la tienda, los multiplicadores son de muestra: «comprar» solo muestra un aviso (`LocalBoost`). Venderlos con almas de verdad va con [[Recompensas y retención 0.2]].
+- La pestaña «Almas y Monedas» usa `DebugCoins` (solo depuración). Sin Robux en la 0.2 (D20): decidir si la pestaña se quita o queda solo para Tester.
 
 ## Pruebas en Studio
 Prompt para la sesión nueva: [[0.2 Integración - pruebas en Studio]].
