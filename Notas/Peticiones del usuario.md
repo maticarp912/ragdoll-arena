@@ -149,3 +149,7 @@ Confirmado por el usuario: enfoque principal en mando y teclado/mouse; adaptar t
 ## Correcciones — 10/11/2026 12:28 (Argentina, UTC-3)
 Pedidos confirmados: combos según dirección; mejorar todas las skins al acabado de la espada de referencia; integrar esta y otras skins en la ruleta de monedas/XP, con tiradas diarias y premio principal semanal; rediseñar la tienda existente con vistas previas; separar armería (elegir armas, skins e infusión y previsualizar antes de salir) de tienda (comprar skins, multiplicadores y monedas). Detalle y referencia visual en [[Correcciones 2026-11-10 1228]]. Solo documentación; implementación y pruebas pendientes. Desde ahora, cada corrección lleva fecha y hora de Argentina; no asignar horas inventadas al historial.
 
+
+
+## Indicaciones para Gemini — 10/11/2026 15:36 (Argentina, UTC-3)
+Pedido: dejarle a Gemini las mismas indicaciones que a Claude para mantener el mismo flujo de trabajo. ✅ Nota creada: [[Indicaciones Gemini 2026-11-10 1536]]. Solo documentación.

@@ -5,10 +5,10 @@ La beta 0.1 está publicada: «[BETA] Dark Fantasy Plataforme 2v2 1v1 PVP», de 
 Leyenda: ✅ comprobado en Studio · 🟡 implementado · 🔧 en curso · ⬜ pendiente · 👤 usuario.
 
 ## 1. Bugs vistos en la beta
-| Pedido | Detalle | Resp. sugerido | Estado |
-|---|---|---|---|
-| Punto doble cuando caen los dos | Si los dos caen de la arena, hoy cada uno suma un punto. Tiene que ganar **el que cae segundo**. Hoy `MatchService` trata `alive.Red == 0 and alive.Blue == 0` como empate: guardar el orden de eliminación y darle la ronda al equipo del último en caer. | Codex | ⬜ |
-| Cámara rota en celular al fijar objetivo en partida | En el teléfono la cámara se traba o salta con el fijado automático. Revisar `Controls.client` (fijado, órbita y joystick táctil) y probar en teléfono real. | Claude | ⬜ |
+| Pedido                                              | Detalle                                                                                                                                                                                                                                                    | Resp. sugerido | Estado |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ------ |
+| Punto doble cuando caen los dos                     | Si los dos caen de la arena, hoy cada uno suma un punto. Tiene que ganar **el que cae segundo**. Hoy `MatchService` trata `alive.Red == 0 and alive.Blue == 0` como empate: guardar el orden de eliminación y darle la ronda al equipo del último en caer. | Codex          | ⬜      |
+| Cámara rota en celular al fijar objetivo en partida | En el teléfono la cámara se traba o salta con el fijado automático. Revisar `Controls.client` (fijado, órbita y joystick táctil) y probar en teléfono real.                                                                                                | Claude         | ⬜      |
 
 ## 2. Celular (prioridad alta: el hermano juega en celular)
 | Pedido | Detalle | Resp. sugerido | Estado |

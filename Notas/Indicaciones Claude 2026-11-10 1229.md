@@ -23,3 +23,7 @@ No marcar tareas como implementadas o comprobadas por estar documentadas. Probar
 
 ## Estado de esta entrega
 Codex solo actualizó documentación y guardó el concepto visual. No modificó scripts del juego, modelos ni el place. Las primeras notas y referencia están publicadas en GitHub en el commit 4b01c00. Existe una modificación previa local en Notas/Versión 0.2.md: no fue incluida ni reemplazada por Codex.
+
+
+## Copia para Gemini — 10/11/2026 15:36
+Las mismas indicaciones quedaron para Gemini en [[Indicaciones Gemini 2026-11-10 1536]]. Si una cambia, actualizar las dos.
