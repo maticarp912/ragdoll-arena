@@ -32,3 +32,6 @@ Están en la carpeta del juego, un nivel arriba: `RESUMEN_PROYECTO.md`, `ASSETS_
 ## Correcciones con fecha y hora
 - [[Correcciones 2026-11-10 1228]] — combos, acabado de skins, ruleta, tienda y armería. Nuevas correcciones: DD/MM/AAAA HH:mm (Argentina, UTC-3).
 
+
+- 10/11/2026 12:29 (Argentina): [[Indicaciones Claude 2026-11-10 1229]] — traspaso de pedidos de esta conversación.
+
