@@ -464,7 +464,7 @@ local function balancePill(parent, position, size, kind, amount, getGems)
 	local tint = gems and C.Guard or C.Coins
 	local pill = UiTheme.panel({ parent = parent, position = position, size = size,
 		anchor = Vector2.new(1, 0.5), bg = C.BgAbyss, borderColor = tint, radius = UiTheme.Radius.Pill })
-	local icon = UiAssets.icon(pill, gems and "rarity_rare" or "coin", 18, tint)
+	local icon = UiAssets.icon(pill, gems and "gem" or "soul", 18, tint) -- 11/11: arte de moneda y alma
 	icon.AnchorPoint = Vector2.new(0, 0.5) icon.Position = UDim2.new(0, 8, 0.5, 0)
 	UiTheme.label({ parent = pill, position = UDim2.fromOffset(30, 0), size = UDim2.new(1, gems and -78 or -38, 1, 0),
 		text = L.t(gems and "mz.gemsAmount" or "ui.souls", { amount = amount }), font = "Number", scaled = true,
@@ -1067,9 +1067,12 @@ local function renderVault(parent, width, mobile)
    local card = UiTheme.panel({ parent = parent, position = UDim2.fromOffset(col * (cardWidth + gap), top),
     size = UDim2.fromOffset(cardWidth, cardHeight), borderColor = item.badge and C.GoldBright or C.BorderDefault, ornaments = group == "Pass" })
    local title, description = Vault.text(item)
-   local iconByKind = { Gems = "rarity_rare", Spins = "trophy", Luck = "stamina", Aura = "crown", Skin = "armory" }
-   local iconName = item.key == "VIP" and "crown" or (iconByKind[item.kind] or "stamina")
-   local crest = UiAssets.icon(card, iconName, 30, item.kind == "Gems" and C.Guard or C.GoldBright)
+   -- 11/11: arte del usuario por oferta (UiAssets); sin imagen subida se dibuja el ícono de antes
+   local artByKey = { SkipOpening = "pass_skip", VIP = "pass_vip", Spins3 = "pack_spins_3", Luck30 = "amulet" }
+   local iconByKind = { Gems = "gem", Spins = "pack_spins_3", Luck = "amulet", Aura = "crown", Skin = "armory" }
+   local iconName = artByKey[item.key] or (item.kind == "Gems" and item.amount and ("pack_gems_" .. item.amount))
+   if not iconName or not UiAssets.Ids[iconName] then iconName = iconByKind[item.kind] or "stamina" end
+   local crest = UiAssets.icon(card, iconName, UiAssets.imageUri(iconName) and 40 or 30, item.kind == "Gems" and C.Guard or C.GoldBright)
    crest.Position = UDim2.fromOffset(14, 18)
    UiTheme.label({ parent = card, position = UDim2.fromOffset(54, 12), size = UDim2.new(1, -68, 0, 42),
     text = title, font = "Title", scaled = true, textSize = UiTheme.TextSizes.XL, color = C.TextPrimary })

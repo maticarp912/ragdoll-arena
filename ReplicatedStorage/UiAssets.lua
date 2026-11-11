@@ -54,7 +54,44 @@ UiAssets.Ids = {
 	interact           = 0,
 	lockon             = 0,
 	switch_target      = 0,
+
+	-- 11/11/2026: arte del usuario (Referencias 0.2/Arte interfaz). Pegar acá el ID de cada imagen subida.
+	-- Con 0 se usa el ícono dibujado de antes. Para retirar TODO el arte de una vez: UiAssets.UseArt = false.
+	soul               = 0, -- icono_alma.png        (almas)
+	gem                = 0, -- icono_moneda.png      (monedas)
+	amulet             = 0, -- icono_amuleto.png     (amuleto de suerte)
+	lock               = 0, -- icono_candado.png     (Skip bloqueado)
+	skip               = 0, -- icono_skip.png        (Skip)
+	vip                = 0, -- icono_vip.png         (corona VIP)
+	frame_obsidian     = 0, -- marco_obsidiana.png   (marco de panel, todavía sin usar)
+	pack_gems_400      = 0, -- pack_monedas_0400.png
+	pack_gems_850      = 0, -- pack_monedas_0850.png
+	pack_gems_2200     = 0, -- pack_monedas_2200.png
+	pack_gems_4600     = 0, -- pack_monedas_4600.png
+	pack_gems_10000    = 0, -- pack_monedas_10000.png
+	pack_spins_3       = 0, -- pack_ruleta_3_tiros.png
+	pass_skip          = 0, -- pase_skip_aperturas.png
+	pass_vip           = 0, -- pase_vip_eclipse.png
 }
+
+-- Interruptor general del arte nuevo: false = todo vuelve a los íconos dibujados (para probar y retirar).
+UiAssets.UseArt = true
+
+-- Arte a todo color: no se tiñe con el color del botón o tarjeta (los íconos viejos son blancos y sí se tiñen)
+local FULL_COLOR = {
+	soul = true, gem = true, amulet = true, lock = true, skip = true, vip = true, frame_obsidian = true,
+	pack_gems_400 = true, pack_gems_850 = true, pack_gems_2200 = true, pack_gems_4600 = true, pack_gems_10000 = true,
+	pack_spins_3 = true, pass_skip = true, pass_vip = true,
+}
+
+-- Si una clave nueva no tiene imagen, se dibuja este ícono viejo en su lugar
+local FALLBACK = {
+	soul = "coin", gem = "rarity_rare", amulet = "stamina", lock = "guard", skip = "dodge", vip = "aura_crown",
+	pack_gems_400 = "rarity_rare", pack_gems_850 = "rarity_rare", pack_gems_2200 = "rarity_rare",
+	pack_gems_4600 = "rarity_rare", pack_gems_10000 = "rarity_rare", pack_spins_3 = "trophy",
+	pass_skip = "dodge", pass_vip = "aura_crown",
+}
+UiAssets.FullColor = FULL_COLOR
 
 local ALIASES = {
 	Fire      = "infusion_fire",
@@ -86,6 +123,7 @@ end
 
 function UiAssets.imageUri(key)
 	local k = UiAssets.resolveKey(key)
+	if FULL_COLOR[k] and not UiAssets.UseArt then return nil end
 	local id = UiAssets.Ids[k]
 	if type(id) == "number" and id > 0 then
 		return "rbxassetid://" .. tostring(id)
@@ -421,6 +459,13 @@ end
 function UiAssets.icon(parent, key, sizePx, colorOverride)
 	local px = sizePx or 24
 	local uri = UiAssets.imageUri(key)
+	local resolved = UiAssets.resolveKey(key)
+	if not uri and FALLBACK[resolved] then
+		key = FALLBACK[resolved]
+		uri = UiAssets.imageUri(key)
+	elseif uri and FULL_COLOR[resolved] then
+		colorOverride = nil -- el arte a color no se tiñe
+	end
 	if uri then
 		local img = Instance.new("ImageLabel")
 		img.Name = "Icon_" .. tostring(key)

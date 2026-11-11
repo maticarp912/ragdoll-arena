@@ -182,7 +182,7 @@ local function balancePill(parent, position, size, kind, amount, getGems)
 	local tint = gems and C.Guard or C.Coins
 	local pill = UiTheme.panel({ parent = parent, position = position, size = size,
 		anchor = Vector2.new(1, 0.5), bg = C.BgAbyss, borderColor = tint, radius = UiTheme.Radius.Pill })
-	local icon = UiAssets.icon(pill, gems and "rarity_rare" or "coin", 18, tint)
+	local icon = UiAssets.icon(pill, gems and "gem" or "soul", 18, tint)
 	icon.AnchorPoint = Vector2.new(0, 0.5) icon.Position = UDim2.new(0, 8, 0.5, 0)
 	UiTheme.label({ parent = pill, position = UDim2.fromOffset(30, 0), size = UDim2.new(1, gems and -78 or -38, 1, 0),
 		text = L.t(gems and "mz.gemsAmount" or "ui.souls", { amount = amount }), font = "Number", scaled = true,
@@ -663,7 +663,7 @@ local function animateCarousel(job, stage, pool, reward)
 					entry.preview = makeWeaponPreview3D(entry.frame, skin.weapon or "Sword", sid,
 						{ REVEAL.CardGap, REVEAL.CardIconY, REVEAL.CardWidth - REVEAL.CardGap * 2, REVEAL.CardNameY - REVEAL.CardIconY }, false)
 				else
-					entry.preview = UiAssets.icon(entry.frame, entry.reward.kind == "Box" and "trophy" or (entry.reward.kind == "Gems" and "rarity_rare" or "coin"), REVEAL.CardIconSize, rewardColor(entry.reward))
+					entry.preview = UiAssets.icon(entry.frame, entry.reward.kind == "Box" and "trophy" or (entry.reward.kind == "Gems" and "gem" or "soul"), REVEAL.CardIconSize, rewardColor(entry.reward))
 					entry.preview.AnchorPoint = Vector2.new(0.5, 0) entry.preview.Position = UDim2.new(0.5, 0, 0, REVEAL.CardIconY)
 				end
 				entry.preview.ZIndex = REVEAL.Layer.Preview
@@ -798,7 +798,7 @@ local function runCelebration(job)
 		local vp = makeWeaponPreview3D(stage, skin.weapon or "Sword", sid, { 0, 0, 0, 0 }, true)
 		vp.Size = UDim2.fromScale(1, 1) vp.ZIndex = REVEAL.Layer.Preview
 	else
-		local icon = UiAssets.icon(stage, reward.kind == "Box" and "trophy" or (reward.kind == "XP" and "mission" or (reward.kind == "Gems" and "rarity_rare" or "coin")), REVEAL.ChestSize, color)
+		local icon = UiAssets.icon(stage, reward.kind == "Box" and "trophy" or (reward.kind == "XP" and "mission" or (reward.kind == "Gems" and "gem" or "soul")), REVEAL.ChestSize, color)
 		icon.AnchorPoint = Vector2.new(0.5, 0.5) icon.Position = UDim2.fromScale(0.5, 0.5) icon.ZIndex = REVEAL.Layer.Preview
 	end
 	local name = revealLabel(box, rewardName(reward), REVEAL.NameY + extraHeight, REVEAL.NameH, jackpot and REVEAL.JackpotNameSize or REVEAL.NameSize, color)
@@ -932,7 +932,7 @@ local function boxOpenButton(props, id, spec)
 end
 
 local ODDS_RARITIES = { "Exclusive", "Legendary", "Epic", "Rare", "Common" }
-local ODDS_ICONS = { Souls = "coin", Gems = "rarity_rare", Boost = "stamina", XP = "stamina", Box = "mission" }
+local ODDS_ICONS = { Souls = "soul", Gems = "gem", Boost = "stamina", XP = "stamina", Box = "mission" }
 
 function showOddsModal(id, messageKey)
  if spinning or busy or not serverStateReady then return end
