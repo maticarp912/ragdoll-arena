@@ -77,3 +77,18 @@ Implementado, **sin probar en Studio**:
   La rareza de cada skin sale del precio de su original: hasta 1500 = Rara (7 skins), hasta 3100 = Épica (16), más = Legendaria (13). No se compran en la tienda y solo aparecen en la armería y la tienda si ya las tenés. La Reliquia ya no puede dar skins de Tormenta. Nombres: «<original> de Tormenta» / «Storm …» / «… da Tempestade».
 - **Tipografía:** títulos en Grenze Gotisch (gótica), textos en Merriweather (serif clásica) y números en Builder Sans. Se cambia en un solo lugar: `UiTheme.Fonts`, `UiTheme.FontFaces` y `Theme.Fonts`. Si una fuente no existiera, cae sola a la anterior. Ojo: Merriweather es más ancha que Gotham y puede que algún texto quede cortado; avisar dónde.
 - **Para Codex:** revisión de las cajas, la colección y sus pendientes en [[0.2 Revisión final - Codex]] (la manda el usuario).
+
+## Revisión final de Codex integrada (11/11, 00:40)
+Codex revisó todo y lo dejó en [[Reporte 0.2 Codex]] («Revisión final (11/11)»). Claude leyó sus cambios: nada roto, check_lua y LihFolk OK.
+- **Codex:**
+  - las cajas de los perfiles viejos se completan solas (`Rewards.reconcile`);
+  - las skins de Tormenta no cuentan en la colección por arma;
+  - la pantalla de cajas conserva el desplazamiento y el foco del mando;
+  - queda un solo catálogo de multiplicadores (`Rewards.Boosts`, se borró `BoostShop`);
+  - recibos de Robux con IDs repetidos quedan pendientes en vez de dar el cosmético equivocado;
+  - hallazgos 5, 7 y 9 revisados: ya estaban resueltos.
+- **Claude, lo que Codex le dejó:**
+  - cupo por hora de cajas, tiros y racha en el panel (`Roles.Admin.HourUnits` = 300, compartido entre destinatarios);
+  - textos «Ruleta o Caja de Reliquias» (D23 confirmada por el usuario a las 00:23);
+  - si un equipo se queda sin jugadores, la serie termina y gana el otro (`MatchService`).
+- Sigue sin probar en Studio: perfil de la 0.1 con las cajas nuevas, las cinco cajas en celular y con mando, abandono en 1v1 y 2v2.

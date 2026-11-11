@@ -15,14 +15,14 @@ Leyenda (revisada el 10/11 22:50): ✅ hecho y comprobado (en Studio o jugando e
 - Sin probar todavía: 2v2, mando y teléfono real.
 **👤 Opinión del usuario (10/11 23:59):** «el juego se ve bien en todo» y «en general ya está todo listo». Lo único que marcó fueron los tirones en la tienda y el mouse.
 **🔍 Nuevo, sin probar (23:59):** tienda, armería y recompensas sin tirones (sin CanvasGroup); tres cajas de Tormenta con las 36 skins con rayos; tipografía nueva; anclado al piso (no subirse encima).
-**🔧 Revisión de Codex:** [[0.2 Revisión final - Codex]] (la manda el usuario).
-**⬜ Falta agregar:** sangrado de dagas, animaciones de captura para dagas y estoque, Arena de la Mano, clasificatorias con Elo, tableros en la plaza, ciudad estilo pueblo, cielo, hallazgos 5/7/8/9 de Codex, mallas de Blender (decidir si se rehacen con los diseños de la 0.1), revisión de seguridad de la ronda 3.
+**✅ Revisión final de Codex hecha e integrada (11/11 00:40):** ver [[Integración 0.2]]. Falta probar en Studio lo que lista.
+**⬜ Falta agregar:** sangrado de dagas, animaciones de captura para dagas y estoque, Arena de la Mano, clasificatorias con Elo, tableros en la plaza, ciudad estilo pueblo, cielo, mallas de Blender (decidir si se rehacen con los diseños de la 0.1), revisión de seguridad de la ronda 3.
 **👤 Usuario:** UserId de Mateito, ícono y miniatura de la página, instalar Rojo (opcional), subir mallas cuando se decida.
 
 ## 1. Bugs vistos en la beta
 | Pedido                                              | Detalle                                                                                                                                                                                                                                                    | Resp. sugerido | Estado |
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ------ |
-| Punto doble cuando caen los dos                     | Si los dos caen de la arena, hoy cada uno suma un punto. Tiene que ganar **el que cae segundo**. Hoy `MatchService` trata `alive.Red == 0 and alive.Blue == 0` como empate: guardar el orden de eliminación y darle la ronda al equipo del último en caer. | Codex          | 🔍 Codex ronda 1: gana el último en caer; falta probar caídas simultáneas y 2v2 |
+| Punto doble cuando caen los dos                     | Si los dos caen de la arena, hoy cada uno suma un punto. Tiene que ganar **el que cae segundo**. Hoy `MatchService` trata `alive.Red == 0 and alive.Blue == 0` como empate: guardar el orden de eliminación y darle la ronda al equipo del último en caer. | Codex          | 🔍 gana el último en caer (Codex); 11/11: si un equipo abandona, termina la serie. Falta probar caídas simultáneas y 2v2 |
 | Cámara rota en celular al fijar objetivo en partida | En el teléfono la cámara se traba o salta con el fijado automático. Revisar `Controls.client` (fijado, órbita y joystick táctil) y probar en teléfono real.                                                                                                | Claude         | 🔍 ✅ en el emulador; falta teléfono real (Mateito) |
 
 ## 2. Celular (prioridad alta: el hermano juega en celular)
@@ -54,8 +54,7 @@ Leyenda (revisada el 10/11 22:50): ✅ hecho y comprobado (en Studio o jugando e
 |---|---|---|---|
 | Roles | Owner, Admin, Mod, Tester, VIP, Nuevo, etc. Etiqueta con color sobre la cabeza y en el chat. El rol se decide en el servidor por lista de UserIds (en un módulo de datos), y «Nuevo» por las horas jugadas. | Codex | ✅ roles en el servidor y etiqueta sobre la cabeza (Studio); 👤 falta el UserId de Mateito |
 | El Owner tiene todo | El Owner (PapuDoNacimento) tiene todas las armas, skins y auras sin comprarlas. | Codex | ✅ comprobado en Studio con el gancho `StudioOwnerUserId` |
-| Panel de administración | Solo Owner y Admin. Buscar un jugador y darle monedas, armas, skins, auras, nivel o rol. Todo se valida en el servidor y queda registrado (quién dio qué a quién). | Codex (servidor) + Gemini (interfaz) | 🔍 abre y responde en Studio; los campos se arreglaron y falta volver a probarlos escribiendo. Sin cuota por hora para cajas y tiros |
-
+| Panel de administración | Solo Owner y Admin. Buscar un jugador y darle monedas, armas, skins, auras, nivel o rol. Todo se valida en el servidor y queda registrado (quién dio qué a quién). | Codex (servidor) + Gemini (interfaz) | 🔍 abre y responde en Studio; 11/11: cupo por hora de cajas y tiros. Falta volver a probar los campos escribiendo |
 ## 6. Progresión
 | Pedido | Detalle | Resp. sugerido | Estado |
 |---|---|---|---|
@@ -87,7 +86,7 @@ Pedido del 10/11 (habló con Gemini Pro):
 
 Números propuestos en [[Equilibrio de armas]] («Propuesta de números para la 0.2»), aprobados (D3) y aplicados en `WeaponData`. 10/11: espadón y maza más rápidos y con contragolpe de peso. | Claude | 🔍 sin probar en partida |
 | Arena de la Mano | Fuera de la rotación porque no se entiende como mano. Rehacerla. | Gemini (Argon) | ⬜ |
-| Revisión de Codex, ronda 6 | Pendientes: hallazgo 5 (sesión perdida), 7 (estadísticas al abandonar una partida), 8 (precios reales si vuelve Robux) y 9 (rendimiento de `CityLife` y de la caché de nombres). | Codex | ⬜ hallazgos 5, 7, 8 y 9 sin tocar |
+| Revisión de Codex, ronda 6 | Pendientes: hallazgo 5 (sesión perdida), 7 (estadísticas al abandonar una partida), 8 (precios reales si vuelve Robux) y 9 (rendimiento de `CityLife` y de la caché de nombres). | Codex | ✅ 5, 7 y 9 ya resueltos; 8 (recibos) arreglado; precios de Robux para cuando vuelva Robux |
 | Cielo | Más estrellas usando imágenes de cielo (6 caras), si hace falta. | Claude | ⬜ |
 | Rojo | Cambios en vivo en Studio sin regenerar el place. | Claude | 🔍 `default.project.json` creado; 👤 falta instalar Rojo (CLI y plugin) |
 | Robux | Productos y precios reales, más adelante. | 👤 + Codex | ⬜ la 0.2 es sin Robux; el paquete de tiros con Robux queda preparado con `productId = 0` |

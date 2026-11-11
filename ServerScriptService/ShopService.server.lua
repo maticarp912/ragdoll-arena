@@ -1,5 +1,3 @@
-local Theme = require(game:GetService("ReplicatedStorage"):WaitForChild("Theme"))
-local N = Theme.Metrics
 local E = require(game:GetService("ReplicatedStorage"):WaitForChild("Economy"))
 -- Script: ServerScriptService/ShopService
 -- Tienda de skins (monedas o Robux) y selección de arma.
@@ -204,33 +202,33 @@ ShopRF.OnServerInvoke = function(player, action, id)
  return ok,message
 end
 
--- Compras con Robux: se concede la skin y se confirma el recibo
-local productToSkin = {}
-for id, skin in Skins.Data do
-	if skin.productId and skin.productId > N.Zero then
-		productToSkin[skin.productId] = id
-	end
-end
-
-local productToAura = {}
-for id, aura in Auras.Data do
- if aura.productId > E.Zero then
-  if productToSkin[aura.productId] then warn("[Shop] Duplicate productId: " .. tostring(aura.productId))
-  else productToAura[aura.productId] = id end
+-- Keep receipt mappings for previously configured products. Ambiguous IDs cannot grant a cosmetic.
+local receiptProducts = {}
+local function registerReceiptProducts(catalog, isAura)
+ for id, item in catalog do
+  local productId = item.productId
+  if productId and productId > E.Zero then
+   local existing = receiptProducts[productId]
+   if existing == nil then
+    receiptProducts[productId] = { id = id, isAura = isAura }
+   elseif existing then
+    receiptProducts[productId] = false
+    warn("[Shop] Duplicate receipt productId: " .. tostring(productId))
+   end
+  end
  end
 end
+registerReceiptProducts(Skins.Data, false)
+registerReceiptProducts(Auras.Data, true)
 
 MarketplaceService.ProcessReceipt = function(info)
-	local player = Players:GetPlayerByUserId(info.PlayerId)
-	if not player then return Enum.ProductPurchaseDecision.NotProcessedYet end
+ local player = Players:GetPlayerByUserId(info.PlayerId)
+ local product = receiptProducts[info.ProductId]
+ if not player or not product or not PlayerData.get(player) then
+  return Enum.ProductPurchaseDecision.NotProcessedYet
+ end
 
-	local auraId = productToAura[info.ProductId]
- local skinId = auraId or productToSkin[info.ProductId]
-	if not skinId or not PlayerData.get(player) then
-		return Enum.ProductPurchaseDecision.NotProcessedYet
-	end
-
-	if PlayerData.processReceipt(player, tostring(info.PurchaseId), skinId, auraId ~= nil) then
+ if PlayerData.processReceipt(player, tostring(info.PurchaseId), product.id, product.isAura) then
   return Enum.ProductPurchaseDecision.PurchaseGranted
  end
  return Enum.ProductPurchaseDecision.NotProcessedYet

@@ -43,7 +43,7 @@ RF.OnServerInvoke = function(player, action, targetId, value)
  end
  if action ~= "Kick" and action ~= "Mute" and action ~= "Unmute" and not RoleService.has(player, "Admin") then return response(false) end
  local b = budgets[player]
- if not b or now - b.at >= Roles.Admin.Window then b = { at = now, actions = 0, coins = 0 } budgets[player] = b end
+ if not b or now - b.at >= Roles.Admin.Window then b = { at = now, actions = 0, coins = 0, units = 0 } budgets[player] = b end
  if b.actions >= Roles.Admin.HourActions then return response(false) end
  local d = Data.get(target)
  local ok = false
@@ -51,7 +51,11 @@ RF.OnServerInvoke = function(player, action, targetId, value)
   if type(value) ~= "number" or value ~= value or value % 1 ~= 0 or value < 1 or value > Roles.Admin.MaxCoins or b.coins + value > Roles.Admin.HourCoins then return response(false) end
   b.coins += value Data.addCoins(target, value) ok = true
  elseif action == "Box" or action == "BoxRelic" or action == "BoxSouls" or action == "Spins" or action == "Streak" then
+  -- 11/11/2026: cupo por hora de cajas, tiros y racha (Roles.Admin.HourUnits), compartido entre destinatarios
+  local units = tonumber(value) or 0
+  if units ~= units or units < 1 or units % 1 ~= 0 or b.units + units > Roles.Admin.HourUnits then return response(false) end
   ok = Rewards.admin(target, action, value)
+  if ok then b.units += units end
  elseif action == "Level" then
   ok = Progression.setLevel(target, value)
  elseif action == "Weapon" or action == "Skin" or action == "Aura" then

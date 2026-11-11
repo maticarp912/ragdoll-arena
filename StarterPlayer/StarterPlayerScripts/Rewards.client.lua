@@ -158,6 +158,8 @@ local revealRunning = false
 local serverStateReady = false
 local subModalSelection = nil
 local renderedViewport = nil
+local boxScroller = nil
+local boxScrollPosition = Vector2.zero
 
 local DEFAULT_SECTORS = {
 	{ kind = "Souls", amount = 75, probability = 0.30, rarity = "Common" },
@@ -207,7 +209,8 @@ local function buildFallbackState()
 	for _, wid in Weapons.Order do
 		local tot, own, skList = 0, 0, {}
 		for sid, s in Skins.Data do
-			if sid ~= "Default" and not s.comingSoon and (not s.weapon or s.weapon == wid) then
+			if sid ~= "Default" and not s.comingSoon and s.boxOnly ~= "Storm"
+				and (not s.weapon or s.weapon == wid) then
 				tot += 1
 				local has = ownedMap[sid] == true
 				if has then own += 1 end
@@ -764,7 +767,7 @@ end
 -- Modal "i Probabilidades" (transparencia total de Ruleta y Cajas)
 ----------------------------------------------------------------------
 function showOddsModal()
-	if spinning or busy then return end
+	if spinning or busy or not serverStateReady then return end
 	closeSubModal()
 	local veil, box = overlayBox("RewardOdds", REVEAL.OddsHeight)
 	subModal = veil subModalSelection = GuiService.SelectedObject
@@ -1083,6 +1086,16 @@ function render()
 		state = buildFallbackState()
 	end
 
+	local focusedBoxButtonName = nil
+	if boxScroller then
+		boxScrollPosition = boxScroller.CanvasPosition
+		local selected = GuiService.SelectedObject
+		if selected and selected:IsDescendantOf(boxScroller) then
+			focusedBoxButtonName = selected.Name
+		end
+		boxScroller = nil
+	end
+
 	for _, ch in panel:GetChildren() do
 		if ch ~= scale and not ch:IsA("UIStroke") and not ch:IsA("UICorner") and not ch:IsA("UIGradient") and ch.Name ~= "Ornaments" then
 			ch:Destroy()
@@ -1273,6 +1286,7 @@ function render()
 			text = L.t("ui.rewards.oddsBtn"),
 			variant = "secondary",
 			textSize = UiTheme.TextSizes.XS,
+			disabled = not serverStateReady,
 			onClick = showOddsModal,
 		})
 
@@ -1508,7 +1522,7 @@ function render()
 		end
 
 	------------------------------------------------------------------
-	-- PESTAÑA 2: CAJAS DE SUERTE (Caja de Almas 500 y Caja de Reliquias 1500)
+	-- PESTAÑA 2: CAJAS DE SUERTE
 	------------------------------------------------------------------
 	elseif tab == "Boxes" then
 		-- 10/11/2026: las cajas salen de Rewards.BoxOrder (Almas, Reliquia y las tres de Tormenta) y se listan
@@ -1517,8 +1531,8 @@ function render()
 		local cardW = compact and width - 40 or math.floor((width - 40 - 18 - 8) / 2)
 		local order = (RewardsConfig and RewardsConfig.BoxOrder) or { "Souls", "Relic" }
 		local look = {
-			Souls = { titleKey = "ui.rewards.boxSouls", descKey = "ui.rewards.boxSoulsDesc", color = C.Gold, icon = "coin", price = 500 },
-			Relic = { titleKey = "ui.rewards.boxRelic", descKey = "ui.rewards.boxRelicDesc", color = C.GoldBright, icon = "trophy", price = 1500, hasPity = true, preview = { "Greatsword", "BloodMoonCleaver" } },
+			Souls = { titleKey = "ui.rewards.boxSouls", descKey = "ui.rewards.boxSoulsDesc", color = C.Gold, icon = "coin" },
+			Relic = { titleKey = "ui.rewards.boxRelic", descKey = "ui.rewards.boxRelicDesc", color = C.GoldBright, icon = "trophy", hasPity = true, preview = { "Greatsword", "BloodMoonCleaver" } },
 		}
 		for id, prev in REVEAL.StormBoxPreview do
 			look[id] = { titleKey = "cx.reward.box." .. id, descKey = "cx.reward.box." .. id .. ".desc", color = REVEAL.StormBoxColor[id] or C.GoldBright, icon = "trophy", preview = prev }
@@ -1530,7 +1544,8 @@ function render()
 			if st or look[id] then
 				table.insert(boxSpecs, {
 					id = id, titleKey = lk.titleKey, descKey = lk.descKey, color = lk.color, icon = lk.icon,
-					price = (st and st.price) or lk.price or 0, count = (st and st.count) or 0,
+					price = st and st.price, count = st and st.count or 0,
+					ready = serverStateReady and st ~= nil,
 					hasPity = lk.hasPity == true, preview = lk.preview,
 				})
 			end
@@ -1548,6 +1563,7 @@ function render()
 			holder.ScrollingDirection = Enum.ScrollingDirection.Y
 			holder.Parent = body
 		end
+		boxScroller = holder
 		holder.CanvasSize = UDim2.fromOffset(0, rows * (bodyH + REVEAL.MobileGap))
 
 		for idx, bSpec in boxSpecs do
@@ -1569,6 +1585,7 @@ function render()
 				text = L.t(bSpec.titleKey),
 				font = "Title",
 				textSize = UiTheme.TextSizes.XXL,
+				scaled = compact,
 				color = bSpec.color,
 				alignX = Enum.TextXAlignment.Center,
 			})
@@ -1639,11 +1656,13 @@ function render()
 			})
 
 			local hasOwned = bSpec.count > 0
-			local openBtnText = hasOwned
-				and L.t("ui.rewards.openOwned", { count = bSpec.count })
-				or L.t("ui.rewards.buyAndOpen", { price = bSpec.price })
+			local openBtnText = L.t("loading")
+			if bSpec.ready then
+				openBtnText = hasOwned and L.t("ui.rewards.openOwned", { count = bSpec.count })
+					or L.t("ui.rewards.buyAndOpen", { price = bSpec.price })
+			end
 
-			UiTheme.button({
+			local openButton = UiTheme.button({
 				name = "OpenBox_" .. bSpec.id,
 				parent = bCard,
 				anchor = Vector2.new(0.5, 1),
@@ -1653,6 +1672,7 @@ function render()
 				font = "Title",
 				textSize = UiTheme.TextSizes.LG,
 				variant = "gold",
+				disabled = not bSpec.ready,
 				onClick = function()
 					if busy or spinning then return end
 					local candidates = boxCandidates(bSpec.id)
@@ -1666,7 +1686,12 @@ function render()
 					end)
 				end,
 			})
+			if compact then
+				openButton.TextScaled = true
+				UiTheme.textConstraint(openButton, UiTheme.TextSizes.XS, UiTheme.TextSizes.LG)
+			end
 		end
+		holder.CanvasPosition = boxScrollPosition
 
 	------------------------------------------------------------------
 	-- PESTAÑA 3: RACHA DIARIA (7 DÍAS), BIENVENIDO DE VUELTA Y PRIMEROS PASOS
@@ -2126,7 +2151,8 @@ function render()
 	})
 
 	if UIS.GamepadEnabled and firstTabBtn and not subModal then
-		GuiService.SelectedObject = firstTabBtn
+		local focusedBox = boxScroller and focusedBoxButtonName and boxScroller:FindFirstChild(focusedBoxButtonName, true)
+		GuiService.SelectedObject = focusedBox and focusedBox.Selectable and focusedBox or firstTabBtn
 	end
 end
 

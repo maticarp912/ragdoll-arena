@@ -164,3 +164,48 @@ Registro: 10/11/2026 23:08 (Argentina, UTC-3). Pedido y autorización excepciona
 **Comprobado en Studio:** nada en esta entrega. Claude integra y ejecuta estas pruebas antes de marcar ✅.
 
 **Cierre de verificación — 10/11/2026 23:09 (Argentina, UTC-3):** LihFolk revisó los 89 archivos de la copia final con **0 errores, 0 avisos y 0 info**. `node tools/check_lua.js .` también pasó sobre 89 archivos. Sin cambios de Lua posteriores a esos controles.
+
+## Revisión final (11/11)
+
+Registro del 11/11/2026 00:18 (Argentina, UTC−3). Revisé los cinco commits recientes y los diffs desde `HEAD~3`, incluido `1cd1be2` (cajas de Tormenta y ventanas Frame).
+
+### Arreglado — 🟡
+
+- **Perfiles.** `PlayerData` delega todos los contadores de cajas a `Rewards.reconcile` antes de publicar el perfil. Conserva el saldo y las Reliquias válidas, crea los contadores faltantes en cero y aplica el mismo saneo entero de 0 a 100.000 a las cinco cajas.
+- **Colección.** Excluí las variantes `boxOnly = "Storm"` de la lista, del numerador y del denominador por arma, tanto en el servidor como en el respaldo del cliente. Así se mantiene el progreso de las colecciones previas y el requisito de sus auras. Las skins de Tormenta ganadas siguen equipables desde la armería. La maestría sigue contando XP de combate por arma.
+- **Pantalla de cajas.** La lista conserva su desplazamiento al reconstruirse y recupera el foco del botón de caja con mando si sigue disponible. Los títulos y botones ajustan el texto en pantalla angosta. Abrir y consultar probabilidades queda deshabilitado hasta recibir el estado del servidor, que trae los precios y el inventario.
+- **Multiplicadores y compras.** Quedó `Rewards.Boosts` como único catálogo de venta, con los precios activos de 1.200, 1.400 y 2.400 almas. Actualicé el comentario de `buyCosmetic` para que describa el cambio en memoria y el guardado diferido.
+- **Hallazgo 8, IDs de recibos.** Unifiqué el registro de skins y auras. Un ID duplicado dentro de un catálogo o entre ambos genera un aviso y su recibo queda pendiente. Los IDs únicos conservan el destino de cada cosmético. La 0.2 sigue con compras en almas.
+
+### Revisado sin cambios
+
+- **Cajas y tienda.** `BuyBox` y `OpenBox` usan la configuración de las cinco cajas. Tormenta solo entrega sus variantes. La Reliquia excluye Tormenta, conserva la garantía y puede dar las cinco skins semanales de la ruleta. La tienda rechaza la compra directa de ambos grupos y los excluye del Destacado.
+- **Presentación.** El carrusel toma candidatos de la caja elegida con probabilidad positiva y la revelación usa el premio que devuelve el servidor. El modal de probabilidades recorre las cinco cajas. El panel principal es Frame. `GroupTransparency` se usa en el CanvasGroup de la revelación.
+- **Hallazgo 5, sesión perdida.** `PlayerData` ya marca `Lost` al vencer el lease local o detectar un token ajeno, desactiva la escritura y deja de exponer el perfil a los servicios.
+- **Hallazgo 7, abandono.** El cierre estadístico ya se ejecuta antes de guardar el perfil. Registra partida y abandono una vez, sin premio para quien se va. Para Claude queda el cierre de la serie completa por abandono si se vacía un equipo. `MatchService.server.lua` todavía puede resolver rondas adicionales hasta llegar a `RoundsToWin`.
+- **Hallazgo 9, rendimiento.** `CityLife` conserva la referencia a `CityDressing` y evita la búsqueda recursiva durante partidas. La caché de nombres ya tiene vencimiento de 600 s y tope de 200 entradas.
+- **Hallazgo 8, precio premium.** El precio efectivo por producto queda para la etapa en que se habilite Robux. La rama actual rechaza esas compras y `RobuxSpinPack` está deshabilitado. La futura presentación del precio necesita `Shop.client.lua`.
+
+### Comprobado fuera de Studio
+
+- `node tools/check_lua.js .` pasó sobre 89 archivos. LihFolk examinó 89 archivos con 0 errores, 0 avisos y 0 mensajes informativos.
+- Compilé los archivos del encargo con Luau y ejecuté `Rewards`, `Skins` y `RewardService` con servicios Roblox simulados. Verifiqué migración, saneo de los cinco contadores, los 36 premios de Tormenta (7 raros, 16 épicos y 13 legendarios), colección y maestría.
+- Las cinco distribuciones de `GetState` sumaron 100 % por rareza y por premio, incluida la Reliquia con garantía (5/6 épica y 1/6 legendaria). Probé los ocho cruces caja/rareza de Tormenta con tiradas deterministas, compra para guardar, apertura de inventario, pago directo, duplicados, saldo insuficiente, tope y repetición de solicitud. La garantía de Reliquia quedó intacta al abrir Tormenta.
+- Probé el bloque de recibos con IDs simulados. Las colisiones de skins, de auras y cruzadas quedan pendientes. Los IDs únicos llegan al cosmético correcto.
+- Revisión estática del cliente a 375 px útiles. La ventana mide 343 px, las tarjetas 303 px y el botón de apertura 239 × 48 px. Las claves de las tres cajas y de su restricción de compra existen en ES, EN y PT-BR. El redondeo de cada fila del modal a dos decimales puede variar la suma visible.
+
+### Necesita Studio — ⬜
+
+- Cargar un perfil de 0.1 con Reliquias, abrir y comprar las tres cajas nuevas, reconectar y comparar inventario, saldo, colección, maestría y auras. Verificar la décima Reliquia y una skin de ruleta obtenida desde Reliquia.
+- Abrir las cinco cajas con toque, mouse y mando. En 375 px, revisar el desplazamiento hasta la última tarjeta, la recuperación del foco tras refrescar, los textos en los tres idiomas, el modal de probabilidades, el carrusel, los modelos 3D, el resultado y su conversión por duplicado. Medir rendimiento en celular.
+- En el entorno de guardado aislado, comprobar expiración y traspaso de lease, abandono 1v1/2v2 antes y durante una ronda, y comportamiento de `CityLife` con streaming. Probar recibos reales solo cuando existan productos de prueba.
+- Comprobado en Studio en esta revisión · ninguno.
+
+### Pendientes para Claude
+
+- **Cuota horaria de concesiones.** `AdminService.lua` conoce al administrador y hoy limita 100 acciones por hora, mientras `Rewards.admin` limita a 100 unidades por concesión. Falta comprobar el cupo antes de conceder y descontar las unidades del presupuesto del administrador al completar la concesión. El presupuesto tiene que compartirse entre destinatarios. `MissionService` usa `Rewards.admin` para los tiros ganados, así que el cupo corresponde al panel en `AdminService.lua`, fuera de los archivos de este encargo.
+
+### D23 confirmada — 👤
+
+- 11/11/2026 00:23 (Argentina, UTC−3). El usuario confirmó que las cinco skins del Eclipse Carmesí se consiguen en la rotación semanal de la ruleta y como premios legendarios de la Caja de Reliquias. La compra directa sigue bloqueada. Verificado por lectura del código.
+- Para la próxima revisión de interfaz: cambiar «Solo en la Ruleta» por «Ruleta o Caja de Reliquias» en los textos de tienda de los tres idiomas. Las dos claves están en `LocaleGemini.lua`, fuera de los archivos de este encargo.

@@ -60,7 +60,7 @@ local cache = {}
 local function defaults()
 	return {
 		Schema = E.Schema, Level = 1, XP = 0, PlaySeconds = 0, GrantedRole = "",
-        OwnedWeapons = {}, Titles = {}, Boxes = { Relic = 0 }, Boosts = { XP = 1, Coins = 1, XPSeconds = 0, CoinsSeconds = 0 },
+        OwnedWeapons = {}, Titles = {}, Boxes = {}, Boosts = { XP = 1, Coins = 1, XPSeconds = 0, CoinsSeconds = 0 },
         Coins = 0,
         Stats = { Wins = 0, Kills = 0, Knockdowns = 0, Matches = 0, Coins = 0 }, Daily = {}, FirstWinDay = -1,
         OwnedAuras = {}, EquippedAura = "", Receipts = {}, Options = {},
@@ -174,9 +174,7 @@ function PlayerData.load(player: Player)
   data.Level = math.floor(finite(data.Level, 1, 1, P.MaxLevel))
   data.XP = finite(data.XP, 0, 0, P.MaxGrant)
   data.PlaySeconds = finite(data.PlaySeconds, 0, 0, E.MaxPlaySeconds)
-  if type(data.Boxes) ~= "table" then data.Boxes = {} end
   if type(data.Boosts) ~= "table" then data.Boosts = {} end
-  data.Boxes.Relic = math.floor(finite(data.Boxes.Relic, 0, 0, P.MaxGrant))
   for _, kind in { "XP", "Coins" } do
    data.Boosts[kind] = finite(data.Boosts[kind], 1, 1, P.MaxMultiplier)
    data.Boosts[kind .. "Seconds"] = finite(data.Boosts[kind .. "Seconds"], 0, 0, P.MaxBoostSeconds)
@@ -189,6 +187,7 @@ function PlayerData.load(player: Player)
  else
   warn("[PlayerData] Studio profile is temporary; persistent purchases are disabled.")
  end
+ -- Reconcile every box counter before exposing the profile to services.
  R.reconcile(data)
  data.TouchLayout = touchLayout(data.TouchLayout) or {}
  leaseUntil[player] = writable[player] and saved.Session.expires or nil
@@ -295,7 +294,7 @@ function PlayerData.equipAura(player, id)
  if not data or (id~="" and not PlayerData.owns(player, "OwnedAuras", id)) then return false end
  data.EquippedAura=id refresh(player) return true
 end
--- Earned-soul purchases apply price and ownership together, without yielding.
+-- Update the coin balance and cosmetic ownership together in memory, then queue a save.
 function PlayerData.buyCosmetic(player, id, price, aura)
  local data = PlayerData.get(player)
  if not data or closing[player] then return false, "loading" end
@@ -304,7 +303,6 @@ function PlayerData.buyCosmetic(player, id, price, aura)
  local field=aura and "OwnedAuras" or "OwnedSkins"
  if data[field][id] then return false, "alreadyOwned" end
  if data.Coins<price then return false, "noCoins" end
- -- Earned currency uses the same atomic, non-yielding profile path as rewards.
  data.Coins -= price data[field][id] = true refresh(player) PlayerData.saveSoon(player)
  return true, "acquired"
 end

@@ -130,7 +130,8 @@ function Service.collection(player)
  for weapon, aura in R.Collection do
   local owned, total, ids = 0, 0, {}
   for id, skin in Skins.Data do
-   if id ~= "Default" and not skin.comingSoon and (not skin.weapon or skin.weapon == weapon) then
+   if id ~= "Default" and not skin.comingSoon and skin.boxOnly ~= "Storm"
+    and (not skin.weapon or skin.weapon == weapon) then
     total += 1 local has = Data.owns(player, "OwnedSkins", id)
     if has then owned += 1 end
     table.insert(ids, { id = id, owned = has })

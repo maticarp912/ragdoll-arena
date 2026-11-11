@@ -34,10 +34,6 @@ local R = {
   { kind = "Boost", boost = "XP", multiplier = 3, seconds = 3600, weight = 5 },
   { kind = "Boost", boost = "Coins", multiplier = 3, seconds = 3600, weight = 5 },
  },
- BoostShop = {
-  XP15 = { price = 500, boost = "XP", multiplier = 1.5, seconds = 900 }, XP2 = { price = 1200, boost = "XP", multiplier = 2, seconds = 1800 },
-  Souls15 = { price = 500, boost = "Coins", multiplier = 1.5, seconds = 900 }, Souls2 = { price = 1200, boost = "Coins", multiplier = 2, seconds = 1800 },
- },
  AntiAFK = { Sample = 0.5, MinSeconds = 1, MinDistance = 6, MinEvents = 1, MaxStep = 16, MinStep = 0.4 },
  CollectionAuras = { Sword = "AshCrown", Greatsword = "SmokeWings", Dagger = "FootShroud", Rapier = "GraveRunes", Mace = "SpectralChains" },
 }

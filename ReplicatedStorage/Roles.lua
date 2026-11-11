@@ -11,5 +11,5 @@ return {
   Nuevo = { priority = 10, color = Color3.fromRGB(120,220,150), ids = {}, names = {}, permissions = {} },
   Player = { priority = 0, color = Color3.fromRGB(220,220,220), ids = {}, names = {}, permissions = {} },
  },
- Admin = { Interval = 0.5, MaxCoins = 10000, MaxLevel = 100, HourCoins = 50000, HourActions = 100, AuditLimit = 200, Window = 3600, MuteSeconds = 600 },
+ Admin = { Interval = 0.5, MaxCoins = 10000, MaxLevel = 100, HourCoins = 50000, HourActions = 100, HourUnits = 300, AuditLimit = 200, Window = 3600, MuteSeconds = 600 },
 }

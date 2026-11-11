@@ -447,7 +447,18 @@ local function runMatch(group, modeName: string)
  Stats.begin(group, modeName)
 	local wins = { Red = 0, Blue = 0 }
 	local round = 0
+	-- 11/11/2026: si un equipo se queda sin jugadores (abandono), la serie termina y gana el otro
+	local function present(teamName)
+		for _, player in teamsMap[teamName] do if player.Parent then return true end end
+		return false
+	end
+	local forfeitWinner = nil
 	while wins.Red < CONFIG.RoundsToWin and wins.Blue < CONFIG.RoundsToWin and round < CONFIG.MaxRounds do
+		local red, blue = present("Red"), present("Blue")
+		if not red or not blue then
+			forfeitWinner = (red and "Red") or (blue and "Blue") or nil
+			break
+		end
 		round += 1
 		local winner = runRound(round, modeName, teamsMap)
 		if winner then wins[winner] += 1 end
@@ -455,8 +466,10 @@ local function runMatch(group, modeName: string)
 		task.wait(E.RoundEndTime)
 	end
 
-	local matchWinner = nil
-	if wins.Red > wins.Blue then matchWinner = "Red" elseif wins.Blue > wins.Red then matchWinner = "Blue" end
+	local matchWinner = forfeitWinner
+	if not matchWinner then
+		if wins.Red > wins.Blue then matchWinner = "Red" elseif wins.Blue > wins.Red then matchWinner = "Blue" end
+	end
 	if matchWinner then
 		setStatus("cx.match.winner", { teamKey = "team." .. matchWinner })
 	end
