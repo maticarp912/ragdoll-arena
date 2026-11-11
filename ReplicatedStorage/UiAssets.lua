@@ -57,21 +57,28 @@ UiAssets.Ids = {
 
 	-- 11/11/2026: arte del usuario (Referencias 0.2/Arte interfaz). Pegar acá el ID de cada imagen subida.
 	-- Con 0 se usa el ícono dibujado de antes. Para retirar TODO el arte de una vez: UiAssets.UseArt = false.
-	soul               = 0, -- icono_alma.png        (almas)
-	gem                = 0, -- icono_moneda.png      (monedas)
-	amulet             = 0, -- icono_amuleto.png     (amuleto de suerte)
-	lock               = 0, -- icono_candado.png     (Skip bloqueado)
-	skip               = 0, -- icono_skip.png        (Skip)
-	vip                = 0, -- icono_vip.png         (corona VIP)
-	frame_obsidian     = 0, -- marco_obsidiana.png   (marco de panel, todavía sin usar)
-	pack_gems_400      = 0, -- pack_monedas_0400.png
-	pack_gems_850      = 0, -- pack_monedas_0850.png
-	pack_gems_2200     = 0, -- pack_monedas_2200.png
-	pack_gems_4600     = 0, -- pack_monedas_4600.png
-	pack_gems_10000    = 0, -- pack_monedas_10000.png
-	pack_spins_3       = 0, -- pack_ruleta_3_tiros.png
-	pass_skip          = 0, -- pase_skip_aperturas.png
-	pass_vip           = 0, -- pase_vip_eclipse.png
+	soul               = 134654221859108, -- icono_alma.png        (almas)
+	gem                = 78823117403465, -- icono_moneda.png      (monedas)
+	amulet             = 106423441679908, -- icono_amuleto.png     (amuleto de suerte)
+	lock               = 85115316891177, -- icono_candado.png     (Skip bloqueado)
+	skip               = 76314126269519, -- icono_skip.png        (Skip)
+	vip                = 92539242850581, -- icono_vip.png         (corona VIP)
+	frame_obsidian     = 134211523830539, -- marco_obsidiana.png   (marco de panel, todavía sin usar)
+	pack_gems_400      = 96155066678089, -- pack_monedas_0400.png
+	pack_gems_850      = 116253031835080, -- pack_monedas_0850.png
+	pack_gems_2200     = 80218170316347, -- pack_monedas_2200.png
+	pack_gems_4600     = 90077279241401, -- pack_monedas_4600.png
+	pack_gems_10000    = 131416292676315, -- pack_monedas_10000.png
+	pack_spins_3       = 75417800650244, -- pack_ruleta_3_tiros.png
+	pass_skip          = 120398082207425, -- pase_skip_aperturas.png
+	pass_vip           = 108842582911580, -- pase_vip_eclipse.png
+	-- Cofres del 1 al 6, cerrado y abierto (subidos el 11/11)
+	chest_1_closed     = 117493290127703, chest_1_open = 131124602014011, -- hierro
+	chest_2_closed     = 112102957287363, chest_2_open = 81121421030094,  -- plata
+	chest_3_closed     = 81738317245230,  chest_3_open = 133906942535835, -- verdín
+	chest_4_closed     = 102803368763178, chest_4_open = 91502582109751,  -- violeta
+	chest_5_closed     = 82406256229173,  chest_5_open = 86978747416585,  -- oro
+	chest_6_closed     = 111801149076401, chest_6_open = 86485483140880,  -- eclipse
 }
 
 -- Interruptor general del arte nuevo: false = todo vuelve a los íconos dibujados (para probar y retirar).

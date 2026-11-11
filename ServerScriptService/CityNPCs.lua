@@ -59,15 +59,10 @@ function Service.start(cityFolder,ctx)
   else clothing("Hood",C.HoodSize,char:FindFirstChild("Head"),CFrame.new(0,0.15,0.15)) end
   char.Parent=folder char:PivotTo(CFrame.new(origin+C.Route[index]+Vector3.yAxis*C.SpawnHeight))
   pcall(function() root:SetNetworkOwner(nil) end)
-  -- Animate R15 joints without relying on uploaded animation IDs.
-  local joints={}
-  for _,obj in char:GetDescendants() do if obj:IsA("Motor6D") and (obj.Name=="LeftHip" or obj.Name=="RightHip" or obj.Name=="LeftShoulder" or obj.Name=="RightShoulder") then joints[obj]=obj.C0 end end
-  local animation=RunService.Heartbeat:Connect(function()
-   if not char.Parent then return end
-   local moving=root.AssemblyLinearVelocity.Magnitude>1
-   local swing=moving and math.sin(workspace:GetServerTimeNow()*5)*0.28 or 0
-   for joint,base in joints do if joint.Parent then joint.C0=base*CFrame.Angles(joint.Name:find("Left") and swing or -swing,0,0) end end
-  end)
+  -- 11/11/2026 (rendimiento): brazos y piernas los anima cada cliente (StarterPlayerScripts/Performance).
+  -- Antes se movían acá 60 veces por segundo y cada cambio viajaba por la red a todos los jugadores.
+  game:GetService("CollectionService"):AddTag(char,"CityWalker")
+  local animation={Disconnect=function() end}
   local waypoint=index
   while folder.Parent and char.Parent and hum.Health>0 do
    waypoint=waypoint%#C.Route+1

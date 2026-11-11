@@ -50,6 +50,7 @@ local REVEAL = {
 	ConfirmHeight = 250, ConfirmTextY = 28, ConfirmTextH = 130, ConfirmGap = 12,
 	MobileWheelHeight = 510, MobileBoxHeight = 245, MobileGap = 14, MobileTabHeight = 44,
 	BoxCardHeight = 204,
+	ChestArtScale = 2, -- 11/11: tamaño del arte del cofre respecto del cofre dibujado
 	CompactWidth = 375, CompactHeader = 112, CompactBodyY = 174,
 	CompactMaxHeight = 780, CompactRowHeight = 58, CompactStepHeight = 48,
 	CompactTitleHeight = 30, CompactTextSize = 13, WeeklyHeight = 114, DesktopWeeklyHeight = 82,
@@ -88,6 +89,12 @@ local CHEST_TIERS = {
 	StormRoyal = { size = 74, stroke = 2.6, color = C.Coins, bg = UiTheme.Rarities.Legendary.bg, icon = "crown", image = "", openedImage = "" },
 	Eclipse = { size = 80, stroke = 3, color = C.GoldBright, bg = C.GoldDark, icon = "crown", lightning = true, image = "", openedImage = "" },
 }
+-- 11/11/2026: arte de los cofres del usuario (UiAssets chest_N_closed / chest_N_open). Sin imagen o con
+-- UiAssets.UseArt = false se dibuja el cofre de marcos de antes.
+for i, id in { "Souls", "Relic", "StormLesser", "StormGreater", "StormRoyal", "Eclipse" } do
+	CHEST_TIERS[id].image = UiAssets.imageUri("chest_" .. i .. "_closed") or ""
+	CHEST_TIERS[id].openedImage = UiAssets.imageUri("chest_" .. i .. "_open") or ""
+end
 local remotes = RS:WaitForChild("Remotes", 10)
 
 ----------------------------------------------------------------------
@@ -676,10 +683,21 @@ end
 
 local function drawChest(parent, tier, z)
  local size = tier.size
+ if tier.image ~= "" then
+  -- 11/11: con imagen el cofre va sin marco y más grande (el arte ya trae su forma y su brillo)
+  local holder = Instance.new("Frame")
+  holder.Name = "ChestArt" holder.AnchorPoint = Vector2.new(0.5, 0.5) holder.Position = UDim2.fromScale(0.5, 0.5)
+  holder.Size = UDim2.fromOffset(size * REVEAL.ChestArtScale, size * REVEAL.ChestArtScale)
+  holder.BackgroundTransparency = 1 holder.ZIndex = z holder.Parent = parent
+  local image = Instance.new("ImageLabel")
+  image.Size = UDim2.fromScale(1, 1) image.ScaleType = Enum.ScaleType.Fit
+  image.BackgroundTransparency = 1 image.Image = tier.image image.ZIndex = z + 1 image.Parent = holder
+  return holder, nil, image
+ end
  local frame = UiTheme.panel({ parent = parent, name = "ChestArt", anchor = Vector2.new(0.5, 0.5),
   position = UDim2.fromScale(0.5, 0.5), size = UDim2.fromOffset(size * 1.35, size),
   bg = tier.bg, borderColor = tier.color, borderThickness = tier.stroke, ornaments = true, zIndex = z })
- if tier.image ~= "" then
+ if false then
   local image = Instance.new("ImageLabel")
   image.Size = UDim2.fromScale(1, 1) image.ScaleType = Enum.ScaleType.Fit
   image.BackgroundTransparency = 1 image.Image = tier.image image.ZIndex = z + 1 image.Parent = frame
