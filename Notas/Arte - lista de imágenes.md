@@ -76,3 +76,13 @@ Para retirar todo el arte nuevo de una vez: `UiAssets.UseArt = false`.
 ## Prompt base para generarlas (pegar antes de cada pedido)
 Tipo A: «Ícono de videojuego de fantasía oscura, estilo pintado y nítido, sin texto, centrado, fondo totalmente transparente, 256 × 256, paleta obsidiana, carmesí y marfil con brillo del color del elemento, contorno oscuro fino, mismo estilo que [adjuntar icono_alma.png]. Objeto: …»
 Tipo B: «Ícono plano de interfaz, silueta blanca pura sobre fondo transparente, sin sombras, sin degradados ni texto, trazo grueso y redondeado, legible a 32 px, 128 × 128. Objeto: …»
+
+## Recursos de HUD (Referencias 0.2/Recursos HUD PNG) — estilo elegido: Plata clásica (11/11)
+Subir estos 27 (no los 86):
+- iconos_infusion: infusion_fuego, infusion_hielo, infusion_rayo, infusion_sombra → reemplazan infusion_fire/ice/lightning/shadow.
+- barras_hud: barra_hud_04 (roja → vida), barra_hud_08 (celeste → guardia), barra_hud_14 (azul violeta → infusión).
+- marco_avatar: marco_avatar_redondo (foto en el HUD y la party).
+- marcos_clasicos: marco_clasico_01 a 05, esquina_clasica_01 a 04, separador_clasico_01 a 03, ornamento_lateral_01 a 04.
+- bordes_oscuros: borde_oscuro_01 y 02 (encabezados).
+- marco_arco: marco_arco_gotico (pantalla de carga / tarjeta de título).
+No se usan: esquinas celestiales, marcos celestiales, marcos circulares y de rombo y separadores dorados (son dorados y chocan con la plata).
