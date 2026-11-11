@@ -103,6 +103,7 @@ UiAssets.Ids = {
 UiAssets.UseArt = true
 -- Las esquinas de plata de las ventanas las dibuja UiTheme (no puede leer este módulo): se apagan con el mismo interruptor
 UiTheme.CornerArt.Enabled = UiAssets.UseArt
+UiTheme.FrameArt.Enabled = UiAssets.UseArt
 
 -- Arte a todo color: no se tiñe con el color del botón o tarjeta (los íconos viejos son blancos y sí se tiñen)
 local FULL_COLOR = {

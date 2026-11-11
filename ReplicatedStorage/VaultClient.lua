@@ -79,11 +79,13 @@ function Vault.text(item)
  return L.t("mz.product." .. item.kind, params), L.t("mz.product." .. item.kind .. ".desc", params)
 end
 
+-- 11/11/2026: que se note que es Robux: botón verde (como en Roblox) y el símbolo oficial (U+E002) delante del precio
 function Vault.priceButton(props, item)
- if not item.owned then props.icon = "robux" end
- props.text = item.owned and L.t("mz.owned") or tostring(item.price)
+ props.icon = nil
+ props.text = item.owned and L.t("mz.owned") or (utf8.char(0xE002) .. " " .. tostring(item.price))
  props.textColor = C.TextPrimary
- props.variant = "primary"
+ props.variant = item.owned and "primary" or "robux"
+ props.font = "Number"
  props.disabled = props.disabled or item.owned == true
  return UiTheme.button(props)
 end

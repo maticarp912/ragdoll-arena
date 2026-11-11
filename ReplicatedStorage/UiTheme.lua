@@ -305,9 +305,21 @@ function UiTheme.corner(parent, radius)
 	return c
 end
 
+-- 11/11/2026: sin contornos rojos. Los bordes que usaban los tonos carmesí pasan a plata (UiTheme.FrameArt).
+local function silverize(color)
+	local fa = UiTheme.FrameArt
+	if not fa or not fa.Enabled or not color then return color end
+	local C = UiTheme.Colors
+	if color == C.Gold or color == C.GoldBright or color == C.GoldDim or color == C.GoldDark
+		or color == C.BorderDefault or color == C.BorderStrong or color == C.BorderSubtle then
+		return fa.Silver
+	end
+	return color
+end
+
 function UiTheme.stroke(parent, color, thickness, transparency)
 	local s = parent:FindFirstChildOfClass("UIStroke") or Instance.new("UIStroke")
-	s.Color = color or UiTheme.Colors.Gold
+	s.Color = silverize(color or UiTheme.Colors.Gold)
 	s.Thickness = thickness or UiTheme.Stroke.Default
 	s.Transparency = transparency or 0.15
 	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
@@ -344,6 +356,42 @@ end
 -- Ornamento sutil de esquinas estilo fantasía oscura (4 escuadras doradas)
 -- 11/11/2026: esquinas de plata clásica del usuario (esquina_clasica_01 a 04). Mismos IDs que UiAssets
 -- (corner_classic_*); UiAssets.UseArt = false las apaga y vuelven las líneas de antes.
+-- 11/11/2026: marcos de plata clásica del usuario (marco_clasico_01 y 02) estirados en 9 partes (Slice).
+-- Ventanas (con ornamentos) usan el 01; tarjetas y paneles chicos, el 02. El contorno del borde se oculta.
+-- Recorte medido sobre los PNG de 512 × 512: el marco ocupa de x=100 a 412 y de y=24 a 488.
+UiTheme.FrameArt = {
+	Enabled = true,
+	Silver = Color3.fromRGB(176, 180, 190),
+	Window = { id = 115146949745382, rect = { 100, 24, 312, 464 }, slice = { 70, 70, 242, 394 }, scale = 0.42 },
+	Card = { id = 109248225662281, rect = { 99, 25, 314, 462 }, slice = { 66, 66, 248, 396 }, scale = 0.3 },
+	Inset = 4, -- px que el marco sobresale del panel
+	MinHeight = 56, -- paneles más bajos que esto no llevan marco
+}
+
+function UiTheme.frameArt(frame, kind)
+	local fa = UiTheme.FrameArt
+	local spec = fa[kind or "Card"]
+	if not fa.Enabled or not spec then return nil end
+	local img = Instance.new("ImageLabel")
+	img.Name = "FrameArt"
+	img.AnchorPoint = Vector2.new(0.5, 0.5)
+	img.Position = UDim2.fromScale(0.5, 0.5)
+	img.Size = UDim2.new(1, fa.Inset * 2, 1, fa.Inset * 2)
+	img.BackgroundTransparency = 1
+	img.Image = "rbxassetid://" .. spec.id
+	img.ImageRectOffset = Vector2.new(spec.rect[1], spec.rect[2])
+	img.ImageRectSize = Vector2.new(spec.rect[3], spec.rect[4])
+	img.ScaleType = Enum.ScaleType.Slice
+	img.SliceCenter = Rect.new(spec.slice[1], spec.slice[2], spec.slice[3], spec.slice[4])
+	img.SliceScale = spec.scale
+	img.ZIndex = frame.ZIndex + 1
+	img.Parent = frame
+	-- Se oculta el contorno plateado (lo reemplaza el marco); los de color propio (rareza, equipo) se conservan
+	local stroke = frame:FindFirstChildOfClass("UIStroke")
+	if stroke and stroke.Color == fa.Silver then stroke.Transparency = 1 end
+	return img
+end
+
 UiTheme.CornerArt = {
 	Enabled = true,
 	Ids = { 95600733860151, 98692641434464, 78148340074076, 122947440560620 }, -- arriba izq, arriba der, abajo izq, abajo der
@@ -363,6 +411,8 @@ function UiTheme.ornamentCorners(parent, color, length, thickness)
 	folder.Parent = parent
 
 	local art = UiTheme.CornerArt
+	-- con marcos de plata, las esquinas ya vienen en el marco
+	if UiTheme.FrameArt.Enabled then return folder end
 	if art.Enabled then
 		local size = math.clamp(math.floor(len * art.Scale), art.MinSize, art.MaxSize)
 		local spots = { { Vector2.new(0, 0), UDim2.fromScale(0, 0) }, { Vector2.new(1, 0), UDim2.fromScale(1, 0) },
@@ -477,6 +527,11 @@ function UiTheme.panel(props)
 	if props.ornaments then
 		UiTheme.ornamentCorners(frame, props.borderColor or UiTheme.Colors.Gold, props.ornamentSize or 12, 2)
 	end
+	-- 11/11/2026: marco de plata clásica (ventanas = con ornamentos; el resto, tarjeta). frameArt = false lo evita.
+	-- (los paneles muy bajos, como las píldoras de saldo, quedan sin marco: no entra el adorno)
+	local sz = props.size
+	local tooSmall = sz and sz.Y.Scale == 0 and sz.Y.Offset > 0 and sz.Y.Offset < UiTheme.FrameArt.MinHeight
+	if props.frameArt ~= false and not tooSmall then UiTheme.frameArt(frame, props.ornaments and "Window" or "Card") end
 	return frame, stroke
 end
 
@@ -527,8 +582,15 @@ function UiTheme.button(props)
 		bgBase = Color3.fromRGB(178, 32, 52)
 		bgHover = Color3.fromRGB(214, 48, 68)
 		bgPress = Color3.fromRGB(128, 22, 38)
-		borderCol = UiTheme.Colors.GoldBright
+		borderCol = UiTheme.Colors.GoldBright -- (UiTheme.stroke lo pasa a plata si FrameArt está prendido)
 		textCol = UiTheme.Colors.TextPrimary
+	elseif variant == "robux" then
+		-- 11/11/2026: compras con Robux en verde, como en Roblox
+		bgBase = Color3.fromRGB(0, 158, 96)
+		bgHover = Color3.fromRGB(12, 188, 118)
+		bgPress = Color3.fromRGB(0, 118, 72)
+		borderCol = Color3.fromRGB(150, 240, 200)
+		textCol = Color3.fromRGB(255, 255, 255)
 	elseif variant == "success" then
 		bgBase = UiTheme.Colors.SuccessDark
 		bgHover = Color3.fromRGB(46, 96, 62)
