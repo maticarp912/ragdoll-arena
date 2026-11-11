@@ -241,3 +241,94 @@ Registro del 11/11/2026 01:57 (Argentina, UTC−3). Encargo en [[Plan glow-up y 
 
 - Usé **150 almas** como reemplazo fijo del tiro VIP restringido. ¿Te sirve ese monto diario?
 - ¿Querés conservar Relicario del Rayo en 12.000 y Cofre del Eclipse en 20.000? Los precios actuales siguen vigentes.
+
+## Almas, monedas y títulos
+
+Registro del 11/11/2026 10:56 (Argentina, UTC−3). Encargo en [[Almas, monedas, títulos y party - Codex]]. El usuario aprobó los precios propuestos para el catálogo existente y dejó las skins básicas nuevas para otra etapa.
+
+### Implementado — 🟡
+
+- **Saldos.** Almas sigue en `data.Coins`. Monedas usa `data.Gems`, con migración aditiva y publicación en el atributo `Gems`. Tienda y recompensas muestran los dos saldos, con un rombo azul para monedas. La Bóveda conserva sus cinco productos y sus IDs, con 400 / 850 / 2.200 / 4.600 / 10.000 monedas por 49 / 99 / 249 / 499 / 999 Robux sugeridos. El catálogo consulta el precio real.
+- **Cómo se ganan.** El tutorial completo entrega 200 monedas una sola vez, incluso si un perfil anterior ya tenía sus tres pasos completados. Cada misión diaria da 40 monedas, además de las almas y el tiro ya existentes. La ruleta tiene un sector de 15 monedas al 8 % en la distribución base. Con tutorial y tres misiones por día, las skins de 1.200 a 2.000 monedas equivalen a unos 9 a 15 días por skin antes de sumar cofres o ruleta.
+- **Gasto.** Dos giros diarios extra por almas, a 250 y 500. Las almas también sirven para los cofres 1 y 2, los multiplicadores, los títulos de tienda y el renacimiento. La compra de skins con monedas valida el precio y la propiedad en servidor.
+- **Cofres.** Almas y Reliquias cuestan 500 y 1.500 almas, con 10 % y 17 % de skin base. El resto de resultados son monedas y multiplicadores. La Reliquia usa su nueva distribución desde la primera apertura y sigue pudiendo entregar skins del Eclipse Carmesí. Los niveles 3 a 6 cuestan 600 / 1.300 / 2.400 / 4.000 monedas. Se conservan las rarezas de Tormenta generando sus variantes antes de cambiar los precios de venta. Siguen visibles las probabilidades base y con suerte, y la conversión de duplicados al 40 % del valor anterior en almas.
+- **Azar pago.** Se bloquean la compra y la apertura de los cofres 3 a 6 para cuentas restringidas, y se ocultan los paquetes de monedas. Los dos primeros cofres y los giros con almas siguen disponibles para esas cuentas. La política también se comprueba en servidor. [Guía oficial de Roblox](https://create.roblox.com/docs/production/monetization/paid-random-items)
+- **Renacimiento.** En maestría 20 se puede volver a nivel 1 desde la pestaña Títulos. Precio inicial de 5.000 almas, con 2.500 adicionales por renacimiento. Se conserva el historial de recompensas desbloqueadas. Cada renacimiento añade una estrella al arma y un título con numeral romano para la tarjeta.
+- **Amigos.** +20 % de almas y XP ganadas jugando al coincidir con un amigo de Roblox en el servidor. Las almas acumulan el bonus de amigos y VIP de forma aditiva. Se usa `IsFriendsWithAsync` con caché por par presente, y se quita el bonus al salir el último amigo. Indicador en el HUD del lobby y en el resumen de partida. [Referencia de Player](https://create.roblox.com/docs/reference/engine/classes/Player#IsFriendsWithAsync)
+- **Títulos.** Armería con categorías, rareza, progreso, compra con almas, equipamiento, vista previa de tarjeta y avisos breves. Se contabilizan Parries, RingOuts, Kicks, GuardBreaks, Finishers y Throws, y se conceden Undying, Collector, Duelist y BondedBlades. Undying toma los puntos de ronda publicados por MatchService. BondedBlades usa la party y el equipo al iniciar la partida. El evento actual de daño trae solo `amount`. El contador de remates usa `info.finisher` cuando está presente y el estado servidor `M1` con `Finisher` como respaldo.
+- **Interfaz.** Textos nuevos en ES, EN y PT-BR. El catálogo existente mantiene los modelos, las referencias y las vías exclusivas de ruleta y Tormenta.
+
+### Tabla completa de venta directa
+
+| Arma | Monedas · precio aplicado | 99 Robux · precio sugerido | 199 Robux · precio sugerido |
+|---|---|---|---|
+| Universales | — | Obsidiana, Hueso, Oro Ceniciento, Runas Etéreas, Linaje Carmesí | — |
+| Espada | Filo del Dragón · 1.400 / Vigilia Violeta · 2.000 / Reliquia Dracónica · 12.000 | Juramento Solar, Corona del Alba, Aguja del Vacío, Diente del Exilio | Réquiem Astado, Espina del Osario |
+| Espadón | Luto Real · 1.200 / Devorador · 1.800 / Alas del Abismo · 10.000 | Sudario | Tumba Esmeralda, Cruz del Ocaso |
+| Dagas | Crecientes de Plata · 1.200 / Lunas del Vacío · 1.800 | Colmillos Carmesí, Garras del Eclipse | Espinas Vivas |
+| Estoque | Corte de Plata · 1.200 / Lamento Oscuro · 2.000 | Duelo Dorado, Duelo del Crepúsculo, Aguijón Espectral, Velo Amatista | Lengua de Fuego |
+| Maza | Juicio de Hierro · 1.200 / Mandíbula Antigua · 1.600 / Corona del Osario · 15.000 | Verdugo del Norte, Corazón de Forja, Vértebra del Abismo | Espinas Carmesí, Hacha del Osario, Fauces del Sepulcro |
+
+Acero Viejo es el acabado inicial. Las tres skins iniciales y Réquiem Astado también conservan sus vías de recompensa existentes. La tabla Robux clasifica según el precio anterior del catálogo (hasta 3.100 almas para estándar). Los productos de skins requieren que el usuario configure sus IDs y precios en Roblox.
+
+### Probado fuera de Studio
+
+- `node tools/check_lua.js .` pasó sobre 100 archivos. LihFolk examinó 100 archivos con 0 errores, 0 avisos y 0 mensajes informativos. Compilé los 100 scripts con Luau y `git diff --check` quedó limpio.
+- Con APIs Roblox simuladas y los módulos reales, probé migración y saneo de saldos, tutorial y misión únicos, recibo repetido, ingreso concurrente de monedas y compra de skin con cada moneda de venta. Contrasté los 13 precios aprobados y la distribución original de las 36 variantes de Tormenta.
+- Probé los seis cofres y sus probabilidades base, efectivas y de vista previa. Verifiqué 10 % y 17 % base, apertura sin garantía previa, monedas en la ruleta, los dos giros diarios por almas y el bloqueo de los cuatro cofres con monedas para cuentas restringidas.
+- Probé presencia y salida de un amigo, XP de juego frente a XP de recompensa, seis estadísticas, los cuatro logros, compra y equipo de títulos, renacimiento con título II, y conservación de saldos y títulos al guardar y volver a entrar.
+
+### Necesita Studio — ⬜
+
+- Comprobado en Studio en este encargo · ninguno.
+- Probar a 375 px y con mando la Bóveda, ambos saldos, las tarjetas de cofres, sus probabilidades y la armería. Revisar en los tres idiomas el faltante, el scroll por categorías, la vista previa, los avisos y el botón de renacimiento.
+- Probar partidos 1v1 y 2v2 con amigo, party y rondas empatadas, más una victoria sin perder rondas y un abandono. Verificar especialmente el respaldo de remates con golpes simultáneos y la tarjeta real tras equipar el título II.
+- Probar la cuenta restringida y la elegible en una publicación de prueba, con IDs configurados. Verificar los importes del diálogo Roblox, el recibo y el inventario después de reconectar.
+
+### Preguntas para el usuario — 👤
+
+- El renacimiento quedó en 5.000 almas iniciales y +2.500 por repetición. ¿Te sirve ese ritmo?
+- Con 40 monedas por misión, el objetivo de una skin accesible queda en alrededor de 9 a 15 días con las tres diarias. ¿Querés mantener ese ritmo después de probarlo?
+
+### Vista previa y probabilidades de cofres · 11/11/2026
+
+**Implementado**
+
+- Cada tarjeta tiene el botón **Ver recompensas** con un ojo. La ventana muestra un solo cofre, las chances de skin por rareza, el total de otros premios cuando corresponde y el detalle por premio, con miniaturas 3D para las skins. Se puede abrir desde ahí. La ventana también muestra la conversión de repetidas al 40 % y el progreso de cada garantía.
+- `RewardService` usa la misma distribución para la apertura y `GetState`. Las chances de cada skin salen de su rareza dividida por el número de skins elegibles. Cuando hay suerte, se muestra la distribución de la próxima apertura con y sin el multiplicador. Si cambia la distribución entre la consulta y la apertura, el servidor pide refrescarla antes de cobrar. Cofres, ruleta y Bóveda muestran porcentajes con `Format.percent`.
+- **Exclusiva** es una rareza superior a Legendaria, con el color `UiTheme.Rarities.Mythic`. Las cinco skins de Eclipse Carmesí siguen rotando como premio de la ruleta y pueden salir de los cofres 2 a 6. Para habilitar la probabilidad de Legendaria de los cofres 1 y 2, usé tres skins de lujo del catálogo existente como Legendarias: Reliquia Dracónica, Alas del Abismo y Corona del Osario.
+- El cofre 1 y la Reliquia dan 10 % y 17 % de skin respectivamente en aperturas base. Reliquia asegura una skin Épica o superior como máximo al décimo cofre desde el último resultado que cumple. Eclipse asegura Legendaria o superior al décimo y Exclusiva al cuadragésimo. Las repetidas también cuentan para la garantía. Una Exclusiva satisface ambos umbrales de Eclipse. Se guardan los contadores por cofre y se migra el avance anterior de Reliquia desde `relicPity`.
+- Los premios de moneda y multiplicadores de los dos cofres de almas conservan sus pesos. Se conserva la restricción del servidor sobre los cofres de monedas. Se agregaron los textos ES, EN y PT-BR.
+
+**Probado fuera de Studio**
+
+- `node tools/check_lua.js .` pasó sobre 100 archivos. LihFolk revisó 100 archivos con 0 errores, 0 avisos y 0 mensajes informativos. También compilaron los 100 scripts con Luau.
+- Con los módulos reales y servicios Roblox simulados, validé que los pesos base coinciden con la tabla pedida, que las distribuciones suman 100 % y que la chance de cada skin recompone su rareza. Probé la suerte activa y su vencimiento, las chances de la ruleta, el rechazo antes de consumir un cofre con una distribución vencida, el reintento del mismo pedido, la política de azar, la compra, la conversión de duplicados, el contador antiguo y el guardado de los tres contadores nuevos. En Eclipse comprobé los dos topes en toda la muestra.
+- La simulación abrió **100.000 cofres de cada tipo** mediante el remoto real `OpenBox` con inventario precargado, un perfil nuevo por tipo, sin suerte y semilla 20261111. Se contrastó contra el modelo de la tabla de pesos y el estado de los contadores. Cada celda muestra **observado / esperado**, incluyendo las aperturas forzadas por garantías.
+
+| Cofre | Otros premios (%) | Rara (%) | Épica (%) | Legendaria (%) | Exclusiva (%) |
+|---|---:|---:|---:|---:|---:|
+| Cofre 1 | 90,095 / 90 | 7,864 / 8 | 1,845 / 1,8 | 0,196 / 0,2 | — |
+| Cofre 2 · Reliquia | 76,386 / 76,482 | 11,149 / 11,058 | 10,005 / 9,969 | 2,223 / 2,243 | 0,237 / 0,249 |
+| Cofre 3 · Tormenta menor | — | 70,07 / 70 | 25,872 / 26 | 3,551 / 3,5 | 0,507 / 0,5 |
+| Cofre 4 · Tormenta mayor | — | 39,919 / 40 | 50,034 / 50 | 9,081 / 9 | 0,966 / 1 |
+| Cofre 5 · Tormenta real | — | — | 75,038 / 75 | 22,543 / 22,5 | 2,419 / 2,5 |
+| Cofre 6 · Eclipse | — | — | 54,715 / 54,47 | 39,561 / 39,784 | 5,724 / 5,745 |
+
+Las esperas observadas miden el promedio de aperturas desde el inicio o desde el último premio de la categoría hasta el siguiente. Para Eclipse, un perfil con ambos contadores en cero tarda en teoría 2,49 aperturas hasta su primera Legendaria exacta, 2,22 hasta su primera Legendaria o superior y 17,41 hasta su primera Exclusiva. Los ejemplos de unas 25 aperturas en Tormenta menor y unas 4 en Tormenta real corresponden a Legendaria o superior.
+
+| Cofre | Hasta Legendaria | Hasta Legendaria o superior | Hasta Exclusiva | Almas por cofre | Monedas por cofre |
+|---|---:|---:|---:|---:|---:|
+| Cofre 1 | 500,96 / 500 | 500,96 / 500 | — | 68,93 / 69,39 | 12,18 / 12,2 |
+| Cofre 2 · Reliquia | 44,96 / 44,58 | 40,63 / 40,13 | 421,51 / 401,26 | 224,06 / 224,11 | 24,66 / 24,6 |
+| Cofre 3 · Tormenta menor | 28,16 / 28,57 | 24,64 / 25 | 197,02 / 200 | 736,63 / 737,13 | 0 / 0 |
+| Cofre 4 · Tormenta mayor | 11,01 / 11,11 | 9,95 / 10 | 103,4 / 100 | 957,84 / 958,6 | 0 / 0 |
+| Cofre 5 · Tormenta real | 4,44 / 4,44 | 4,01 / 4 | 41,33 / 40 | 1285,63 / 1287,74 | 0 / 0 |
+| Cofre 6 · Eclipse | 2,53 / 2,51 | 2,21 / 2,2 | 17,47 / 17,41 | 1403,52 / 1405,05 | 0 / 0 |
+
+Los pagos son brutos y las almas incluyen la conversión de duplicados. La expectativa de almas usa los valores al completar la colección. La mayor desviación relativa fue **5,04 %**, en la espera de Exclusiva en Reliquia. Todas las frecuencias y pagos quedaron dentro del margen del 10 %.
+
+**Pendiente de comprobar en Studio**
+
+- Probar las ventanas de los seis cofres a 375 px y en PC. Revisar recorte de nombres y botones, scroll y selección con mando, miniaturas, legibilidad de los tres idiomas y que el carrusel conserve el premio real.
+- Abrir desde la ventana con un cofre propio y con saldo para comprar, ver el paso de una garantía a «próximo cofre» y agotar la suerte con la ventana abierta. Verificar el aspecto del aviso de Exclusiva y el saldo actualizado tras una repetida.

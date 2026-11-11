@@ -268,5 +268,31 @@ Skins.Data.Cyber.rarity = "Rare"
 Skins.Data.Blood.rarity = "Rare"
 Skins.Data.Relic18.accent = Color3.fromRGB(216, 210, 193)
 
+-- Apply shop prices after building the Storm variants from their original price and material.
+local gemPrices = {
+ Relic09 = 1400,
+ Relic10 = 2000,
+ Relic13 = 12000,
+ Relic16 = 1200,
+ Relic15 = 1800,
+ Relic19 = 10000,
+ Relic04 = 1200,
+ Relic03 = 1800,
+ Relic21 = 1200,
+ Relic26 = 2000,
+ Relic27 = 1200,
+ Relic31 = 1600,
+ Maw04 = 15000,
+}
+for id, skin in Skins.Data do
+ if id ~= "Default" and not skin.roulette and not skin.boxOnly and not skin.comingSoon then
+  local price = gemPrices[id]
+  local standard = skin.price <= 3100
+  skin.currency = price and "Gems" or "Robux"
+  skin.price = price or (standard and 99 or 199)
+  if not price then skin.productId = skin.productId or 0 end
+ end
+end
+
 Skins.Designs = {}
 return Skins

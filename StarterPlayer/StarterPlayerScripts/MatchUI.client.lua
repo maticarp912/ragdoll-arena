@@ -194,6 +194,7 @@ local function renderSummary(data)
 	local xpAfter = math.max(0, tonumber(prog.xpAfter) or tonumber(player:GetAttribute("XP")) or xpBefore)
 	local xpNext = math.max(1, tonumber(prog.xpNext) or tonumber(player:GetAttribute("XPNext")) or 150)
 	local leveledUp = levelAfter > levelBefore
+	local friendBonus = math.floor((tonumber(data.friendBonus) or 0) * 100 + 0.5)
 
 	local progPanel = UiTheme.panel({
 		name = "ProgressionPanel",
@@ -244,13 +245,19 @@ local function renderSummary(data)
 		name = "LevelUpBanner",
 		parent = progPanel,
 		position = UDim2.fromOffset(16, 62),
-		size = UDim2.new(1, -32, 0, 22),
+		size = UDim2.new(friendBonus > 0 and 0.48 or 1, -32, 0, 22),
 		text = leveledUp and L.t("ui.match.levelUp", { level = levelAfter }) or "",
 		font = "Title",
 		textSize = UiTheme.TextSizes.MD,
 		color = C.GoldBright,
 		alignX = Enum.TextXAlignment.Center,
 	})
+
+	if friendBonus > 0 then
+		UiTheme.label({ parent = progPanel, anchor = Vector2.new(1, 0), position = UDim2.new(1, -16, 0, 62),
+			size = UDim2.new(0.55, -16, 0, 22), text = L.t("mz.friendBonus", { percent = friendBonus }),
+			textSize = UiTheme.TextSizes.SM, scaled = true, color = C.Accent, alignX = Enum.TextXAlignment.Right })
+	end
 
 	-- Animación de llenado de la barra de XP y festejo de subida de nivel
 	task.delay(0.22, function()

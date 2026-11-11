@@ -1,42 +1,55 @@
 -- Initial retention tuning. All random outcomes are selected by RewardService.
 local Config = require(script.Parent.MonetizationConfig)
+local Economy = require(script.Parent.Economy)
 local R = {
  Version = 1, Interval = 0.35, MaxCount = 100000, WeekDays = 7, MondayOffset = 4, WeekAnchor = 2966, ReturnDays = 3,
  SpinGuarantee = 30, RelicGuarantee = 10, DuplicateRate = 0.4, DuplicateFallback = 1500,
- ExtraPrices = { 250, 500, 1000 }, DailySouls = { 50, 75, 100, 125, 150, 200 },
- StarterSkins = { "Charcoal", "Frost", "Gold" }, FirstMatch = 300, TutorialSouls = 100, TutorialSteps = 3,
+ ExtraPrices = { 250, 500 }, DailySouls = { 50, 75, 100, 125, 150, 200 },
+ StarterSkins = { "Charcoal", "Frost", "Gold" }, FirstMatch = 300, TutorialSouls = 100, TutorialGems = 200, TutorialSteps = 3,
  WeeklyGoals = { Win = 15, Parry = 40 }, FirstGoals = { Match = 3, Win = 1, Parry = 5, Equip = 1, Spin = 1, OpenBox = 1, Level = 5 },
  WeeklySkins = { "CrimsonEclipse", "BloodMoonCleaver", "CataclysmMaw", "EclipseFang", "EclipseNeedle" },
  Spin = {
   { kind = "Souls", amount = 75, weight = 30 }, { kind = "Souls", amount = 200, weight = 25 },
   { kind = "Souls", amount = 600, weight = 15 }, { kind = "XP", amount = 150, weight = 12 },
-  { kind = "Boost", boost = "XP", multiplier = 1.5, seconds = 900, weight = 8 },
+  { kind = "Gems", amount = 15, weight = 8 },
   { kind = "Boost", boost = "XP", multiplier = 2, seconds = 1800, weight = 5 },
   { kind = "Box", id = "Relic", amount = 1, weight = 4 }, { kind = "Weekly", weight = 1 },
  },
  TutorialBoost = { kind = "Boost", boost = "XP", multiplier = 2, seconds = 1800 },
- Boxes = { Souls = { price = 500 }, Relic = { price = 1500 },
+ Boxes = { Souls = { price = 500, currency = "Coins", pool = "Shop" }, Relic = { price = 1500, currency = "Coins", pool = "Shop" },
   -- 10/11/2026: cajas de Tormenta (skins con rayos, Skins.boxOnly = "Storm"). Más caras = mejores rarezas.
-  StormLesser = { price = 3000, pool = "Storm", order = 3 },
-  StormGreater = { price = 6500, pool = "Storm", order = 4 },
-  StormRoyal = { price = 12000, pool = "Storm", order = 5 },
-  -- 11/11/2026: sexto cofre, el mejor: siempre Legendaria, de Tormenta o del Eclipse Carmesí (D23).
-  Eclipse = { price = 20000, pools = { "Storm", "Roulette" }, order = 6 },
+  StormLesser = { price = 600, currency = "Gems", pool = "Storm", order = 3 },
+  StormGreater = { price = 1300, currency = "Gems", pool = "Storm", order = 4 },
+  StormRoyal = { price = 2400, currency = "Gems", pool = "Storm", order = 5 },
+  Eclipse = { price = 4000, currency = "Gems", pool = "Storm", order = 6,
+   guarantees = { { rarity = "Legendary", every = 10 }, { rarity = "Exclusive", every = 40 } } },
  },
  StormRarities = {
-  StormLesser = { { id = "Rare", weight = 72 }, { id = "Epic", weight = 24 }, { id = "Legendary", weight = 4 } },
-  StormGreater = { { id = "Rare", weight = 30 }, { id = "Epic", weight = 55 }, { id = "Legendary", weight = 15 } },
-  StormRoyal = { { id = "Epic", weight = 62 }, { id = "Legendary", weight = 38 } },
-  Eclipse = { { id = "Legendary", weight = 100 } },
+  StormLesser = { { id = "Rare", weight = 70 }, { id = "Epic", weight = 26 }, { id = "Legendary", weight = 3.5 }, { id = "Exclusive", weight = 0.5 } },
+  StormGreater = { { id = "Rare", weight = 40 }, { id = "Epic", weight = 50 }, { id = "Legendary", weight = 9 }, { id = "Exclusive", weight = 1 } },
+  StormRoyal = { { id = "Epic", weight = 75 }, { id = "Legendary", weight = 22.5 }, { id = "Exclusive", weight = 2.5 } },
+  Eclipse = { { id = "Epic", weight = 55 }, { id = "Legendary", weight = 40 }, { id = "Exclusive", weight = 5 } },
  },
- Rarities = { { id = "Common", weight = 60 }, { id = "Rare", weight = 28 }, { id = "Epic", weight = 10 }, { id = "Legendary", weight = 2 } },
- GuaranteedRarities = { { id = "Epic", weight = 10 }, { id = "Legendary", weight = 2 } },
  SoulsBox = {
-  { kind = "Souls", amount = 300, weight = 35 }, { kind = "Souls", amount = 750, weight = 20 }, { kind = "Souls", amount = 1500, weight = 5 },
-  { kind = "Boost", boost = "XP", multiplier = 1.5, seconds = 900, weight = 15 },
-  { kind = "Boost", boost = "Coins", multiplier = 2, seconds = 1800, weight = 15 },
-  { kind = "Boost", boost = "XP", multiplier = 3, seconds = 3600, weight = 5 },
-  { kind = "Boost", boost = "Coins", multiplier = 3, seconds = 3600, weight = 5 },
+  { kind = "SkinPool", rarity = "Rare", weight = 8 },
+  { kind = "SkinPool", rarity = "Epic", weight = 1.8 },
+  { kind = "SkinPool", rarity = "Legendary", weight = 0.2 },
+  { kind = "Gems", rarity = "Common", amount = 10, weight = 35 },
+  { kind = "Gems", rarity = "Rare", amount = 25, weight = 22 },
+  { kind = "Gems", rarity = "Rare", amount = 40, weight = 8 },
+  { kind = "Boost", rarity = "Rare", stat = "XP", multiplier = 1.5, seconds = 900, weight = 15 },
+  { kind = "Boost", rarity = "Rare", stat = "Coins", multiplier = 1.5, seconds = 900, weight = 10 },
+ },
+ RelicBox = {
+  { kind = "SkinPool", rarity = "Rare", weight = 12 },
+  { kind = "SkinPool", rarity = "Epic", weight = 4 },
+  { kind = "SkinPool", rarity = "Legendary", weight = 0.9 },
+  { kind = "SkinPool", rarity = "Exclusive", weight = 0.1 },
+  { kind = "Gems", rarity = "Common", amount = 25, weight = 30 },
+  { kind = "Gems", rarity = "Rare", amount = 50, weight = 24 },
+  { kind = "Gems", rarity = "Epic", amount = 80, weight = 9 },
+  { kind = "Boost", rarity = "Rare", stat = "XP", multiplier = 2, seconds = 1800, weight = 12 },
+  { kind = "Boost", rarity = "Epic", stat = "Coins", multiplier = 2, seconds = 1800, weight = 8 },
  },
  AntiAFK = { Sample = 0.5, MinSeconds = 1, MinDistance = 6, MinEvents = 1, MaxStep = 16, MinStep = 0.4 },
  CollectionAuras = { Sword = "AshCrown", Greatsword = "SmokeWings", Dagger = "FootShroud", Rapier = "GraveRunes", Mace = "SpectralChains" },
@@ -52,8 +65,23 @@ R.MaxAdminGrant = 100 R.MaxSequence = 1e12 R.GraceDays = 1 R.GoodRank = 3
 R.FirstMatchSouls = R.FirstMatch R.DuplicateFraction = R.DuplicateRate
 R.RoulettePity = R.SpinGuarantee R.RelicPity = R.RelicGuarantee
 R.ExtraSpinPrices = R.ExtraPrices R.Collection = R.CollectionAuras
-R.RarityRank = { Common = 1, Rare = 2, Epic = 3, Legendary = 4 }
+R.RarityRank = { Common = 1, Rare = 2, Epic = 3, Legendary = 4, Exclusive = 5 }
+local legendarySkins = { Relic13 = true, Relic19 = true, Maw04 = true }
+
+function R.skinRarity(id, skin)
+ if skin.roulette then return "Exclusive" end
+ if legendarySkins[id] then return "Legendary" end
+ return skin.rarity
+end
+
+function R.rarityTheme(rarity)
+ return rarity == "Exclusive" and "Mythic" or rarity
+end
 R.FirstStepsSkin = "Requiem"
+-- Keep the original soul value for duplicate conversion after a shop price changes currency.
+R.SkinSoulValues = { Charcoal = 300, Frost = 400, Gold = 600, Requiem = 3400,
+ Relic09 = 1500, Relic10 = 3000, Relic13 = 3500, Relic16 = 2800, Relic15 = 3000, Relic19 = 3800,
+ Relic04 = 1400, Relic03 = 3000, Relic21 = 1200, Relic26 = 3200, Relic27 = 3000, Relic31 = 1500, Maw04 = 3900 }
 R.Streak = table.clone(R.DailySouls) table.insert(R.Streak, "Relic")
 R.FirstSteps = {
  { id = "matches", event = "Match", goal = 3 }, { id = "win", event = "Win", goal = 1 },
@@ -64,7 +92,7 @@ R.FirstSteps = {
 R.Weekly = { { event = "Win", goal = R.WeeklyGoals.Win }, { event = "Parry", goal = R.WeeklyGoals.Parry } }
 R.TutorialSpinSector = 6
 R.Roulette = {}
-local sectorRarities = { "Common", "Common", "Rare", "Rare", "Rare", "Epic", "Epic", "Legendary" }
+local sectorRarities = { "Common", "Common", "Rare", "Rare", "Rare", "Epic", "Epic", "Exclusive" }
 for i, row in R.Spin do
  local item = table.clone(row) item.stat = item.boost item.boost = nil item.rarity = sectorRarities[i]
  if item.kind == "Weekly" then item.kind = "WeeklySkin" end
@@ -72,18 +100,13 @@ for i, row in R.Spin do
 end
 -- First tutorial spin has the same sector geometry and its guaranteed x2 reward.
 R.Roulette[R.TutorialSpinSector].stat = "XP"
-R.Boxes.Souls.nameKey = "cx.reward.box.Souls" R.Boxes.Souls.rewards = {}
-for i, row in R.SoulsBox do
- local item = table.clone(row) item.stat = item.boost item.boost = nil
- item.rarity = item.kind == "Boost" and (item.multiplier >= 3 and "Epic" or "Rare") or (item.amount >= 1500 and "Epic" or "Common")
- R.Boxes.Souls.rewards[i] = item
-end
-R.Boxes.Relic.nameKey = "cx.reward.box.Relic" R.Boxes.Relic.rarities = {}
-for i, row in R.Rarities do R.Boxes.Relic.rarities[i] = { rarity = row.id, weight = row.weight } end
+R.Boxes.Souls.nameKey = "cx.reward.box.Souls" R.Boxes.Souls.rewards = R.SoulsBox
+R.Boxes.Relic.nameKey = "cx.reward.box.Relic" R.Boxes.Relic.rewards = R.RelicBox
+R.Boxes.Relic.guarantees = { { rarity = "Epic", every = R.RelicGuarantee } }
 R.Boxes.Souls.order = 1 R.Boxes.Relic.order = 2
 for id, rows in R.StormRarities do
  local box = R.Boxes[id] box.nameKey = "cx.reward.box." .. id box.descKey = "cx.reward.box." .. id .. ".desc" box.rarities = {}
- for i, row in rows do box.rarities[i] = { rarity = row.id, weight = row.weight } end
+ for i, row in rows do box.rarities[i] = { kind = "SkinPool", rarity = row.id, weight = row.weight } end
 end
 R.BoxOrder = {} for id in R.Boxes do table.insert(R.BoxOrder, id) end
 table.sort(R.BoxOrder, function(a, b) return (R.Boxes[a].order or 99) < (R.Boxes[b].order or 99) end)
@@ -123,6 +146,7 @@ function R.reconcile(data)
   t[key] = math.floor(math.clamp(n, -1, max or R.MaxCount))
  end
  local function object(t, key) if type(t[key]) ~= "table" then t[key] = {} end return t[key] end
+ count(data, "Gems", 0, Economy.GemMax) data.Gems = math.max(0, data.Gems)
  local d = object(data, "Rewards")
  for _, key in { "spins", "boughtSpins", "spinPity", "relicPity", "paidSpins", "streak", "loginCount" } do count(d, key, 0) d[key] = math.max(0, d[key]) end
  for _, key in { "day", "lastVisit", "freeDay", "vipDay", "streakDay", "graceWeek" } do count(d, key, -1) end
@@ -130,10 +154,25 @@ function R.reconcile(data)
  count(d, "paidSpins", 0, #R.ExtraSpinPrices)
  count(d, "sequence", 0, R.MaxSequence) d.sequence = math.max(0, d.sequence)
  object(d, "steps") object(d, "tutorial") object(d, "collection")
+ if d.tutorialGems ~= true then
+  local complete = true
+  for i = 1, R.TutorialSteps do if d.tutorial[tostring(i)] ~= true then complete = false break end end
+  if complete then data.Gems = math.min(Economy.GemMax, data.Gems + R.TutorialGems) d.tutorialGems = true end
+ end
  for _, step in R.FirstSteps do count(d.steps, step.id, 0, step.goal) d.steps[step.id] = math.max(0, d.steps[step.id]) end
  local boxes = object(data, "Boxes")
  local paidBoxes = object(d, "paidBoxes")
- for id in R.Boxes do
+ local pity = object(d, "boxPity")
+ for id, box in R.Boxes do
+  if box.guarantees then
+   local counters = object(pity, id)
+   for _, guarantee in box.guarantees do
+    local rarity = guarantee.rarity
+    local fallback = id == "Relic" and d.relicPity or 0
+    count(counters, rarity, fallback, guarantee.every - 1)
+    counters[rarity] = math.max(0, counters[rarity])
+   end
+  end
   count(boxes, id, 0) boxes[id] = math.max(0, boxes[id])
   count(paidBoxes, id, 0, boxes[id]) paidBoxes[id] = math.max(0, paidBoxes[id])
  end
@@ -151,6 +190,7 @@ function R.reconcile(data)
  for weapon in R.Collection do
   local m = data.Mastery[weapon]
   if type(m) == "table" then
+   count(m, "rebirths", 0) m.rebirths = math.max(0, m.rebirths)
    count(m, "level", 1, progression.Mastery.MaxLevel) m.level = math.max(1, m.level)
    count(m, "xp", 0, progression.Mastery.XPPerLevel - 1) m.xp = math.max(0, m.xp)
    object(m, "awarded")

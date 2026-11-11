@@ -14,6 +14,7 @@ local E = require(game:GetService("ReplicatedStorage"):WaitForChild("Economy"))
 local P = require(game:GetService("ReplicatedStorage"):WaitForChild("Progression"))
 local R = require(game:GetService("ReplicatedStorage"):WaitForChild("Rewards"))
 local Auras = require(game:GetService("ReplicatedStorage"):WaitForChild("Auras"))
+local TitleUnlocked = require(script.Parent.Remotes).get("TitleUnlocked")
 local VIP = require(game:GetService("ReplicatedStorage"):WaitForChild("MonetizationConfig")).Passes.VIP.perks
 local tokens, loading = {}, {}
 local lost, leaseUntil = {}, {}
@@ -63,8 +64,8 @@ local function defaults()
 	return {
 		Schema = E.Schema, Level = 1, XP = 0, PlaySeconds = 0, GrantedRole = "",
         OwnedWeapons = {}, Titles = {}, Boxes = {}, Boosts = { XP = 1, Coins = 1, XPSeconds = 0, CoinsSeconds = 0 },
-        Coins = 0,
-        Stats = { Wins = 0, Kills = 0, Knockdowns = 0, Matches = 0, Coins = 0 }, Daily = {}, FirstWinDay = -1,
+        Coins = 0, Gems = 0,
+        Stats = { Wins = 0, Kills = 0, Knockdowns = 0, Matches = 0, Coins = 0, Parries = 0, RingOuts = 0, Kicks = 0, GuardBreaks = 0, Finishers = 0, Throws = 0, DuelistWins = 0, PartyWins = 0 }, Daily = {}, FirstWinDay = -1,
         OwnedAuras = {}, EquippedAura = "", Receipts = {}, ReceiptRevision = 0, Options = {},
 		OwnedSkins = { Default = true },
 		EquippedSkin = "Default",
@@ -93,6 +94,7 @@ local function refresh(player: Player)
 		coins.Parent = ls
 	end
 	coins.Value = data.Coins
+	player:SetAttribute("Gems", data.Gems)
 
 	local owned = {}
 	local skinSource = player:GetAttribute("AllCosmetics") and require(game:GetService("ReplicatedStorage").Skins).Data or data.OwnedSkins
@@ -281,7 +283,7 @@ local function applyReceiptChanges(live, before, staged, saved)
   if type(value) == "table" and type(previous) == "table" and type(live[key]) == "table" and type(saved[key]) == "table" then
    applyReceiptChanges(live[key], previous, value, saved[key])
   elseif value ~= previous then
-   if (key == "Coins" or key == "boughtSpins") and type(value) == "number" and type(live[key]) == "number" then
+   if (key == "Coins" or key == "Gems" or key == "boughtSpins") and type(value) == "number" and type(live[key]) == "number" then
     live[key] += value - (previous or 0)
    else live[key] = copy(saved[key]) end
   end
@@ -317,15 +319,16 @@ function PlayerData.equipAura(player, id)
  data.EquippedAura=id refresh(player) return true
 end
 -- Update the coin balance and cosmetic ownership together in memory, then queue a save.
-function PlayerData.buyCosmetic(player, id, price, aura)
+function PlayerData.buyCosmetic(player, id, price, aura, currency)
  local data = PlayerData.get(player)
  if not data or closing[player] then return false, "loading" end
  if saving[player] then return false, "cx.shop.wait" end
  if player:GetAttribute("InMatch") then return false, "locked" end
  local field=aura and "OwnedAuras" or "OwnedSkins"
  if data[field][id] then return false, "alreadyOwned" end
- if data.Coins<price then return false, "noCoins", price - data.Coins end
- data.Coins -= price data[field][id] = true refresh(player) PlayerData.saveSoon(player)
+ local balance = currency == "Gems" and "Gems" or "Coins"
+ if data[balance] < price then return false, balance == "Gems" and "mz.noGems" or "noCoins", price - data[balance] end
+ data[balance] -= price data[field][id] = true refresh(player) PlayerData.saveSoon(player)
  return true, "acquired"
 end
 
@@ -386,8 +389,17 @@ function PlayerData.addCoins(player: Player, amount: number)
 	refresh(player)
 end
 
+function PlayerData.addGems(player, amount)
+ local data = PlayerData.get(player)
+ if not data or type(amount) ~= "number" or amount ~= amount or math.abs(amount) == math.huge then return end
+ data.Gems = math.clamp(data.Gems + math.floor(amount), 0, E.GemMax)
+ player:SetAttribute("Gems", data.Gems)
+end
+
 function PlayerData.earnedCoins(player, amount)
- return math.floor(amount * (player:GetAttribute("Pass_VIP") == true and (1 + VIP.soulsBonus) or 1))
+ local vip = player:GetAttribute("Pass_VIP") == true and VIP.soulsBonus or 0
+ local friend = player:GetAttribute("FriendBonus") == true and E.FriendBonus or 0
+ return math.floor(amount * (1 + vip + friend) + 1e-9)
 end
 
 function PlayerData.addEarnedCoins(player, amount)
@@ -396,6 +408,15 @@ function PlayerData.addEarnedCoins(player, amount)
  data.Stats.Coins = (data.Stats.Coins or 0) + earned
  PlayerData.addCoins(player, earned)
  return earned
+end
+
+function PlayerData.awardTitle(player, id)
+ local data = PlayerData.get(player)
+ if not data or data.Titles[id] then return false end
+ data.Titles[id] = true
+ PlayerData.saveSoon(player)
+ if player.Parent then TitleUnlocked:FireClient(player, id) end
+ return true
 end
 
 function PlayerData.grantSkin(player: Player, skinId: string)

@@ -13,13 +13,16 @@ local PlayerData = require(ServerScriptService:WaitForChild("PlayerData"))
 local Config = require(ReplicatedStorage:WaitForChild("MonetizationConfig"))
 local Remotes = require(ServerScriptService:WaitForChild("Remotes"))
 local Rewards = require(ReplicatedStorage:WaitForChild("Rewards"))
+local Economy = require(ReplicatedStorage:WaitForChild("Economy"))
 local Skins = require(ReplicatedStorage:WaitForChild("Skins"))
 local Auras = require(ReplicatedStorage:WaitForChild("Auras"))
 
 -- Qué entrega cada tipo. Se aplica a una copia del perfil; si devuelve true se guarda y recién ahí se confirma.
-Manager.registerKind("Souls", function(_, product, data)
-	data.Coins = (data.Coins or 0) + product.amount -- comprado: no lo multiplican los multiplicadores
+Manager.registerKind("Gems", function(_, product, data)
+	data.Gems = (data.Gems or 0) + product.amount
 	return true
+end, function(_, product, data)
+	return data.Gems + product.amount <= Economy.GemMax
 end)
 Manager.registerKind("Spins", function(_, product, data)
 	data.Rewards = data.Rewards or {}
@@ -46,6 +49,8 @@ Manager.registerKind("Skin", function(_, product, data)
 	data.OwnedSkins = data.OwnedSkins or {}
 	data.OwnedSkins[product.item] = true
 	return true
+end, function(player, product)
+	return not PlayerData.owns(player, "OwnedSkins", product.item)
 end)
 
 -- Auras y skins premium: llevan productId en su catálogo
@@ -53,14 +58,15 @@ for id, aura in Auras.Data do
 	if (aura.productId or 0) > 0 and not aura.requiredPass then Manager.registerProduct("Aura." .. id, { id = aura.productId, kind = "Aura", item = id }) end
 end
 for id, skin in Skins.Data do
-	if (skin.productId or 0) > 0 and not skin.roulette and not skin.boxOnly and not skin.comingSoon then Manager.registerProduct("Skin." .. id, { id = skin.productId, kind = "Skin", item = id }) end
+	if skin.currency == "Robux" and (skin.productId or 0) > 0 and not skin.roulette and not skin.boxOnly and not skin.comingSoon then Manager.registerProduct("Skin." .. id, { id = skin.productId, kind = "Skin", item = id }) end
 end
 
 -- Remoto para la interfaz
 local RF = Remotes.get("Monetization", "RemoteFunction")
 local catalogBusy = {}
 local catalogAt = {}
-Players.PlayerRemoving:Connect(function(player) catalogBusy[player] = nil catalogAt[player] = nil end)
+local buyAt = {}
+Players.PlayerRemoving:Connect(function(player) catalogBusy[player] = nil catalogAt[player] = nil buyAt[player] = nil end)
 RF.OnServerInvoke = function(player, action, key)
 	if type(action) ~= "string" or #action > 20 then return false, "invalid" end
 	if action == "Catalog" then
@@ -81,6 +87,18 @@ RF.OnServerInvoke = function(player, action, key)
 		PlayerData.refresh(player)
 		if ok then player:SetAttribute("PurchaseVersion", (player:GetAttribute("PurchaseVersion") or 0) + 1) end
 		return ok
+	elseif action == "BuySkinGems" then
+		if type(key) ~= "string" or #key > Rewards.MaxIdLength then return false, { key = "invalid" } end
+		local now = os.clock()
+		if buyAt[player] and now - buyAt[player] < Economy.ShopInterval then return false, { key = "cx.shop.wait" } end
+		buyAt[player] = now
+		local skin = Skins.Data[key]
+		if not skin or skin.currency ~= "Gems" or skin.roulette or skin.boxOnly or skin.comingSoon then
+			return false, { key = "invalid" }
+		end
+		if PlayerData.owns(player, "OwnedSkins", key) then return false, { key = "alreadyOwned" } end
+		local ok, message, missing = PlayerData.buyCosmetic(player, key, skin.price, false, "Gems")
+		return ok, { key = message, missing = missing }
 	elseif action == "Prompt" then
 		if type(key) ~= "string" or #key > 40 then return false, "invalid" end
 		return Manager.prompt(player, key)

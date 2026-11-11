@@ -17,6 +17,8 @@ local UiAssets = require(RS:WaitForChild("UiAssets", 10))
 local L = require(RS:WaitForChild("Localization", 10))
 local Device = require(RS:WaitForChild("Device")) -- 11/11: PC, celular o consola
 local Skins = require(RS:WaitForChild("Skins", 10))
+local Rewards = require(RS:WaitForChild("Rewards"))
+local Titles = require(RS:WaitForChild("Titles", 10))
 local Weapons = require(RS:WaitForChild("WeaponData", 10))
 local Infusions = require(RS:WaitForChild("Infusions", 10))
 local Builder = require(RS:WaitForChild("WeaponBuilder", 10))
@@ -106,6 +108,10 @@ local zoomAxis = 0
 local statusLabel = nil
 local render
 local setOpen
+local titleState, selectedTitle, titleScroll
+local titleScrollPosition = Vector2.zero
+local titleLoading, titleBusy = false, false
+local titleStatus = ""
 
 local function parseCsv(raw)
 	local map = {}
@@ -374,7 +380,199 @@ end
 ----------------------------------------------------------------------
 -- Renderizado completo de la Armería
 ----------------------------------------------------------------------
+
+local function titleRemote(action, id)
+	local rf = remotes and remotes:FindFirstChild("Titles")
+	if not rf then return false, "loading" end
+	local ok, success, payload = pcall(function() return rf:InvokeServer(action, id) end)
+	if not ok then return false, "error" end
+	return success == true, payload
+end
+
+local function loadTitles()
+	if titleLoading then return end
+	titleLoading = true
+	task.spawn(function()
+		local ok, payload = titleRemote("List")
+		if not ok and payload == "cx.shop.wait" and opened then
+			task.wait(0.4)
+			ok, payload = titleRemote("List")
+		end
+		titleLoading = false
+		if ok and type(payload) == "table" then titleState = payload end
+		if opened then render() end
+	end)
+end
+
+local function titleCard(parent, id, size, caption)
+	local spec = Titles.Data[id]
+	local rarity = UiTheme.Rarities[spec and spec.rarity or "Common"]
+	local frame = UiTheme.panel({ parent = parent, size = size, bg = C.BgPanel, borderColor = rarity.color,
+		borderThickness = rarity.stroke, topColor = rarity.bg, bottomColor = C.BgAbyss })
+	local band = Instance.new("Frame")
+	band.Size = UDim2.new(0, 5, 1, 0) band.BackgroundColor3 = rarity.color band.BorderSizePixel = 0 band.Parent = frame
+	UiTheme.label({ parent = frame, position = UDim2.fromOffset(14, 6), size = UDim2.new(1, -24, 0, 20),
+		text = caption, textSize = UiTheme.TextSizes.XS, color = C.TextSecondary })
+	UiTheme.label({ parent = frame, position = UDim2.fromOffset(14, 28), size = UDim2.new(1, -24, 0, 32),
+		text = Titles.text(id, L.language(), L.t) or L.t("title.none"), font = "Title",
+		scaled = true, textSize = UiTheme.TextSizes.XL, color = rarity.color })
+	UiTheme.label({ parent = frame, position = UDim2.fromOffset(14, 62), size = UDim2.new(1, -24, 0, 24),
+		text = player.DisplayName .. " · " .. L.t("ui.hud.level", { level = player:GetAttribute("Level") or 1 }),
+		scaled = true, textSize = UiTheme.TextSizes.SM, color = C.TextPrimary })
+	return frame
+end
+
+local function actTitle(action, id)
+	if titleBusy then return end
+	titleBusy = true
+	local ok, response = titleRemote(action, id)
+	titleBusy = false
+	titleStatus = ok and "" or L.t(type(response) == "string" and response or "error")
+	if ok and action == "Rebirth" and type(response) == "string" then selectedTitle = response end
+	if ok then loadTitles() elseif opened then render() end
+end
+
+local TITLE_SOURCES = { "role", "pass", "stat", "achievement", "level", "mastery", "shop" }
+local function renderTitles(width, height, top, compact)
+	local usableWidth = width - 40
+	local listWidth = compact and usableWidth or math.floor(usableWidth * 0.58)
+	local previewWidth = compact and usableWidth or usableWidth - listWidth - 12
+	local previewHeight = 158
+	local previewX = compact and 20 or 32 + listWidth
+	local listY = compact and top + previewHeight + 8 or top
+	local preview = UiTheme.panel({ parent = panel, position = UDim2.fromOffset(previewX, top),
+		size = UDim2.fromOffset(previewWidth, previewHeight), borderColor = C.BorderDefault })
+	local list = Instance.new("ScrollingFrame")
+	list.Name = "TitlesList"
+	list.Position = UDim2.fromOffset(20, listY) list.Size = UDim2.fromOffset(listWidth, height - listY - 38)
+	list.BackgroundTransparency = 1 list.BorderSizePixel = 0 list.ScrollBarThickness = 5 list.Parent = panel
+	titleScroll = list
+
+	local previewButtons = {}
+	local function drawPreview()
+		for _, child in preview:GetChildren() do
+			if child:IsA("GuiObject") then child:Destroy() end
+		end
+		table.clear(previewButtons)
+		local equipped = titleState and titleState.equipped or ""
+		local id = selectedTitle or equipped
+		local row
+		for _, candidate in titleState and titleState.titles or {} do
+			if candidate.id == id then row = candidate break end
+		end
+		local card = titleCard(preview, id, UDim2.new(1, -20, 0, 90), L.t("mz.titlePreview"))
+		card.Position = UDim2.fromOffset(10, 8)
+		local isEquipped = equipped ~= "" and equipped == id
+		local action = isEquipped and "Equip" or (row and (row.owned and "Equip" or (row.price and "Buy")))
+		if action then
+			local label = isEquipped and L.t("mz.titleUnequip") or (action == "Buy"
+				and (L.t("buy") .. " · " .. L.t("ui.souls", { amount = row.price })) or L.t("equip"))
+			local button = UiTheme.button({ parent = preview, position = UDim2.fromOffset(10, 104),
+				size = UDim2.new(1, -20, 0, 44), text = label, variant = "primary",
+				textSize = UiTheme.TextSizes.SM, onClick = function() actTitle(action, isEquipped and "" or id) end })
+			button.TextWrapped = true
+			table.insert(previewButtons, button)
+		elseif row and row.hint then
+			UiTheme.label({ parent = preview, position = UDim2.fromOffset(12, 104), size = UDim2.new(1, -24, 0, 42),
+				text = L.t(row.hint), textSize = UiTheme.TextSizes.SM, color = C.TextSecondary })
+		end
+	end
+	drawPreview()
+
+	local y = 0
+	local first
+	local function heading(key)
+		UiTheme.label({ parent = list, position = UDim2.fromOffset(6, y), size = UDim2.new(1, -16, 0, 26),
+			text = L.t(key), font = "Title", textSize = UiTheme.TextSizes.LG, color = C.GoldBright })
+		y += 30
+	end
+	if not titleState then
+		heading("loading")
+	else
+		heading("mz.titles.mastery")
+		for _, weapon in Weapons.Order do
+			local mastery = titleState.mastery[weapon]
+			local row = UiTheme.panel({ parent = list, position = UDim2.fromOffset(0, y), size = UDim2.new(1, -8, 0, 82),
+				bg = C.BgCard, borderColor = C.BorderDefault })
+			UiTheme.label({ parent = row, position = UDim2.fromOffset(10, 2), size = UDim2.new(1, -20, 0, 20),
+				text = L.t("weapon." .. weapon) .. " · " .. L.t("mz.masteryLine",
+					{ level = mastery.level, max = mastery.maxLevel, count = mastery.rebirths }),
+				textSize = UiTheme.TextSizes.XS, font = "Bold", color = C.TextPrimary })
+			local rebirth = UiTheme.button({ parent = row, position = UDim2.fromOffset(10, 28),
+				size = UDim2.new(1, -20, 0, 44), text = L.t("mz.masteryRebirth", { price = mastery.price }),
+				textSize = UiTheme.TextSizes.SM, disabled = mastery.level < mastery.maxLevel or player:GetAttribute("InMatch") == true,
+				onClick = function() actTitle("Rebirth", weapon) end })
+			rebirth.TextWrapped = true
+			if not first and rebirth.Selectable then first = rebirth end
+			y += 88
+		end
+		for _, source in TITLE_SOURCES do
+			local sectionDrawn = false
+			for _, row in titleState.titles do
+				if row.source ~= source then continue end
+				if not sectionDrawn then heading("mz.titles." .. source) sectionDrawn = true end
+				local id = row.id
+				local rarity = UiTheme.Rarities[row.rarity]
+				local rowPanel = UiTheme.panel({ parent = list, position = UDim2.fromOffset(0, y),
+					size = UDim2.new(1, -8, 0, 64), bg = C.BgCard, borderColor = rarity.color })
+				UiTheme.label({ parent = rowPanel, position = UDim2.fromOffset(10, 3), size = UDim2.new(1, -20, 0, 28),
+					text = Titles.text(id, L.language(), L.t), font = "Title", textSize = UiTheme.TextSizes.LG, scaled = true, color = rarity.color })
+				local progress = row.progress ~= nil and ("%d / %d"):format(row.progress, row.goal)
+					or (row.price and L.t("ui.souls", { amount = row.price })) or ""
+				local info = L.t(row.rarity)
+				if titleState.equipped == id then info = info .. " · " .. L.t("equipped")
+				elseif row.owned then info = info .. " · " .. L.t("mz.owned")
+				elseif progress ~= "" then info = info .. " · " .. progress end
+				UiTheme.label({ parent = rowPanel, position = UDim2.fromOffset(10, 34), size = UDim2.new(1, -20, 0, 24),
+					text = info, textSize = UiTheme.TextSizes.XS, color = C.TextSecondary })
+				local hit = Instance.new("TextButton")
+				hit.Name = id hit.Size = UDim2.fromScale(1, 1) hit.BackgroundTransparency = 1 hit.Text = "" hit.Parent = rowPanel
+				UiTheme.bindGamepadFocus(hit, rowPanel:FindFirstChildOfClass("UIStroke"), rarity.color)
+				hit.Activated:Connect(function()
+					selectedTitle = id drawPreview()
+					if Device.isGamepad() and previewButtons[1] then GuiService.SelectedObject = previewButtons[1] end
+				end)
+				if not first then first = hit end
+				y += 70
+			end
+		end
+	end
+	list.CanvasSize = UDim2.fromOffset(0, y)
+	list.CanvasPosition = titleScrollPosition
+	UiTheme.label({ parent = panel, position = UDim2.fromOffset(20, height - 34), size = UDim2.new(1, -40, 0, 30),
+		text = titleStatus, textSize = UiTheme.TextSizes.XS, color = C.Danger })
+	return first
+end
+
+local toastGui = Instance.new("ScreenGui")
+toastGui.Name = "TitleNotices" toastGui.DisplayOrder = 45 toastGui.ResetOnSpawn = false toastGui.Parent = gui.Parent
+local toastQueue = {}
+local showingToast = false
+local function showNextTitle()
+	local id = table.remove(toastQueue, 1)
+	if not id then showingToast = false return end
+	showingToast = true
+	local toast = titleCard(toastGui, id, UDim2.new(0.9, 0, 0, 92), L.t("mz.titleUnlocked"))
+	toast.AnchorPoint = Vector2.new(0.5, 0) toast.Position = UDim2.new(0.5, 0, 0, 62)
+	local limits = Instance.new("UISizeConstraint")
+	limits.MaxSize = Vector2.new(340, 92) limits.Parent = toast
+	task.delay(3.1, function() toast:Destroy() showNextTitle() end)
+end
+
+task.spawn(function()
+	local notice = remotes and remotes:WaitForChild("TitleUnlocked", 15)
+	if not notice then return end
+	notice.OnClientEvent:Connect(function(id)
+		if not Titles.Data[id] then return end
+		table.insert(toastQueue, id)
+		if not showingToast then showNextTitle() end
+		if opened then loadTitles() else titleState = nil end
+	end)
+end)
+
 function render()
+	if titleScroll and titleScroll.Parent then titleScrollPosition = titleScroll.CanvasPosition end
+	titleScroll = nil
 	table.clear(spins)
 	charSpin = nil
 	for _, ch in panel:GetChildren() do
@@ -484,18 +682,20 @@ function render()
 		{ id = "Skins", label = L.t("Skins") },
 		{ id = "Infusions", label = L.t("Infusions") },
 		{ id = "Auras", label = L.t("ui.tab.Auras") },
+		{ id = "Titles", label = L.t("mz.titles") },
 	}
 	for i, def in tabDefs do
 		local b = UiTheme.tabButton({
 			name = "Tab_" .. def.id,
 			parent = tabsBar,
 			layoutOrder = i,
-			size = UDim2.fromOffset(mobile and math.floor((width - 64) / #tabDefs) or 158, 44),
+			size = UDim2.fromOffset(mobile and math.floor((width - 72) / #tabDefs) or 158, 44),
 			text = def.label,
 			active = tab == def.id,
 			onClick = function()
 				tab = def.id
 				selectedId = nil
+				if tab == "Titles" then titleStatus = "" if not titleState then loadTitles() end end
 				render()
 			end,
 		})
@@ -506,6 +706,11 @@ function render()
 
 	-- Subbarra de filtros en Skins
 	local top = mobile and 154 or 118
+	if tab == "Titles" then
+		local titleButton = renderTitles(width, height, top, mobile)
+		if Device.isGamepad() then GuiService.SelectedObject = titleButton or firstButton end
+		return
+	end
 	local leftW = mobile and (width - 40) or math.floor(width * 0.58)
 	if tab == "Skins" then
 		local weaponBar = Instance.new("Frame")
@@ -704,8 +909,8 @@ function render()
 				local isOwned = (tab == "Weapons")
 					or (tab == "Skins" and ownedSkinsMap[id])
 					or (tab == "Auras" and ownedAurasMap[id])
-				local rarityName = (s and s.rarity) or (a and a.rarity) or nil
-				local rSpec = rarityName and UiTheme.Rarities[rarityName] or nil
+				local rarityName = (s and Rewards.skinRarity(id, s)) or (a and a.rarity) or nil
+				local rSpec = rarityName and UiTheme.Rarities[Rewards.rarityTheme(rarityName)] or nil
 				local borderCol = isEq and C.GoldBright or (rSpec and rSpec.color or C.Gold)
 
 				local card = Instance.new("Frame")
@@ -717,8 +922,14 @@ function render()
 				UiTheme.corner(card, UiTheme.Radius.SM)
 				local cardStroke = UiTheme.stroke(card, borderCol, isEq and 2.2 or 1.4, isEq and 0 or 0.22)
 
+				local mastery = tab == "Weapons" and titleState and titleState.mastery[id]
+				if mastery and mastery.rebirths > 0 then
+					UiTheme.label({ parent = card, position = UDim2.fromOffset(8, 4), size = UDim2.new(1, -16, 0, 22),
+						text = "★ " .. mastery.rebirths, font = "Number", textSize = UiTheme.TextSizes.SM, color = C.Coins,
+						alignX = Enum.TextXAlignment.Right, zIndex = 4 })
+				end
 				if rSpec then
-					UiTheme.rarityBadge(card, rarityName, L.t(rarityName), UDim2.fromOffset(8, 6)).ZIndex = 4
+					UiTheme.rarityBadge(card, Rewards.rarityTheme(rarityName), L.t(rarityName), UDim2.fromOffset(8, 6)).ZIndex = 4
 				end
 
 				if tab == "Auras" and a then
@@ -1033,6 +1244,7 @@ function setOpen(value)
 		weaponFilter = player:GetAttribute("WeaponId") or "Sword"
 		backdrop.Visible = true
 		panel.Visible = true
+		loadTitles()
 		render()
 		panel.Position = UDim2.fromScale(0.5, 0.53)
 	else

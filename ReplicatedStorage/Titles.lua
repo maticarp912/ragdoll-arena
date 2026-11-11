@@ -81,10 +81,10 @@ Titles.Data = {
 	VoidHeir = T("Heredero del Vacío", "Heir of the Void", "Herdeiro do Vazio", "Mythic", { source = "shop", price = 35000 }),
 
 	-- Logros especiales (los concede Codex)
-	Undying = T("El Que No Muere", "The Undying", "Aquele Que Não Morre", "Epic", { source = "achievement", hint = "Ganá una partida sin perder ninguna ronda" }),
-	Collector = T("Coleccionista de Reliquias", "Relic Collector", "Colecionador de Relíquias", "Legendary", { source = "achievement", hint = "Completá la colección de un arma" }),
-	Duelist = T("Duelista del Crepúsculo", "Twilight Duelist", "Duelista do Crepúsculo", "Rare", { source = "achievement", hint = "Ganá 25 partidas 1v1" }),
-	BondedBlades = T("Hermanos de Acero", "Bonded Blades", "Irmãos de Aço", "Rare", { source = "achievement", hint = "Ganá 25 partidas 2v2 en party" }),
+	Undying = T("El Que No Muere", "The Undying", "Aquele Que Não Morre", "Epic", { source = "achievement", hint = "mz.titleHint.Undying" }),
+	Collector = T("Coleccionista de Reliquias", "Relic Collector", "Colecionador de Relíquias", "Legendary", { source = "achievement", hint = "mz.titleHint.Collector" }),
+	Duelist = T("Duelista del Crepúsculo", "Twilight Duelist", "Duelista do Crepúsculo", "Rare", { source = "achievement", hint = "mz.titleHint.Duelist", track = "DuelistWins", goal = 25 }),
+	BondedBlades = T("Hermanos de Acero", "Bonded Blades", "Irmãos de Aço", "Rare", { source = "achievement", hint = "mz.titleHint.BondedBlades", track = "PartyWins", goal = 25 }),
 
 	-- Por nivel y maestría (ya existían; se guardan con su clave de idioma)
 	["cx.title.25"] = { nameKey = "cx.title.25", rarity = "Rare", source = "level" },
@@ -97,6 +97,37 @@ Titles.Data = {
 	["cx.mastery.title.Rapier"] = { nameKey = "cx.mastery.title.Rapier", rarity = "Epic", source = "mastery" },
 	["cx.mastery.title.Mace"] = { nameKey = "cx.mastery.title.Mace", rarity = "Epic", source = "mastery" },
 }
+
+
+local ROMAN = {
+	{1000, "M"}, {900, "CM"}, {500, "D"}, {400, "CD"}, {100, "C"}, {90, "XC"}, {50, "L"},
+	{40, "XL"}, {10, "X"}, {9, "IX"}, {5, "V"}, {4, "IV"}, {1, "I"},
+}
+local function roman(n)
+	local parts = {}
+	for _, digit in ROMAN do
+		local count = math.floor(n / digit[1])
+		if count > 0 then table.insert(parts, string.rep(digit[2], count)) n %= digit[1] end
+	end
+	return table.concat(parts)
+end
+
+function Titles.rebirthId(weapon, rebirths)
+	return "cx.mastery.title." .. weapon .. "." .. (rebirths + 1)
+end
+
+-- Rebirth titles use the same translated weapon title on the card, with a Roman numeral.
+setmetatable(Titles.Data, {
+	__index = function(data, id)
+		if type(id) ~= "string" or #id > 64 then return nil end
+		local weapon, suffix = string.match(id, "^cx%.mastery%.title%.([%a]+)%.(%d+)$")
+		if not weapon then return nil end
+		local base = rawget(data, "cx.mastery.title." .. weapon)
+		local rank = tonumber(suffix)
+		if not base or not rank or rank < 2 or rank > 100001 or tostring(rank) ~= suffix then return nil end
+		return { nameKey = base.nameKey, rarity = "Legendary", source = "mastery", roman = roman(rank) }
+	end,
+})
 
 -- Orden para listas: por fuente y después por rareza y meta/precio
 local SOURCE_ORDER = { role = 1, pass = 2, stat = 3, achievement = 4, level = 5, mastery = 6, shop = 7 }
@@ -121,7 +152,7 @@ function Titles.text(id, lang, translate)
 	if not t then return nil end
 	if t.nameKey and translate then
 		local s = translate(t.nameKey)
-		if s and s ~= t.nameKey then return s end
+		if s and s ~= t.nameKey then return t.roman and (s .. " " .. t.roman) or s end
 	end
 	if lang == "EN" then return t.en or t.es end
 	if lang == "PT-BR" then return t.pt or t.en or t.es end

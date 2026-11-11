@@ -13,9 +13,12 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Titles = require(ReplicatedStorage:WaitForChild("Titles"))
 local PlayerData = require(ServerScriptService:WaitForChild("PlayerData"))
 local Remotes = require(ServerScriptService:WaitForChild("Remotes"))
+local Progression = require(ServerScriptService:WaitForChild("ProgressionService"))
+local Weapons = require(ReplicatedStorage:WaitForChild("WeaponData"))
 
 local RF = Remotes.get("Titles", "RemoteFunction")
 local last = {}
+local lastList = {}
 
 local function passes(player)
 	return { VIP = player:GetAttribute("Pass_VIP") == true }
@@ -44,35 +47,49 @@ local function publish(player)
 end
 
 RF.OnServerInvoke = function(player, action, id)
-	if type(action) ~= "string" or #action > 12 then return false end
+	if type(action) ~= "string" or #action > 12 or (id ~= nil and (type(id) ~= "string" or #id > 64)) then return false, "invalid" end
 	local now = os.clock()
-	if last[player] and now - last[player] < 0.4 then return false, "wait" end
-	last[player] = now
+	local calls = action == "List" and lastList or last
+	if calls[player] and now - calls[player] < 0.4 then return false, "cx.shop.wait" end
+	calls[player] = now
 	local data = PlayerData.get(player)
 	if not data then return false, "loading" end
 	if action == "List" then
 		local list = {}
 		local stats = data.Stats or {}
-		for _, tid in Titles.Order do
+		local function append(tid)
 			local t = Titles.Data[tid]
 			local mine = owns(player, tid)
 			-- Los de rol solo se muestran a quien los tiene
 			if mine or not t.role then
 				table.insert(list, { id = tid, owned = mine, source = t.source, rarity = t.rarity, price = t.price,
-					goal = t.goal, progress = t.stat and math.min(tonumber(stats[t.stat]) or 0, t.goal or 0) or nil, hint = t.hint })
+					goal = t.goal, progress = (t.stat or t.track) and math.min(tonumber(stats[t.stat or t.track]) or 0, t.goal or 0) or nil, hint = t.hint })
 			end
 		end
-		return true, { titles = list, equipped = player:GetAttribute("Title") or "" }
+		for _, tid in Titles.Order do append(tid) end
+		local reborn = {}
+		for tid in data.Titles do
+			local spec = Titles.Data[tid]
+			if spec and spec.roman then table.insert(reborn, tid) end
+		end
+		table.sort(reborn)
+		for _, tid in reborn do append(tid) end
+		local mastery = {}
+		for _, weapon in Weapons.Order do mastery[weapon] = Progression.masteryState(player, weapon) end
+		return true, { titles = list, mastery = mastery, equipped = player:GetAttribute("Title") or "" }
+	elseif action == "Rebirth" then
+		return Progression.rebirth(player, id)
 	elseif action == "Buy" then
 		local t = type(id) == "string" and Titles.Data[id]
 		if not t or t.source ~= "shop" or type(t.price) ~= "number" then return false, "invalid" end
 		if owns(player, id) then return false, "alreadyOwned" end
-		if not PlayerData.canMutate(player) then return false, "loading" end
+		if not PlayerData.canMutate(player) then return false, "cx.shop.wait" end
+		if player:GetAttribute("InMatch") then return false, "locked" end
 		if (data.Coins or 0) < t.price then return false, "noCoins" end
 		-- Sin esperas entre comprobar y cobrar: el cambio es atómico en memoria y se guarda después
 		data.Coins -= t.price
 		data.Titles = data.Titles or {}
-		data.Titles[id] = true
+		PlayerData.awardTitle(player, id)
 		data.EquippedTitle = id
 		PlayerData.refresh(player)
 		PlayerData.saveSoon(player)
@@ -104,4 +121,4 @@ end
 
 Players.PlayerAdded:Connect(track)
 for _, p in Players:GetPlayers() do track(p) end
-Players.PlayerRemoving:Connect(function(p) last[p] = nil end)
+Players.PlayerRemoving:Connect(function(p) last[p] = nil lastList[p] = nil end)

@@ -1,6 +1,7 @@
 -- Stage 8 server/data configuration. Ranked progression is reserved for a future stage.
 return {
  DayOffset = 10800, FeaturedCount = 5, Schema = 2, MinPrematchTime = 10, PrematchTime = 10, CinematicTime = 4.5, RoundEndTime = 3, SummaryTime = 4, EliminationPoll = 0.05,
+ GemMax = 1e12, FriendBonus = 0.2, FriendRetrySeconds = 30, Rebirth = { Start = 5000, Step = 2500 },
  MaxPlaySeconds = 1e12, NameCacheLimit = 200, NameCacheTTL = 600, QueueInterval = 0.25,
 
  Stores = { Live = "RagdollArena_v2", Studio = "RagdollArena_v2_Studio", BoardsLive = "RagdollArena_Stage8_", BoardsStudio = "RagdollArena_Stage8_Studio_" },

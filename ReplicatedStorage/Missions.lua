@@ -1,6 +1,6 @@
 -- Deterministic daily rotation; midnight Argentina (UTC-3), manually claimed rewards.
 return {
- DailyCount = 3, RotationStep = 3, SpinReward = 1,
+ GemReward = 40, DailyCount = 3, RotationStep = 3, SpinReward = 1,
  Order = { "wins", "knockdowns", "parries", "guards", "throws", "greatsword", "matches", "kills", "damage", "daggers", "kicks", "ringouts" },
  Data = {
  wins = { event = "Win", goal = 2, reward = 130 },

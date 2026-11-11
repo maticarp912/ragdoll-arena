@@ -17,6 +17,8 @@ local UiTheme = require(RS:WaitForChild("UiTheme", 10))
 local UiAssets = require(RS:WaitForChild("UiAssets", 10))
 local L = require(RS:WaitForChild("Localization", 10))
 local Vault = require(RS:WaitForChild("VaultClient"))
+local Rewards = require(RS:WaitForChild("Rewards"))
+local Format = require(RS:WaitForChild("Format"))
 local Device = require(RS:WaitForChild("Device")) -- 11/11: PC, celular o consola
 local Skins = require(RS:WaitForChild("Skins", 10))
 local Weapons = require(RS:WaitForChild("WeaponData", 10))
@@ -196,13 +198,39 @@ local vaultScroll = Vector2.zero
 local inspecting = false
 local compactShop = false
 
+local function loadChestOdds()
+ local rewards = remotes and remotes:FindFirstChild("Rewards")
+ if not rewards then return nil end
+ local function read() return rewards:InvokeServer("GetState") end
+ local ok, accepted, state = pcall(read)
+ if ok and not accepted then
+  task.wait(Rewards.Interval + 0.05)
+  ok, accepted, state = pcall(read)
+ end
+ if not ok or not accepted then return nil end
+ local lines = { L.t("mz.highRarityOdds") }
+ local lang = L.language()
+ for level, id in Rewards.BoxOrder do
+  local box = state.boxes[id]
+  local base, boosted = 0, 0
+  for _, row in box.probabilities do
+   if Rewards.RarityRank[row.rarity] >= Rewards.GoodRank then
+    base += row.baseProbability
+    boosted += row.previewProbability
+   end
+  end
+  table.insert(lines, L.t("mz.level", { level = level }) .. "  " .. Format.percent(base, lang) .. " → " .. Format.percent(boosted, lang))
+ end
+ return table.concat(lines, "\n")
+end
+
 local function loadVault()
  if vaultLoading then return end
  vaultLoading = true
  task.spawn(function()
   vaultEntries = Vault.catalog() or {}
   for _, item in vaultEntries do
-   if item.available and item.kind == "Luck" then luckOdds = Vault.chestOdds() break end
+   if item.available and item.kind == "Luck" then luckOdds = loadChestOdds() break end
   end
   vaultLoading = false
   if opened and tab == "Vault" then render() end
@@ -217,7 +245,7 @@ local function openVault(section)
  loadVault()
 end
 
-local rarities = { "all", "Common", "Rare", "Epic", "Legendary" }
+local rarities = { "all", "Common", "Rare", "Epic", "Legendary", "Exclusive" }
 local filters = { "all", "owned", "available" }
 local auraKinds = { "all", "Body", "Weapon" }
 
@@ -430,10 +458,28 @@ local function ownAuras()
 	return parseCsv(player:GetAttribute("OwnedAuras"))
 end
 
+
+local function balancePill(parent, position, size, kind, amount, getGems)
+	local gems = kind == "Gems"
+	local tint = gems and C.Guard or C.Coins
+	local pill = UiTheme.panel({ parent = parent, position = position, size = size,
+		anchor = Vector2.new(1, 0.5), bg = C.BgAbyss, borderColor = tint, radius = UiTheme.Radius.Pill })
+	local icon = UiAssets.icon(pill, gems and "rarity_rare" or "coin", 18, tint)
+	icon.AnchorPoint = Vector2.new(0, 0.5) icon.Position = UDim2.new(0, 8, 0.5, 0)
+	UiTheme.label({ parent = pill, position = UDim2.fromOffset(30, 0), size = UDim2.new(1, gems and -78 or -38, 1, 0),
+		text = L.t(gems and "mz.gemsAmount" or "ui.souls", { amount = amount }), font = "Number", scaled = true,
+		textSize = UiTheme.TextSizes.SM, minTextSize = 10, color = tint, alignX = Enum.TextXAlignment.Center })
+	if gems then
+		UiTheme.button({ name = "GetGems", parent = pill, anchor = Vector2.new(1, 0.5),
+			position = UDim2.fromScale(1, 0.5), size = UDim2.fromOffset(42, 44), text = "+",
+			textColor = tint, variant = "secondary", onClick = getGems })
+	end
+end
+
 local function pending(item)
 	if not item then return true end
 	if item.comingSoon then return true end
-	if item.currency == "Robux" then return true end -- D20: sin Robux en 0.2
+	if item.currency == "Robux" then return (item.productId or 0) == 0 end
 	return false
 end
 
@@ -444,6 +490,8 @@ local function priceText(item)
 	end
 	if item.currency == "Free" then return L.t("Free") end
 	if item.currency == "Coins" then return L.t("ui.souls", { amount = item.price or 0 }) end
+	if item.currency == "Gems" then return L.t("mz.gemsAmount", { amount = item.price or 0 }) end
+	if item.currency == "Robux" and (item.productId or 0) > 0 then return L.t("mz.skinVault") end
 	return L.t("soon")
 end
 
@@ -574,9 +622,12 @@ local function act(action, id)
 		UiTheme.playSound("UI_Error")
 		return
 	end
+	local target = remote
+	if action == "BuySkinGems" then target = remotes and remotes:FindFirstChild("Monetization") end
+	if not target then return end
 	busy = true
 	local ok, success, msg = pcall(function()
-		return remote:InvokeServer(action, id)
+		return target:InvokeServer(action, id)
 	end)
 	busy = false
 	dismiss()
@@ -587,7 +638,7 @@ local function act(action, id)
 	end
 
 	if success then
-		UiTheme.playSound((action == "Buy" or action == "BuyAura") and "UI_PurchaseOK" or "UI_Equip")
+		UiTheme.playSound((action == "Buy" or action == "BuyAura" or action == "BuySkinGems") and "UI_PurchaseOK" or "UI_Equip")
 		if detailSpin then
 			detailSpin.flashUntil = os.clock() + 0.35
 		end
@@ -596,14 +647,16 @@ local function act(action, id)
 	end
 
 	render()
-	if type(msg) == "table" and msg.key == "noCoins" and type(msg.missing) == "number" then
+	if type(msg) == "table" and msg.key == "mz.noGems" and type(msg.missing) == "number" then
 		messageLabel.Text = ""
 		local missing = UiTheme.button({ parent = panel, position = messageLabel.Position - UDim2.fromOffset(0, 14), size = UDim2.new(messageLabel.Size.X.Scale, messageLabel.Size.X.Offset, 0, 44),
-			text = Vault.shortfall(msg.missing), textSize = UiTheme.TextSizes.XS, onClick = function() openVault("Souls") end })
+			text = L.t("mz.missingGems", { amount = msg.missing }), textSize = UiTheme.TextSizes.XS, onClick = function() openVault("Gems") end })
 		missing.TextWrapped = true
 		return
 	end
-	if type(msg) == "table" and msg.key then
+	if type(msg) == "table" and msg.key == "noCoins" and type(msg.missing) == "number" then
+		setStatus(L.t("mz.missingSoulsEarn", { amount = msg.missing }), true)
+	elseif type(msg) == "table" and msg.key then
 		setStatus(L.t(msg.key, msg.params), not success)
 	elseif type(msg) == "string" then
 		setStatus(L.t(msg), not success)
@@ -749,9 +802,10 @@ local function inspect(id)
 	local rec, kind = getItemRecord(id)
 	if not rec then return end
 
-	local rSpec = rec.rarity and UiTheme.Rarities[rec.rarity] or nil
+	local rarityName = Skins.Data[id] and Rewards.skinRarity(id, rec) or rec.rarity
+	local rSpec = rarityName and UiTheme.Rarities[Rewards.rarityTheme(rarityName)] or nil
 	if rSpec then
-		UiTheme.rarityBadge(detail, rec.rarity, L.t(rec.rarity), UDim2.fromOffset(16, 12))
+		UiTheme.rarityBadge(detail, Rewards.rarityTheme(rarityName), L.t(rarityName), UDim2.fromOffset(16, 12))
 	end
 
 	-- Insignia de Ruleta / Gran Premio Semanal (D15)
@@ -902,7 +956,11 @@ local function inspect(id)
 	local labelText = L.t(st)
 	local variant = "primary"
 	local disabled = false
-	local missing = st == "buy" and rec.currency == "Coins" and math.max(0, rec.price - Vault.souls(player)) or 0
+	local usesGems = rec.currency == "Gems"
+	local missing = 0
+	if st == "buy" and (usesGems or rec.currency == "Coins") then
+		missing = math.max(0, rec.price - (usesGems and (player:GetAttribute("Gems") or 0) or Vault.souls(player)))
+	end
 
 	if st == "vipPass" then
 		labelText = L.t("mz.pass.VIP")
@@ -912,7 +970,10 @@ local function inspect(id)
 		variant = "secondary"
 		disabled = true
 	elseif missing > 0 then
-		labelText = Vault.shortfall(missing)
+		labelText = L.t(usesGems and "mz.missingGems" or "mz.missingSoulsEarn", { amount = missing })
+		disabled = not usesGems
+	elseif st == "buy" and rec.currency == "Robux" then
+		labelText = L.t("mz.skinVault")
 	elseif st == "buy" then
 		labelText = L.t("buy") .. " · " .. priceText(rec)
 		variant = "gold"
@@ -940,7 +1001,8 @@ local function inspect(id)
 		disabled = disabled,
 		onClick = function()
 			if st == "vipPass" then openVault("VIP") return end
-			if missing > 0 then openVault("Souls") return end
+			if missing > 0 then if usesGems then openVault("Gems") end return end
+			if st == "buy" and rec.currency == "Robux" then openVault(kind .. "." .. id) return end
 			if kind == "Aura" then
 				if st == "buy" then
 					confirmPurchase(id, rec, "BuyAura")
@@ -949,7 +1011,7 @@ local function inspect(id)
 				end
 			elseif kind == "Skin" then
 				if st == "buy" then
-					confirmPurchase(id, rec, "Buy")
+					confirmPurchase(id, rec, usesGems and "BuySkinGems" or "Buy")
 				elseif st == "equip" then
 					if rec.weapon and rec.weapon ~= player:GetAttribute("WeaponId") then
 						act("SelectWeapon", rec.weapon)
@@ -1001,13 +1063,13 @@ local function renderVault(parent, width, mobile)
    local col = (index - 1) % columns
    local top = y + offsets[row]
    local cardHeight = group == "Pass" and 186 or (item.kind == "Luck" and 298 or 165)
-   if vaultTarget == item.key or (vaultTarget == "Souls" and item.kind == "Souls" and targetY == nil) then targetY = top end
+   if vaultTarget == item.key or (vaultTarget == "Gems" and item.kind == "Gems" and targetY == nil) then targetY = top end
    local card = UiTheme.panel({ parent = parent, position = UDim2.fromOffset(col * (cardWidth + gap), top),
     size = UDim2.fromOffset(cardWidth, cardHeight), borderColor = item.badge and C.GoldBright or C.BorderDefault, ornaments = group == "Pass" })
    local title, description = Vault.text(item)
-   local iconByKind = { Souls = "coin", Spins = "trophy", Luck = "stamina", Aura = "crown", Skin = "armory" }
+   local iconByKind = { Gems = "rarity_rare", Spins = "trophy", Luck = "stamina", Aura = "crown", Skin = "armory" }
    local iconName = item.key == "VIP" and "crown" or (iconByKind[item.kind] or "stamina")
-   local crest = UiAssets.icon(card, iconName, 30, item.kind == "Souls" and C.Coins or C.GoldBright)
+   local crest = UiAssets.icon(card, iconName, 30, item.kind == "Gems" and C.Guard or C.GoldBright)
    crest.Position = UDim2.fromOffset(14, 18)
    UiTheme.label({ parent = card, position = UDim2.fromOffset(54, 12), size = UDim2.new(1, -68, 0, 42),
     text = title, font = "Title", scaled = true, textSize = UiTheme.TextSizes.XL, color = C.TextPrimary })
@@ -1072,7 +1134,7 @@ function render()
 	-- Cabecera: título del Escaparate, saldo de monedas, botón Abrir Armería y botón Cerrar
 	local header = Instance.new("Frame")
 	header.Name = "Header"
-	header.Size = UDim2.new(1, 0, 0, mobile and 106 or 58)
+	header.Size = UDim2.new(1, 0, 0, mobile and 143 or 58)
 	header.BackgroundColor3 = C.BgHeader
 	header.BorderSizePixel = 0
 	header.Parent = panel
@@ -1102,42 +1164,16 @@ function render()
 		color = C.TextSecondary,
 	})
 
-	local ls = player:FindFirstChild("leaderstats")
-	local coinsVal = ls and ls:FindFirstChild("Coins")
-	local coinBox = Instance.new("Frame")
-	coinBox.AnchorPoint = mobile and Vector2.zero or Vector2.new(1, 0.5)
-	coinBox.Position = mobile and UDim2.fromOffset(16, 52) or UDim2.new(1, -290, 0.5, 0)
-	coinBox.Size = UDim2.fromOffset(mobile and math.floor((width - 44) * 0.42) or 180, 44)
-	coinBox.BackgroundColor3 = C.BgAbyss
-	coinBox.BorderSizePixel = 0
-	coinBox.Parent = header
-	UiTheme.corner(coinBox, UiTheme.Radius.Pill)
-	UiTheme.stroke(coinBox, C.GoldDim, 1, 0.25)
-
-	local coinIc = UiAssets.icon(coinBox, "coin", 20, C.Coins)
-	coinIc.AnchorPoint = Vector2.new(0, 0.5)
-	coinIc.Position = UDim2.new(0, 10, 0.5, 0)
-
-	UiTheme.label({
-		parent = coinBox,
-		position = UDim2.fromOffset(30, 0),
-		size = UDim2.new(1, -76, 1, 0),
-		text = tostring(coinsVal and coinsVal.Value or 0),
-		scaled = true,
-		font = "Number",
-		textSize = UiTheme.TextSizes.SM,
-		color = C.Coins,
-		alignX = Enum.TextXAlignment.Right,
-	})
-
-	UiTheme.button({ name = "GetSouls", parent = coinBox, anchor = Vector2.new(1, 0.5),
-		position = UDim2.fromScale(1, 0.5), size = UDim2.fromOffset(42, 44), text = "+",
-		textColor = C.Coins, variant = "secondary", onClick = function() openVault("Souls") end })
+	local balanceW = mobile and math.floor((width - 48) / 2) or 148
+	balancePill(header, mobile and UDim2.new(0.5, -4, 0, 68) or UDim2.new(1, -444, 0.5, 0),
+		UDim2.fromOffset(balanceW, 44), "Coins", Vault.souls(player))
+	balancePill(header, mobile and UDim2.new(1, -16, 0, 68) or UDim2.new(1, -290, 0.5, 0),
+		UDim2.fromOffset(balanceW, 44), "Gems", player:GetAttribute("Gems") or 0, function() openVault("Gems") end)
 	local armoryBtn = UiTheme.button({
 		name = "OpenArmoryBtn",
 		parent = header,
 		anchor = Vector2.new(1, 0.5),
-		position = mobile and UDim2.new(1, -94, 0, 74) or UDim2.new(1, -130, 0.5, 0),
+		position = mobile and UDim2.new(1, -94, 0, 116) or UDim2.new(1, -130, 0.5, 0),
 		size = UDim2.fromOffset(mobile and math.floor((width - 44) * 0.31) or 150, 44),
 		text = L.t("ui.shop.openArmory"),
 		variant = "primary",
@@ -1158,7 +1194,7 @@ function render()
 		name = "CloseButton",
 		parent = header,
 		anchor = Vector2.new(1, 0.5),
-		position = mobile and UDim2.new(1, -16, 0, 74) or UDim2.new(1, -16, 0.5, 0),
+		position = mobile and UDim2.new(1, -16, 0, 116) or UDim2.new(1, -16, 0.5, 0),
 		size = UDim2.fromOffset(mobile and 70 or 104, 44),
 		text = L.t("close"),
 		variant = "secondary",
@@ -1174,7 +1210,7 @@ function render()
 		tabsBar.ScrollingDirection = Enum.ScrollingDirection.X tabsBar.ScrollBarThickness = 3 tabsBar.BorderSizePixel = 0
 	end
 	tabsBar.Name = "TabsBar"
-	tabsBar.Position = UDim2.fromOffset(20, mobile and 112 or 66)
+	tabsBar.Position = UDim2.fromOffset(20, mobile and 149 or 66)
 	tabsBar.Size = UDim2.new(1, -40, 0, 48)
 	tabsBar.BackgroundTransparency = 1
 	tabsBar.Parent = panel
@@ -1215,7 +1251,7 @@ function render()
 		end
 	end
 
-	local top = mobile and 167 or 116
+	local top = mobile and 204 or 116
 	local listWidth = mobile and (width - 40) or math.floor(width * 0.61) - 24
 	if tab == "Skins" then
 		local weaponBar = Instance.new("Frame")
@@ -1315,7 +1351,8 @@ function render()
 		if not rec then return end
 		table.insert(shown, id)
 
-		local rSpec = rec.rarity and UiTheme.Rarities[rec.rarity] or nil
+		local rarityName = Skins.Data[id] and Rewards.skinRarity(id, rec) or rec.rarity
+		local rSpec = rarityName and UiTheme.Rarities[Rewards.rarityTheme(rarityName)] or nil
 		local st = state(id)
 		local borderCol = (selected == id or rec.weeklyPrize) and C.GoldBright or (rSpec and rSpec.color or C.Gold)
 
@@ -1333,7 +1370,7 @@ function render()
 		end
 
 		if rSpec then
-			UiTheme.rarityBadge(card, rec.rarity, L.t(rec.rarity), UDim2.fromOffset(8, 6)).ZIndex = 4
+			UiTheme.rarityBadge(card, Rewards.rarityTheme(rarityName), L.t(rarityName), UDim2.fromOffset(8, 6)).ZIndex = 4
 		end
 
 		if rec.roulette then
@@ -1568,7 +1605,7 @@ function render()
 				local s = Skins.Data[id]
 				if s and id ~= "Default" and not s.comingSoon and (not s.boxOnly or ownedSkinsMap[id]) then -- 10/11: las de Tormenta solo si las tenés
 					local matches = (not s.weapon or s.weapon == weapon)
-						and (rarity == "all" or s.rarity == rarity)
+						and (rarity == "all" or Rewards.skinRarity(id, s) == rarity)
 						and (ownership == "all" or (ownership == "owned" and ownedSkinsMap[id]) or (ownership == "available" and not ownedSkinsMap[id]))
 					if matches then
 						buildItemCard(content, id, cw, ch, idx, s.roulette == true)
@@ -1803,7 +1840,7 @@ RunService.RenderStepped:Connect(function(dt)
 	end
 end)
 
-for _, attr in { "OwnedSkins", "EquippedSkin", "OwnedAuras", "EquippedAura", "WeaponId", "InfusionId", "InMatch", "OptUiScale" } do
+for _, attr in { "Gems", "OwnedSkins", "EquippedSkin", "OwnedAuras", "EquippedAura", "WeaponId", "InfusionId", "InMatch", "OptUiScale" } do
 	player:GetAttributeChangedSignal(attr):Connect(function()
 		if opened and not busy then
 			render()

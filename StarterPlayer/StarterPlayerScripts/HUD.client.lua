@@ -573,7 +573,12 @@ local xpBarBg, xpBarFill = UiTheme.progressBar({
 })
 xpBarBg.Name = "XPBar"
 
+local friendBadge = UiTheme.label({ parent = progBarHolder, position = UDim2.fromOffset(0, 27),
+	size = UDim2.fromOffset(148, 17), text = L.t("mz.friendBadge", { percent = 20 }), font = "Bold",
+	textSize = UiTheme.TextSizes.XS, color = C.Accent })
 local function updateOwnProgression()
+	friendBadge.Visible = not player:GetAttribute("InMatch") and player:GetAttribute("FriendBonus") == true
+	friendBadge.Text = L.t("mz.friendBadge", { percent = 20 })
 	local lvl = tonumber(player:GetAttribute("Level")) or 1
 	local xp = tonumber(player:GetAttribute("XP")) or 0
 	local xpNext = math.max(1, tonumber(player:GetAttribute("XPNext")) or 150)
@@ -592,7 +597,7 @@ local function updateOwnProgression()
 	boostBadgeLbl.Text = table.concat(parts, " · ")
 end
 
-for _, attr in { "Level", "XP", "XPNext", "MultXP", "MultCoins", "MultRemaining" } do
+for _, attr in { "Level", "XP", "XPNext", "MultXP", "MultCoins", "MultRemaining", "FriendBonus", "InMatch" } do
 	player:GetAttributeChangedSignal(attr):Connect(updateOwnProgression)
 end
 updateOwnProgression()
