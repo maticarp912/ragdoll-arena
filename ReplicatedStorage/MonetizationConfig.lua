@@ -17,7 +17,7 @@ M.Passes = {
 	VIP = {
 		id = 0, robux = 399, order = 2, nameKey = "mz.pass.VIP", descKey = "mz.pass.VIP.desc",
 		-- Ventajas (las aplica cada servicio leyendo el atributo Pass_VIP del jugador):
-		perks = { soulsBonus = 0.2, extraDailySpin = 1, role = "VIP", aura = "VipCrown" },
+		perks = { soulsBonus = 0.2, extraDailySpin = 1, fallbackSouls = 150, role = "VIP", aura = "VipCrown" },
 	},
 }
 
@@ -31,8 +31,8 @@ M.Products = {
 	Souls5 = { id = 0, robux = 999, kind = "Souls", amount = 20000, order = 5, paidRandom = true, badge = "best" },
 	Spins3 = { id = 0, robux = 49, kind = "Spins", amount = 3, order = 6, paidRandom = true },
 	-- Suerte de cofres: multiplica el peso de Épica y Legendaria (Rewards.Luck lo aplica) durante `seconds`.
-	-- enabled = false hasta que Rewards.Luck esté hecho (Codex): no se vende algo que todavía no hace nada.
-	Luck30 = { id = 0, robux = 79, kind = "Luck", multiplier = 2, seconds = 1800, order = 7, paidRandom = true, enabled = false, maxSeconds = 7200 },
+	-- Disponible con ID válido, política habilitada y espacio de duración.
+	Luck30 = { id = 0, robux = 79, kind = "Luck", multiplier = 2, seconds = 1800, order = 7, paidRandom = true, enabled = true, maxSeconds = 7200 },
 }
 
 -- Auras y skins que se venden con Robux: llevan su `productId` en Auras.lua / Skins.lua (ya existe el campo).
@@ -43,6 +43,8 @@ M.StudioGrantAttribute = "StudioGrantPasses"
 
 -- Reintentos para consultar Roblox (propiedad de pases y políticas)
 M.Retry = { Attempts = 3, Delays = { 1, 2 }, RecheckSeconds = 30, PurchaseConfirm = { 2, 4, 8, 15, 30 } }
+M.PriceCacheSeconds = 60
+M.ReceiptProfileWait = 25
 M.PromptCooldown = 1 -- s entre pedidos de compra del mismo jugador
 
 return M

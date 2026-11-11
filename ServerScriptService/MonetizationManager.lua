@@ -26,6 +26,7 @@ local Manager = {}
 
 local kinds = {}            -- [kind] = grant(player, product, data)
 local limits = {}           -- [kind] = canBuy(player, product, data) -> boolean (no cobrar si ya está en el tope)
+local products = {}
 local byProductId = {}      -- [productId] = { key, product } | false (id repetido: no se entrega nada)
 local passOwned = {}        -- [player] = { [key] = true | false }
 local policy = {}           -- [player] = { paidRandom = boolean }
@@ -46,6 +47,7 @@ end
 -- Registro de productos
 ----------------------------------------------------------------------
 local function register(key, product)
+	products[key] = product
 	local id = product.id
 	if type(id) ~= "number" or id <= 0 then return end
 	local existing = byProductId[id]
@@ -73,8 +75,15 @@ for key, product in Config.Products do register(key, product) end
 ----------------------------------------------------------------------
 -- Políticas (azar pago)
 ----------------------------------------------------------------------
+local paidSouls = false
+for _, product in Config.Products do
+	if product.kind == "Souls" and product.id > 0 then paidSouls = true end
+end
+function Manager.soulsArePaid() return paidSouls end
+
 local function loadPolicy(player)
 	local ok, info = retry(function() return PolicyService:GetPolicyInfoForPlayerAsync(player) end)
+	if not player.Parent then return end
 	-- Si falla, se cierra: se trata como restringido (fail closed)
 	local restricted = not ok or type(info) ~= "table" or info.ArePaidRandomItemsRestricted ~= false
 	policy[player] = { paidRandom = not restricted, known = ok }
@@ -98,6 +107,7 @@ local function studioGrant()
 end
 
 local function setPass(player, key, owned)
+	if not player.Parent then return end
 	passOwned[player] = passOwned[player] or {}
 	local before = passOwned[player][key]
 	passOwned[player][key] = owned
@@ -118,7 +128,7 @@ local function checkPass(player, key)
 	else
 		-- No se sabe: no se guarda false. Se vuelve a intentar más tarde.
 		task.delay(Config.Retry.RecheckSeconds, function()
-			if player.Parent and passOwned[player] and passOwned[player][key] == nil then checkPass(player, key) end
+			if player.Parent and Manager.ownsPass(player, key) == nil then checkPass(player, key) end
 		end)
 	end
 end
@@ -163,7 +173,12 @@ end)
 MarketplaceService.ProcessReceipt = function(info)
 	local player = Players:GetPlayerByUserId(info.PlayerId)
 	local entry = byProductId[info.ProductId]
-	if not player or not entry or not PlayerData.get(player) then
+	if not player or not entry then return Enum.ProductPurchaseDecision.NotProcessedYet end
+	local deadline = os.clock() + Config.ReceiptProfileWait
+	while player.Parent and player:GetAttribute("ProfileState") == nil and not PlayerData.get(player) and os.clock() < deadline do
+		task.wait(Config.PromptCooldown)
+	end
+	if not player.Parent or not PlayerData.get(player) then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 	local grant = kinds[entry.product.kind]
@@ -175,8 +190,10 @@ MarketplaceService.ProcessReceipt = function(info)
 		assert(grant(player, entry.product, data) == true, "grant failed")
 	end)
 	if ok then
-		-- lihfolk-ignore: receipt-grant-before-save (processReceiptWith guarda la copia con el PurchaseId antes de tocar el perfil en memoria)
-		player:SetAttribute("LastPurchase", entry.key)
+		if player.Parent then
+			player:SetAttribute("LastPurchase", entry.key)
+			player:SetAttribute("PurchaseVersion", (player:GetAttribute("PurchaseVersion") or 0) + 1)
+		end
 		return Enum.ProductPurchaseDecision.PurchaseGranted
 	end
 	return Enum.ProductPurchaseDecision.NotProcessedYet
@@ -185,20 +202,24 @@ end
 ----------------------------------------------------------------------
 -- Catálogo y pedidos de compra (el cliente pide, el servidor decide)
 ----------------------------------------------------------------------
-local priceCache = {} -- [clave] = { price = n | false, at = os.clock() }; los fallos se reintentan al minuto
-local function realPrice(id, infoType, fallback)
-	if id <= 0 then return fallback end
+local priceCache = {}
+local function realPrice(id, infoType)
+	if id <= 0 then return nil end
 	local cacheKey = tostring(infoType) .. id
 	local entry = priceCache[cacheKey]
-	if entry == nil or (entry.price == false and os.clock() - entry.at > 60) then
-		local ok, info = pcall(function() return MarketplaceService:GetProductInfo(id, infoType) end)
-		entry = { price = ok and type(info) == "table" and info.PriceInRobux or false, at = os.clock() }
+	if not entry or os.clock() - entry.at >= Config.PriceCacheSeconds then
+		local ok, info = pcall(function() return MarketplaceService:GetProductInfoAsync(id, infoType) end)
+		local price = ok and type(info) == "table" and info.IsForSale == true and info.PriceInRobux
+		entry = { price = type(price) == "number" and price or nil, at = os.clock() }
 		priceCache[cacheKey] = entry
 	end
-	return entry.price or fallback
+	return entry.price
 end
 
-local function enabled(product) return product.id > 0 and product.enabled ~= false end
+local function enabled(product)
+	local entry = byProductId[product.id]
+	return entry and entry.product == product and product.enabled ~= false and kinds[product.kind] ~= nil
+end
 function Manager.underLimit(player, product)
 	local canBuy = limits[product.kind]
 	local data = PlayerData.get(player)
@@ -209,49 +230,52 @@ function Manager.underLimit(player, product)
 end
 local underLimit = Manager.underLimit
 
-function Manager.catalog(player)
+function Manager.catalog(player, onlyPass)
 	local list = {}
-	local allowed = Manager.paidRandomAllowed(player)
-	local policyKnown = policy[player] ~= nil and policy[player].known == true
 	for key, pass in Config.Passes do
-		table.insert(list, {
-			key = key, type = "Pass", order = pass.order, nameKey = pass.nameKey, descKey = pass.descKey,
-			price = realPrice(pass.id, Enum.InfoType.GamePass, pass.robux), owned = Manager.ownsPass(player, key) == true,
-			available = pass.id > 0 or studioGrant(),
-		})
+		if onlyPass and key ~= onlyPass then continue end
+		local price = realPrice(pass.id, Enum.InfoType.GamePass)
+		local owned = Manager.ownsPass(player, key) == true
+		if price or owned then
+			table.insert(list, { key = key, id = pass.id, type = "Pass", order = pass.order,
+				nameKey = pass.nameKey, descKey = pass.descKey, price = price, owned = owned, available = true })
+		end
 	end
-	for key, product in Config.Products do
-		table.insert(list, {
-			key = key, type = "Product", kind = product.kind, order = product.order, amount = product.amount,
-			multiplier = product.multiplier, seconds = product.seconds, badge = product.badge,
-			price = realPrice(product.id, Enum.InfoType.Product, product.robux),
-			available = enabled(product) and (not product.paidRandom or allowed) and underLimit(player, product),
-			restricted = product.paidRandom == true and not allowed and policyKnown,
-			atLimit = enabled(product) and not underLimit(player, product),
-		})
+	for key, product in products do
+		if onlyPass then break end
+		if enabled(product) and (not product.paidRandom or Manager.paidRandomAllowed(player)) and underLimit(player, product) then
+			local price = realPrice(product.id, Enum.InfoType.Product)
+			if price and (not product.paidRandom or Manager.paidRandomAllowed(player)) then
+				table.insert(list, { key = key, id = product.id, type = "Product", kind = product.kind, order = product.order,
+					amount = product.amount, multiplier = product.multiplier, seconds = product.seconds,
+					badge = product.badge, item = product.item, price = price, available = true })
+			end
+		end
 	end
 	table.sort(list, function(a, b)
 		if a.type ~= b.type then return a.type == "Pass" end
+		if (a.order or 99) == (b.order or 99) then return a.key < b.key end
 		return (a.order or 99) < (b.order or 99)
 	end)
 	return list
 end
-
 function Manager.prompt(player, key)
 	local now = os.clock()
 	if promptAt[player] and now - promptAt[player] < Config.PromptCooldown then return false, "wait" end
 	promptAt[player] = now
 	local pass = Config.Passes[key]
 	if pass then
-		if pass.id <= 0 then return false, "unavailable" end
+		if not realPrice(pass.id, Enum.InfoType.GamePass) then return false, "unavailable" end
 		if Manager.ownsPass(player, key) then return false, "owned" end
 		MarketplaceService:PromptGamePassPurchase(player, pass.id)
 		return true
 	end
-	local product = Config.Products[key]
+	local product = products[key]
 	if not product or not enabled(product) then return false, "unavailable" end
 	if product.paidRandom and not Manager.paidRandomAllowed(player) then return false, "restricted" end
-	if not underLimit(player, product) then return false, "limit" end -- no cobrar algo que no se puede entregar
+	if not realPrice(product.id, Enum.InfoType.Product) or not player.Parent then return false, "unavailable" end
+	if product.paidRandom and not Manager.paidRandomAllowed(player) then return false, "restricted" end
+	if not underLimit(player, product) then return false, "limit" end
 	MarketplaceService:PromptProductPurchase(player, product.id)
 	return true
 end

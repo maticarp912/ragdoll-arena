@@ -209,3 +209,35 @@ Registro del 11/11/2026 00:18 (Argentina, UTC−3). Revisé los cinco commits re
 
 - 11/11/2026 00:23 (Argentina, UTC−3). El usuario confirmó que las cinco skins del Eclipse Carmesí se consiguen en la rotación semanal de la ruleta y como premios legendarios de la Caja de Reliquias. La compra directa sigue bloqueada. Verificado por lectura del código.
 - Para la próxima revisión de interfaz: cambiar «Solo en la Ruleta» por «Ruleta o Caja de Reliquias» en los textos de tienda de los tres idiomas. Las dos claves están en `LocaleGemini.lua`, fuera de los archivos de este encargo.
+
+## Glow-up y monetización
+
+Registro del 11/11/2026 01:57 (Argentina, UTC−3). Encargo en [[Plan glow-up y monetización]], secciones 2, 3b, 4 y 5.
+
+### Implementado — 🟡
+
+- **Suerte de cofres.** `Rewards.Luck` descuenta tiempo real al leer, incluso tras desconexión. `R.reconcile` sanea el multiplicador, los segundos y el reloj del perfil. La misma distribución del servidor se usa para sortear y para `GetState`. El estado incluye probabilidades base, efectivas y con el amuleto, por rareza y por skin cuando corresponde. El peso épico y legendario se duplica. Por ejemplo, la probabilidad de obtener Épica o Legendaria en la Reliquia sin garantía pasa de 12 % a 21,428571 %. En la Reliquia con garantía y el Cofre del Eclipse, los pesos disponibles suben en la misma proporción y los porcentajes se mantienen. La ruleta conserva su distribución. El modal muestra la conversión del 40 % por duplicado y la Bóveda muestra los porcentajes antes de ofrecer el amuleto. `Luck30.enabled = true`, con todos los IDs de monetización intactos.
+- **VIP.** Aplica +20 % a almas ganadas en partidas, primer partido y misiones completadas. Conserva los valores de compras, duplicados, regalos y recompensas fijas. Un beneficio diario reclamable usa el mismo calendario que la ruleta. Entrega un tiro extra cuando la política lo permite y 150 almas fijas cuando devuelve restricción o se desconoce. El reclamo de almas consume el beneficio del día sin avanzar la garantía de ruleta. El rol mantiene la prioridad de Owner, Admin, Mod y Tester. Corona junto al nombre y aura `VipCrown` equipable exclusivamente con el pase, validada en servidor.
+- **Azar pago.** Cuando se configuran ventas de almas, el servidor bloquea la compra de cofres y los giros con almas para cuentas restringidas. Los cofres comprados y los tickets comprados tienen contadores separados. Los premios de juego, la ruleta diaria y las cajas ganadas conservan su camino gratuito. Para cuentas restringidas, la suerte activa queda sin efecto y se ocultan los productos de azar pago. [Guía oficial de Roblox](https://create.roblox.com/docs/production/monetization/paid-random-items)
+- **Cofres y Skip.** Seis niveles en orden de `Rewards.BoxOrder`, grilla de 3 × 2 en PC y lista en celular. `CHEST_TIERS` define marco, color, tamaño, ícono y slots para las imágenes cerrada y abierta de cada nivel. La apertura objetivo dura 6,45 s entre sacudida, apertura, tira, frenado y revelación, antes de «Continuar». Enter, A y toque pueden saltarla con `Pass_SkipOpening`. El botón con candado abre la ficha del pase y consulta su precio. La compra y el sorteo siguen separados de la animación.
+- **Bóveda e interfaz.** Pases arriba y paquetes abajo, con precio consultado a Roblox, ícono de Robux y etiquetas de catálogo. El «+» del saldo abre los paquetes desde tienda y recompensas. Las compras de skins y cofres muestran el faltante y el acceso a la Bóveda. La pestaña Almas anterior queda bajo permiso de depuración. Pistas mediante `Device`, tokens de Eclipse y ajustes de ancho, títulos, filtros y controles en recompensas, tienda y armería. Se actualizaron las vistas previas, el HUD, las pantallas de menú y la paleta de carga. Hay 40 claves `mz.*` en ES, EN y PT-BR.
+- **Revisión de pagos.** `MonetizationManager` usaba el precio sugerido cuando fallaba la consulta. Ahora el catálogo y el cliente consultan precios de Roblox y ocultan las ofertas que carecen de precio válido o autorización. También corregí el reintento de un pase si la primera consulta fallaba antes de crear su caché. En `PlayerData.processReceiptWith`, la entrega se aplica una sola vez a una copia. La escritura guarda el premio con el PurchaseId y una revisión. Tras confirmar, se incorporan solo los campos afectados y se conservan las almas ganadas mientras se guardaba. La revisión impide que un guardado viejo pise una compra confirmada cuya respuesta se perdió. `PurchaseVersion` actualiza la interfaz también cuando se compra dos veces el mismo paquete. Referencia LihFolk «Purchase Data and Receipts». [Precios regionales](https://create.roblox.com/docs/production/monetization/regional-pricing)
+
+### Probado fuera de Studio
+
+- `node tools/check_lua.js .` pasó sobre 94 archivos. LihFolk examinó 94 archivos con 0 errores, 0 avisos y 0 mensajes informativos. Compilé los 94 scripts con Luau y `git diff --check` quedó limpio.
+- Con APIs simuladas y los módulos reales, probé los seis cofres, la suma del 100 % de las probabilidades base, efectivas y de vista previa, la caducidad y la recarga de la suerte, y la garantía. Probé sorteos deterministas de las filas disponibles y verifiqué que la ruleta conserva sus pesos.
+- Probé una compra confirmada, un recibo repetido, un premio ganado durante el guardado y una respuesta perdida después de persistir. También probé precio faltante y recuperación, restricciones, separación de tickets y cofres, rol VIP, Corona VIP y el beneficio diario único.
+- Comprobación aritmética a 375 px útiles. Recompensas mide 343 px, tienda y armería 347 px, y las tarjetas de cofres y Bóveda 297 px. El botón de abrir y el de precio conservan 44 px de alto en esa vista. Verifiqué la paridad de las claves en los tres idiomas.
+
+### Necesita Studio — ⬜
+
+- **Comprobado en Studio en este encargo** · ninguno.
+- A 375 px y en horizontal, probar tienda, armería y recompensas con toque, teclado/mouse y mando. Revisar textos en los tres idiomas, navegación, filtros, scroll, Bóveda desde el saldo y desde un faltante, y apertura de los seis niveles. Probar Enter, A, toque, candado, cerrar la ficha, final natural y entrada a partida.
+- Con `StudioGrantPasses` y la acción `Monetization/StudioTest` de prueba, revisar el rol y la Corona VIP, la ficha de suerte al entregar o vencer el amuleto, las probabilidades visibles, la conversión de repetidas y el refresco al comprar otra vez el mismo paquete. Probar el reinicio diario y el camino de reemplazo de 150 almas.
+- En una publicación de prueba con los IDs cargados, verificar precio regional en el diálogo de Roblox, recibos reales y reconexión. El arte final de cofres queda pendiente de cargar en los slots de `CHEST_TIERS`.
+
+### Preguntas para el usuario — 👤
+
+- Usé **150 almas** como reemplazo fijo del tiro VIP restringido. ¿Te sirve ese monto diario?
+- ¿Querés conservar Relicario del Rayo en 12.000 y Cofre del Eclipse en 20.000? Los precios actuales siguen vigentes.

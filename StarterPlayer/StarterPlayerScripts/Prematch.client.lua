@@ -23,10 +23,10 @@ local shopRemote = remotes and remotes:WaitForChild("Shop", 10)
 local C = UiTheme.Colors
 
 local ROLE_COLORS = {
-	OWNER = Color3.fromRGB(255, 196, 64),
-	DEV = Color3.fromRGB(98, 205, 255),
-	ADMIN = Color3.fromRGB(245, 78, 88),
-	TESTER = Color3.fromRGB(135, 235, 148),
+	OWNER = C.Coins,
+	DEV = C.Guard,
+	ADMIN = C.Danger,
+	TESTER = C.Success,
 }
 
 local gui = Instance.new("ScreenGui")
@@ -338,7 +338,7 @@ local function renderCinematicCards()
 
 	local function buildFighterCard(fighter, side, index, total)
 		local isRed = side == "Red"
-		local accent = isRed and Color3.fromRGB(235, 58, 68) or Color3.fromRGB(82, 168, 255)
+		local accent = isRed and C.TeamRed or C.TeamBlue
 		local cardH = 98
 		local yOffset = (index - (total + 1) * 0.5) * (cardH + 14)
 

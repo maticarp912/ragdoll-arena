@@ -2,6 +2,10 @@
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local R = require(RS:WaitForChild("Rewards"))
+local Config = require(RS:WaitForChild("MonetizationConfig"))
+local VIP = Config.Passes.VIP.perks
+local ConfiguredLuck = Config.Products.Luck30.multiplier
+local Monetization = require(script.Parent.MonetizationManager)
 local P = require(RS:WaitForChild("Progression"))
 local Skins = require(RS:WaitForChild("Skins"))
 local Weapons = require(RS:WaitForChild("WeaponData"))
@@ -74,18 +78,48 @@ local function skinPool(rarity, poolName, pools)
  end
  table.sort(pool) return pool
 end
-local function weighted(rows, minRank)
- local total = 0
- for _, row in rows do if not minRank or R.RarityRank[row.rarity] >= minRank then total += row.weight end end
- assert(total > 0, "Empty reward distribution")
- local n = random:NextNumber() * total
+local function probabilities(rows, minRank, multiplier)
+ local result, baseTotal, total = {}, 0, 0
  for i, row in rows do
+  local r = table.clone(row) r.index = i
+  r.baseProbability, r.probability = 0, 0
   if not minRank or R.RarityRank[row.rarity] >= minRank then
-   n -= row.weight if n <= 0 then return table.clone(row), i end
+   r.baseProbability = row.weight
+   r.probability = multiplier and R.boxWeight(row, multiplier) or row.weight
+   baseTotal += r.baseProbability total += r.probability
+  end
+  result[i] = r
+ end
+ assert(total > 0, "Empty reward distribution")
+ for _, row in result do
+  row.baseProbability /= baseTotal row.probability /= total
+ end
+ return result
+end
+local function weighted(rows)
+ local remaining = random:NextNumber()
+ local lastEligible
+ for _, row in rows do
+  if row.probability > 0 then
+   lastEligible = row remaining -= row.probability
+   if remaining <= 0 then return row, row.index end
   end
  end
- return table.clone(rows[#rows]), #rows
+ return lastEligible, lastEligible.index
 end
+local function boxOdds(box, guaranteed, multiplier)
+ local rows = probabilities(box.rarities or box.rewards, guaranteed and R.GoodRank or nil, multiplier)
+ if box.rarities then
+  for _, row in rows do
+   row.skins = skinPool(row.rarity, box.pool, box.pools)
+   assert(#row.skins > 0 or row.probability == 0, "Missing reward pool for " .. row.rarity)
+   row.probabilityPerSkin = #row.skins > 0 and row.probability / #row.skins or 0
+   row.baseProbabilityPerSkin = #row.skins > 0 and row.baseProbability / #row.skins or 0
+  end
+ end
+ return rows
+end
+
 local function souls(player, amount)
  local data = Data.get(player)
  data.Stats.Coins = (data.Stats.Coins or 0) + amount
@@ -93,7 +127,7 @@ local function souls(player, amount)
 end
 local function award(player, reward, weeklySkin)
  local data = Data.get(player)
- local out = table.clone(reward) out.weight = nil
+ local out = table.clone(reward) out.weight = nil out.index = nil out.probability = nil out.baseProbability = nil
  if out.kind == "WeeklySkin" then out.kind = "Skin" out.id = weeklySkin end
  if out.kind == "Skin" then
   local skin = Skins.Data[out.id]
@@ -153,16 +187,6 @@ function Service.collection(player)
  if granted then notify(player) end
  return list
 end
-local function probabilities(rows, minRank)
- local result, total = {}, 0
- for _, row in rows do if not minRank or R.RarityRank[row.rarity] >= minRank then total += row.weight end end
- for i, row in rows do
-  local r = table.clone(row) r.index = i
-  r.probability = (not minRank or R.RarityRank[row.rarity] >= minRank) and row.weight / total or 0
-  table.insert(result, r)
- end
- return result
-end
 function Service.getState(player)
  local data, d, day = profile(player) if not data then return nil end
  Service.progress(player, "Level", 0)
@@ -172,17 +196,25 @@ function Service.getState(player)
   table.insert(steps, { id = step.event, nameKey = "cx.firstSteps." .. step.id, progress = d.steps[step.id], goal = step.goal })
   complete = complete and d.steps[step.id] >= step.goal
  end
+ local allowed = Monetization.paidRandomAllowed(player)
+ local canSpend = allowed or not Monetization.soulsArePaid()
+ local now = os.time()
+ local luck, luckSeconds = R.Luck(data, now, not Data.canMutate(player))
+ local effectiveLuck = allowed and luck or 1
+ local vipAvailable = player:GetAttribute("Pass_VIP") == true and VIP.extraDailySpin > 0 and d.vipDay ~= day
+ local availableSpins = d.spins + (allowed and d.boughtSpins or 0)
  local boxes = {}
  for id, box in R.Boxes do
   local guaranteed = id == "Relic" and d.relicPity >= R.RelicPity - 1
-  local rows = probabilities(box.rarities or box.rewards, guaranteed and R.GoodRank or nil)
-  if box.rarities then
-   for _, row in rows do
-    row.skins = skinPool(row.rarity, box.pool, box.pools)
-    row.probabilityPerSkin = #row.skins > 0 and row.probability / #row.skins or 0
-   end
+  local rows = boxOdds(box, guaranteed, effectiveLuck)
+  local preview = effectiveLuck ~= ConfiguredLuck and boxOdds(box, guaranteed, ConfiguredLuck) or rows
+  for i, row in rows do
+   row.previewProbability = preview[i].probability
+   row.previewProbabilityPerSkin = preview[i].probabilityPerSkin
   end
-  boxes[id] = { count = data.Boxes[id], price = box.price, nameKey = box.nameKey, descKey = box.descKey, order = box.order, probabilities = rows, guaranteed = guaranteed }
+  local count = data.Boxes[id]
+  boxes[id] = { count = count, openable = count - (allowed and 0 or d.paidBoxes[id]), price = box.price,
+   nameKey = box.nameKey, descKey = box.descKey, order = box.order, probabilities = rows, guaranteed = guaranteed }
  end
  local tutorialCount = 0 for i = 1, R.TutorialSteps do if d.tutorial[tostring(i)] == true then tutorialCount += 1 end end
  local roulette = probabilities(R.Roulette)
@@ -200,9 +232,11 @@ function Service.getState(player)
  return {
   souls = data.Coins, nextRequest = tostring(d.sequence + 1), resetAt = R.nextDay(day), weekResetAt = R.nextWeek(day),
   weeklySkin = weeklySkin, roulette = roulette, spinPity = d.spinPity, spinGuarantee = R.RoulettePity,
-  freeSpin = d.freeDay ~= day, spins = d.spins, paidSpins = d.paidSpins,
+  freeSpin = d.freeDay ~= day, vipAvailable = vipAvailable, vipFallbackSouls = vipAvailable and not allowed and VIP.fallbackSouls or nil,
+  spins = availableSpins, paidSpins = d.paidSpins, canSpendOnRandom = canSpend, duplicateFraction = R.DuplicateFraction,
+  luck = { multiplier = effectiveLuck, remaining = luckSeconds, endsAt = now + luckSeconds, previewMultiplier = ConfiguredLuck },
   paidSpinsRemaining = math.max(0, #R.ExtraSpinPrices - d.paidSpins),
-  paidSpinPrice = R.ExtraSpinPrices[d.paidSpins + 1], relicPity = d.relicPity, relicGuarantee = R.RelicPity,
+  paidSpinPrice = canSpend and R.ExtraSpinPrices[d.paidSpins + 1] or nil, relicPity = d.relicPity, relicGuarantee = R.RelicPity,
   boxes = boxes, boosts = data.Boosts,
   streak = { day = d.streak, canClaim = d.streakDay ~= day, rewards = R.Streak, graceAvailable = d.graceWeek ~= R.week(day), paused = d.streakDay >= 0 and day - d.streakDay > 1 },
   weekly = { event = weekly.event, nameKey = "cx.weekly." .. weekly.event, goal = weekly.goal, progress = d.weekly.progress, claimed = d.weekly.claimed },
@@ -210,7 +244,7 @@ function Service.getState(player)
   tutorial = { completed = tutorialCount, steps = d.tutorial, skipped = d.tutorialSkipped == true, spinAvailable = d.tutorialReady == true and not d.tutorialSpin },
   firstSteps = { list = steps, canClaim = complete and not d.firstStepsClaimed, claimed = d.firstStepsClaimed == true, skin = R.FirstStepsSkin },
   returnNotice = d.returnNotice == true, collection = Service.collection(player), mastery = mastery,
-  notifications = { spin = d.freeDay ~= day or d.spins > 0 or (d.tutorialReady and not d.tutorialSpin) == true, streak = d.streakDay ~= day, weekly = d.weekly.progress >= weekly.goal and not d.weekly.claimed, firstSteps = complete and not d.firstStepsClaimed },
+  notifications = { spin = d.freeDay ~= day or vipAvailable or availableSpins > 0 or (d.tutorialReady and not d.tutorialSpin) == true, streak = d.streakDay ~= day, weekly = d.weekly.progress >= weekly.goal and not d.weekly.claimed, firstSteps = complete and not d.firstStepsClaimed },
  }
 end
 function Service.buyBoost(player, id)
@@ -240,7 +274,7 @@ end
 function Service.match(player, won, weapon, kills)
  local data, d = profile(player) if not data then return nil end
  local bonus = 0
- if not d.firstMatch then d.firstMatch = true bonus = R.FirstMatchSouls souls(player, bonus) Telemetry.emit(player, "FirstMatch") Telemetry.emit(player, "RewardClaim", 1, nil, nil, "FirstMatch") end
+ if not d.firstMatch then d.firstMatch = true bonus = Data.addEarnedCoins(player, R.FirstMatchSouls) Telemetry.emit(player, "FirstMatch") Telemetry.emit(player, "RewardClaim", 1, nil, nil, "FirstMatch") end
  Service.progress(player, "Match", 1) if won then Service.progress(player, "Win", 1) end
  Service.progress(player, "Level", 0)
  if data.Level >= P.EarlyLevels and not d.level5 then d.level5 = true Telemetry.emit(player, "Level5") end
@@ -310,8 +344,18 @@ local function act(player, action, id, source)
   elseif mode == "Free" then
    if d.freeDay == day then return fail() end d.freeDay = day
   elseif mode == "Ticket" then
-   if d.spins < 1 then return fail() end d.spins -= 1
+   if d.spins > 0 then d.spins -= 1
+   elseif d.boughtSpins > 0 and Monetization.paidRandomAllowed(player) then d.boughtSpins -= 1
+   else return fail() end
+  elseif mode == "VIP" then
+   if player:GetAttribute("Pass_VIP") ~= true or VIP.extraDailySpin < 1 or d.vipDay == day then return fail() end
+   d.vipDay = day
+   if not Monetization.paidRandomAllowed(player) then
+    souls(player, VIP.fallbackSouls) notify(player)
+    return true, { key = "cx.reward.claimed", mode = "VIPFallback", reward = { kind = "Souls", amount = VIP.fallbackSouls, rarity = "Common" } }
+   end
   elseif mode == "Paid" then
+   if Monetization.soulsArePaid() and not Monetization.paidRandomAllowed(player) then return fail("mz.restricted") end
    local price = R.ExtraSpinPrices[d.paidSpins + 1]
    if not price then return fail() end if data.Coins < price then return fail("noCoins") end
    Data.addCoins(player, -price) d.paidSpins += 1
@@ -319,7 +363,7 @@ local function act(player, action, id, source)
   local row, sector
   if d.spinPity >= R.RoulettePity then sector = #R.Roulette row = table.clone(R.Roulette[sector])
   elseif mode == "Tutorial" then sector = R.TutorialSpinSector row = table.clone(R.Roulette[sector])
-  else row, sector = weighted(R.Roulette) end
+  else row, sector = weighted(probabilities(R.Roulette)) end
   d.spinPity = row.kind == "WeeklySkin" and 0 or d.spinPity + 1
   local reward = award(player, row, R.weeklySkin(day))
   -- Tutorial always includes its promised boost even when pity takes priority.
@@ -332,21 +376,33 @@ local function act(player, action, id, source)
  elseif action == "BuyBox" or action == "OpenBox" then
   local box = R.Boxes[id] if not box then return fail("invalid") end
   local purchase = action == "BuyBox" or source == "Buy"
+  local allowed = Monetization.paidRandomAllowed(player)
+  local paidSource = Monetization.soulsArePaid()
+  local usesPaidBox = not purchase and data.Boxes[id] <= d.paidBoxes[id]
   if purchase then
-   if data.Coins < box.price then return fail("noCoins") end
-   if data.Boxes[id] >= R.MaxCount then return fail() end
-  elseif data.Boxes[id] < 1 then return fail() end
+   if paidSource and not allowed then return fail("mz.restricted") end
+   if data.Coins < box.price then return false, { key = "noCoins", missing = box.price - data.Coins } end
+   if action == "BuyBox" and data.Boxes[id] >= R.MaxCount then return fail() end
+  elseif data.Boxes[id] < 1 then return fail()
+  elseif usesPaidBox and not allowed then return fail("mz.restricted") end
   local row
   if action == "OpenBox" then
+   local luck = R.Luck(data, os.time())
+   local guaranteed = id == "Relic" and d.relicPity >= R.RelicPity - 1
+   local picked = weighted(boxOdds(box, guaranteed, allowed and luck or 1))
    if box.rarities then
-    local rarity = weighted(box.rarities, id == "Relic" and d.relicPity >= R.RelicPity - 1 and R.GoodRank or nil)
-    local pool = skinPool(rarity.rarity, box.pool, box.pools)
-    if #pool == 0 then return fail("cx.reward.unavailable") end
-    row = { kind = "Skin", id = pool[random:NextInteger(1, #pool)], rarity = rarity.rarity }
-   else row = weighted(box.rewards) end
+    local pool = picked.skins
+    row = { kind = "Skin", id = pool[random:NextInteger(1, #pool)], rarity = picked.rarity }
+   else row = picked end
   end
-  if purchase then Data.addCoins(player, -box.price) else data.Boxes[id] -= 1 end
-  if action == "BuyBox" then data.Boxes[id] += 1
+  if purchase then Data.addCoins(player, -box.price)
+  else
+   data.Boxes[id] -= 1
+   if usesPaidBox then d.paidBoxes[id] -= 1 end
+  end
+  if action == "BuyBox" then
+   data.Boxes[id] += 1
+   if paidSource then d.paidBoxes[id] += 1 end
   else
    if id == "Relic" then d.relicPity = R.RarityRank[row.rarity] >= R.GoodRank and 0 or d.relicPity + 1 end
    local reward = award(player, row)

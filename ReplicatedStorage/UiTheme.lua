@@ -32,6 +32,8 @@ UiTheme.Colors = {
 	BgCardSelected = Color3.fromRGB(58, 20, 32),
 	BgCardDisabled = Color3.fromRGB(17, 14, 19),
 	BgPreview      = Color3.fromRGB(11, 9, 13),
+	PreviewAmbient = Color3.fromRGB(170, 168, 184),
+	PreviewLight   = Color3.fromRGB(255, 240, 214),
 	BgBarBack      = Color3.fromRGB(10, 8, 12),
 	BgModalVeil    = Color3.fromRGB(3, 2, 5),
 
@@ -78,6 +80,7 @@ UiTheme.Colors = {
 	Health         = Color3.fromRGB(206, 40, 56),
 	HealthBright   = Color3.fromRGB(246, 82, 88),
 	HealthTrail    = Color3.fromRGB(250, 240, 226),
+	HealthFlash    = Color3.fromRGB(255, 220, 220),
 	Stamina        = Color3.fromRGB(96, 206, 140),
 	Guard          = Color3.fromRGB(96, 170, 236),
 	GuardBroken    = Color3.fromRGB(112, 104, 118),

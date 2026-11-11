@@ -21,6 +21,7 @@ local L = require(ReplicatedStorage:WaitForChild("Localization"))
 local InputBridge = require(ReplicatedStorage:WaitForChild("InputBridge"))
 
 local player = Players.LocalPlayer
+local Device = require(ReplicatedStorage:WaitForChild("Device"))
 local C = UiTheme.Colors
 
 local gui = Instance.new("ScreenGui")
@@ -429,25 +430,13 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 -- Claude 9/11: en celular con mando los botones táctiles se ocultan.
-local usingGamepad = UserInputService.GamepadEnabled
-local function isGamepadInput(t)
-	return t.Name:sub(1, 7) == "Gamepad"
-end
-UserInputService.LastInputTypeChanged:Connect(function(t)
-	if isGamepadInput(t) then usingGamepad = true
-	elseif t == Enum.UserInputType.Touch then usingGamepad = false end
-end)
-UserInputService.GamepadDisconnected:Connect(function()
-	if #UserInputService:GetConnectedGamepads() == 0 then usingGamepad = false end
-end)
-
 local function updateVisibilityAndScale()
 	editMode = player:GetAttribute("TouchEditMode") == true
 	editorBanner.Visible = editMode
 
-	local isTouch = UserInputService.TouchEnabled
+	local isTouch = Device.isTouch()
 	local menuOpen = player:GetAttribute("MenuOpen") == true
-	local show = editMode or (isTouch and not menuOpen and not usingGamepad)
+	local show = editMode or (isTouch and not menuOpen)
 	if rightPad.Visible and not show then
 		for _, entry in touchButtons do entry.release() end
 	end
@@ -473,7 +462,7 @@ player:GetAttributeChangedSignal("TouchEditMode"):Connect(function()
 	updateEditHighlight()
 end)
 
-UserInputService:GetPropertyChangedSignal("TouchEnabled"):Connect(updateVisibilityAndScale)
+Device.Changed:Connect(updateVisibilityAndScale)
 player:GetAttributeChangedSignal("MenuOpen"):Connect(updateVisibilityAndScale)
 player:GetAttributeChangedSignal("OptUiScale"):Connect(updateVisibilityAndScale)
 RunService.Heartbeat:Connect(updateVisibilityAndScale)

@@ -111,10 +111,11 @@ local function shopAction(player, action, id)
    PlayerData.saveSoon(player) return true, { key = "cx.aura.equipped" }
   end
   if PlayerData.owns(player, "OwnedAuras", id) then return false, { key = "alreadyOwned" } end
+  if aura.requiredPass then return false, { key = "mz.vipAura" } end
   if Rewards.exclusiveAura(id) then return false, { key = "cx.reward.collectionOnly" } end
   if aura.currency == "Coins" then
-   local ok,key=PlayerData.buyCosmetic(player,id,aura.price,true)
-   return ok, { key = key }
+   local ok,key,missing=PlayerData.buyCosmetic(player,id,aura.price,true)
+   return ok, { key = key, missing = missing }
   elseif aura.currency == "Robux" then
    return false, { key = "soon" }
   end
@@ -178,8 +179,8 @@ local function shopAction(player, action, id)
 		if PlayerData.owns(player, "OwnedSkins", id) then return false, { key = "alreadyOwned" } end
 
 		if skin.currency == "Coins" then
-			local ok,key=PlayerData.buyCosmetic(player,id,skin.price,false)
-   return ok, { key = key }
+			local ok,key,missing=PlayerData.buyCosmetic(player,id,skin.price,false)
+   return ok, { key = key, missing = missing }
 		elseif skin.currency == "Robux" then
    return false, { key = "soon" }
 		end

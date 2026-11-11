@@ -100,7 +100,7 @@ function Service.finish(player, won, abandoned)
  if won and d.FirstWinDay ~= day then d.FirstWinDay = day coins *= E.Match.FirstWinMultiplier end
  local mult = d.Boosts.CoinsSeconds > 0 and d.Boosts.Coins or 1
  coins = math.floor(coins * mult)
- d.Stats.Coins = (d.Stats.Coins or 0) + coins Data.addCoins(player, coins)
+ coins = Data.addEarnedCoins(player, coins)
  local xpBefore, levelBefore = d.XP, d.Level
  local earned, levels, levelRewards = Progression.grant(player, require(RS.Progression).Sources.Match + (won and require(RS.Progression).Sources.Win or 0) + a.kills * require(RS.Progression).Sources.Kill)
  local levelSouls = levelRewards and levelRewards.souls or 0

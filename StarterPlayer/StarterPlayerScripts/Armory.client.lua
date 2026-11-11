@@ -187,8 +187,8 @@ local function makeWeaponPreview(parent, wid, sid, rect)
 	vp.BackgroundColor3 = C.BgPreview
 	vp.BackgroundTransparency = 0.15
 	vp.BorderSizePixel = 0
-	vp.Ambient = Color3.fromRGB(165, 165, 180)
-	vp.LightColor = Color3.fromRGB(255, 240, 214)
+	vp.Ambient = C.PreviewAmbient
+	vp.LightColor = C.PreviewLight
 	vp.LightDirection = Vector3.new(-1, -1, -1)
 	vp.Parent = parent
 	UiTheme.corner(vp, UiTheme.Radius.SM)
@@ -244,7 +244,7 @@ local function buildCharacterAvatarModel(previewWeaponId, previewSkinId, preview
 	pedBase.Name = "Pedestal"
 	pedBase.Shape = Enum.PartType.Cylinder
 	pedBase.Size = Vector3.new(0.45, 4.4, 4.4)
-	pedBase.Color = Color3.fromRGB(26, 24, 32)
+	pedBase.Color = C.BgCard
 	pedBase.Material = Enum.Material.Slate
 	pedBase.Anchored = true
 	pedBase.CanCollide = false
@@ -307,8 +307,8 @@ local function buildCharacterAvatarModel(previewWeaponId, previewSkinId, preview
 		end
 	else
 		-- Maniquí de armadura oscura
-		local armorCol = Color3.fromRGB(42, 42, 52)
-		local trimCol = Color3.fromRGB(168, 142, 86)
+		local armorCol = C.IronLight
+		local trimCol = C.TextSecondary
 		local function addPart(sz, cframe, col, mat, shape)
 			local p = Instance.new("Part")
 			p.Size = sz
@@ -326,8 +326,8 @@ local function buildCharacterAvatarModel(previewWeaponId, previewSkinId, preview
 		addPart(Vector3.new(1.92, 0.28, 1.02), CFrame.new(0, -0.75, 0), trimCol, Enum.Material.Foil)
 		addPart(Vector3.new(0.72, 1.75, 0.72), CFrame.new(1.32, 0.05, -0.15) * CFrame.Angles(math.rad(25), 0, math.rad(-10)), armorCol)
 		addPart(Vector3.new(0.72, 1.75, 0.72), CFrame.new(-1.32, 0.05, -0.10) * CFrame.Angles(math.rad(18), 0, math.rad(10)), armorCol)
-		addPart(Vector3.new(0.82, 1.95, 0.82), CFrame.new(0.50, -1.95, 0), Color3.fromRGB(28, 28, 36), Enum.Material.Slate)
-		addPart(Vector3.new(0.82, 1.95, 0.82), CFrame.new(-0.50, -1.95, 0), Color3.fromRGB(28, 28, 36), Enum.Material.Slate)
+		addPart(Vector3.new(0.82, 1.95, 0.82), CFrame.new(0.50, -1.95, 0), C.IronDark, Enum.Material.Slate)
+		addPart(Vector3.new(0.82, 1.95, 0.82), CFrame.new(-0.50, -1.95, 0), C.IronDark, Enum.Material.Slate)
 	end
 
 	-- Arma principal en la mano derecha
@@ -386,10 +386,12 @@ function render()
 	local cam = workspace.CurrentCamera
 	local viewport = cam and cam.ViewportSize or Vector2.new(BASE_W, BASE_H)
 	local mobile = viewport.X < 780
-	local width = mobile and 700 or BASE_W
-	local height = mobile and 620 or BASE_H
+	local insetA, insetB = GuiService:GetGuiInset()
+	local usable = viewport - insetA - insetB
+	local width = mobile and math.min(700, usable.X - 28) or BASE_W
+	local height = mobile and math.clamp(usable.Y - 28, 560, 760) or BASE_H
 	panel.Size = UDim2.fromOffset(width, height)
-	scale.Scale = UiTheme.computeScale(viewport, width, height, player)
+	scale.Scale = mobile and math.min(1, (usable.Y - 28) / height) or UiTheme.computeScale(usable, width, height, player)
 
 	local equippedWeapon = player:GetAttribute("WeaponId") or "Sword"
 	local equippedSkin = player:GetAttribute("EquippedSkin") or "Default"
@@ -399,7 +401,7 @@ function render()
 	-- Cabecera
 	local header = Instance.new("Frame")
 	header.Name = "Header"
-	header.Size = UDim2.new(1, 0, 0, 58)
+	header.Size = UDim2.new(1, 0, 0, mobile and 100 or 58)
 	header.BackgroundColor3 = C.BgHeader
 	header.BorderSizePixel = 0
 	header.Parent = panel
@@ -407,13 +409,14 @@ function render()
 
 	local crest = UiAssets.icon(header, "armory", 26, C.GoldBright)
 	crest.AnchorPoint = Vector2.new(0, 0.5)
-	crest.Position = UDim2.new(0, 18, 0.5, 0)
+	crest.Position = mobile and UDim2.fromOffset(18, 22) or UDim2.new(0, 18, 0.5, 0)
 
 	UiTheme.label({
 		parent = header,
 		position = UDim2.fromOffset(52, 6),
-		size = UDim2.fromOffset(380, 28),
+		size = mobile and UDim2.new(1, -66, 0, 35) or UDim2.fromOffset(380, 28),
 		text = L.t("ui.armory.title"),
+		scaled = mobile,
 		font = "Title",
 		textSize = UiTheme.TextSizes.XL,
 		color = C.GoldBright,
@@ -422,7 +425,7 @@ function render()
 		parent = header,
 		position = UDim2.fromOffset(52, 32),
 		size = UDim2.fromOffset(420, 18),
-		text = L.t("ui.armory.subtitle"),
+		text = mobile and "" or L.t("ui.armory.subtitle"),
 		font = "Body",
 		textSize = UiTheme.TextSizes.XS,
 		color = C.TextSecondary,
@@ -434,8 +437,8 @@ function render()
 			name = "OpenShopBtn",
 			parent = header,
 			anchor = Vector2.new(1, 0.5),
-			position = UDim2.new(1, -132, 0.5, 0),
-			size = UDim2.fromOffset(154, 38),
+			position = mobile and UDim2.new(1, -132, 0, 72) or UDim2.new(1, -132, 0.5, 0),
+			size = UDim2.fromOffset(154, mobile and 44 or 38),
 			text = L.t("ui.armory.openShop"),
 			variant = "gold",
 			textSize = UiTheme.TextSizes.SM,
@@ -453,8 +456,8 @@ function render()
 		name = "CloseButton",
 		parent = header,
 		anchor = Vector2.new(1, 0.5),
-		position = UDim2.new(1, -16, 0.5, 0),
-		size = UDim2.fromOffset(106, 38),
+		position = mobile and UDim2.new(1, -16, 0, 72) or UDim2.new(1, -16, 0.5, 0),
+		size = UDim2.fromOffset(106, mobile and 44 or 38),
 		text = L.t("close"),
 		variant = "secondary",
 		onClick = function()
@@ -465,7 +468,7 @@ function render()
 	-- Barra de pestañas de la Armería: Armas, Skins, Infusiones, Auras
 	local tabsBar = Instance.new("Frame")
 	tabsBar.Name = "TabsBar"
-	tabsBar.Position = UDim2.fromOffset(20, 66)
+	tabsBar.Position = UDim2.fromOffset(20, mobile and 106 or 66)
 	tabsBar.Size = UDim2.new(1, -40, 0, 44)
 	tabsBar.BackgroundTransparency = 1
 	tabsBar.Parent = panel
@@ -487,7 +490,7 @@ function render()
 			name = "Tab_" .. def.id,
 			parent = tabsBar,
 			layoutOrder = i,
-			size = UDim2.fromOffset(mobile and 128 or 158, 44),
+			size = UDim2.fromOffset(mobile and math.floor((width - 64) / #tabDefs) or 158, 44),
 			text = def.label,
 			active = tab == def.id,
 			onClick = function()
@@ -496,15 +499,17 @@ function render()
 				render()
 			end,
 		})
+		b.TextWrapped = true
+		if mobile then b.TextSize = UiTheme.TextSizes.XS end
 		if i == 1 then firstButton = b end
 	end
 
 	-- Subbarra de filtros en Skins
-	local top = 118
+	local top = mobile and 154 or 118
 	local leftW = mobile and (width - 40) or math.floor(width * 0.58)
 	if tab == "Skins" then
 		local weaponBar = Instance.new("Frame")
-		weaponBar.Position = UDim2.fromOffset(20, 116)
+		weaponBar.Position = UDim2.fromOffset(20, top)
 		weaponBar.Size = UDim2.fromOffset(leftW, 34)
 		weaponBar.BackgroundTransparency = 1
 		weaponBar.Parent = panel
@@ -528,7 +533,7 @@ function render()
 
 		UiTheme.button({
 			parent = panel,
-			position = UDim2.fromOffset(20, 156),
+			position = UDim2.fromOffset(20, top + 38),
 			size = UDim2.fromOffset(220, 32),
 			text = L.t("ui.filter.ownership", { value = skinOwnership == "owned" and L.t("ui.armory.ownedOnly") or L.t("ui.armory.allSkins") }),
 			textSize = UiTheme.TextSizes.XS,
@@ -537,11 +542,11 @@ function render()
 				render()
 			end,
 		})
-		top = 196
+		top += 78
 	end
 
 	local contentH = height - top - 44
-	local listH = mobile and math.floor(contentH * 0.52) or contentH
+	local listH = mobile and math.floor(contentH * 0.5) or contentH
 
 	local content = Instance.new("ScrollingFrame")
 	content.Name = "ArmoryList"
@@ -579,12 +584,12 @@ function render()
 		-- 4 tarjetas altas estilo referencias\infusiones ref2.jpg
 		local gap = 8
 		local count = #Infusions.Order
-		local cardW = math.floor((leftW - gap * (count - 1) - 4) / count)
-		local cardH = math.max(250, listH - 8)
-
-		local rowLayout = Instance.new("UIListLayout")
-		rowLayout.FillDirection = Enum.FillDirection.Horizontal
-		rowLayout.Padding = UDim.new(0, gap)
+		local columns = mobile and 2 or count
+		local cardW = math.floor((leftW - gap * (columns - 1) - 8) / columns)
+		local cardH = mobile and 180 or math.max(250, listH - 8)
+		local rowLayout = Instance.new("UIGridLayout")
+		rowLayout.CellSize = UDim2.fromOffset(cardW, cardH)
+		rowLayout.CellPadding = UDim2.fromOffset(gap, gap)
 		rowLayout.SortOrder = Enum.SortOrder.LayoutOrder
 		rowLayout.Parent = content
 
@@ -834,15 +839,15 @@ function render()
 		alignX = Enum.TextXAlignment.Center,
 	})
 
-	local vpH = math.max(170, rightH - 188)
+	local vpH = mobile and math.max(52, rightH - 86) or math.max(170, rightH - 188)
 	local charVp = Instance.new("ViewportFrame")
 	charVp.Name = "CharacterViewport"
 	charVp.Position = UDim2.fromOffset(14, 34)
 	charVp.Size = UDim2.new(1, -28, 0, vpH)
 	charVp.BackgroundColor3 = C.BgPreview
 	charVp.BorderSizePixel = 0
-	charVp.Ambient = Color3.fromRGB(168, 166, 182)
-	charVp.LightColor = Color3.fromRGB(255, 238, 210)
+	charVp.Ambient = C.PreviewAmbient
+	charVp.LightColor = C.PreviewLight
 	charVp.LightDirection = Vector3.new(-1, -1, -1)
 	charVp.Parent = stagePanel
 	UiTheme.corner(charVp, UiTheme.Radius.SM)
@@ -893,17 +898,19 @@ function render()
 	UiTheme.corner(rotatePill, UiTheme.Radius.Pill)
 	UiTheme.stroke(rotatePill, C.GoldDim, 1, 0.25)
 
-	UiTheme.label({
-		name = "RotateHintLabel",
-		parent = rotatePill,
-		size = UDim2.fromScale(1, 1),
-		text = L.t("ui.armory.rotateHint"),
-		font = "Bold",
-		textSize = UiTheme.TextSizes.XS,
-		color = C.GoldBright,
-		alignX = Enum.TextXAlignment.Center,
-		zIndex = 13,
-	})
+	for mode, key in { Keyboard = "mz.rotateKeyboard", Gamepad = "mz.rotateGamepad", Touch = "mz.rotateTouch" } do
+		Device.showFor(UiTheme.label({
+			name = "RotateHintLabel",
+			parent = rotatePill,
+			size = UDim2.fromScale(1, 1),
+			text = L.t(key),
+			font = "Bold",
+			textSize = UiTheme.TextSizes.XS,
+			color = C.GoldBright,
+			alignX = Enum.TextXAlignment.Center,
+			zIndex = 13,
+		}), mode)
+	end
 
 	-- Resumen inferior del equipo activo + pieza seleccionada
 	local infoY = 38 + vpH
@@ -911,6 +918,7 @@ function render()
 		parent = stagePanel,
 		position = UDim2.fromOffset(16, infoY),
 		size = UDim2.new(1, -32, 0, 24),
+		scaled = mobile,
 		text = selectedId and itemName(selectedId) or itemName(previewW),
 		font = "Title",
 		textSize = UiTheme.TextSizes.LG,
@@ -920,8 +928,10 @@ function render()
 	UiTheme.label({
 		parent = stagePanel,
 		position = UDim2.fromOffset(16, infoY + 24),
-		size = UDim2.new(1, -32, 0, 44),
+		size = UDim2.new(1, -32, 0, mobile and math.max(20, rightH - infoY - 28) or 44),
 		text = selectedId and itemDesc(selectedId) or itemDesc(previewW),
+		scaled = mobile,
+		minTextSize = 10,
 		font = "Body",
 		textSize = UiTheme.TextSizes.XS,
 		color = C.TextSecondary,
@@ -930,6 +940,7 @@ function render()
 
 	-- Resumen de las 4 piezas equipadas actualmente
 	local summaryBar = Instance.new("Frame")
+	summaryBar.Visible = not mobile
 	summaryBar.AnchorPoint = Vector2.new(0.5, 1)
 	summaryBar.Position = UDim2.new(0.5, 0, 1, -12)
 	summaryBar.Size = UDim2.new(1, -28, 0, 62)
@@ -971,7 +982,7 @@ function render()
 		name = "StatusMessage",
 		parent = panel,
 		position = UDim2.fromOffset(22, height - 34),
-		size = UDim2.fromOffset(width - 260, 24),
+		size = UDim2.fromOffset(mobile and width - 44 or width - 260, 24),
 		text = "",
 		font = "Bold",
 		textSize = UiTheme.TextSizes.SM,
@@ -989,7 +1000,7 @@ function render()
 		alignX = Enum.TextXAlignment.Right,
 	}), "Gamepad") -- 11/11: solo con mando (Device)
 
-	if UIS.GamepadEnabled and firstButton then
+	if Device.isGamepad() and firstButton then
 		GuiService.SelectedObject = firstButton
 	end
 end

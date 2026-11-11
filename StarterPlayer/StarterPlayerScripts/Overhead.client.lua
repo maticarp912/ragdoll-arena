@@ -224,6 +224,7 @@ local function attach(model)
 			name.TextColor3 = C.BoneDim
 		else
 			local display = player and player.DisplayName or model.Name
+			if player and player:GetAttribute("Pass_VIP") == true then display = "♛ " .. display end
 			local role = player and player:GetAttribute("Role")
 			if type(role) == "string" and not HIDDEN_ROLES[role] then
 				-- [ROL] Nombre: el rol con su color, el nombre con el del equipo
@@ -241,6 +242,7 @@ local function attach(model)
 	if player then
 		on(player:GetPropertyChangedSignal("Team"), updateName)
 		on(player:GetAttributeChangedSignal("Role"), updateName)
+		on(player:GetAttributeChangedSignal("Pass_VIP"), updateName)
 	end
 	if model:GetAttribute("IsDummy") then on(workspace:GetAttributeChangedSignal("DummyMode"), updateName) end
 

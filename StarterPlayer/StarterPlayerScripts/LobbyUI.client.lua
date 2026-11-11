@@ -22,6 +22,7 @@ local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
 local QueueRemote = remotes and remotes:WaitForChild("Queue", 10)
 
 local player = Players.LocalPlayer
+local Device = require(ReplicatedStorage:WaitForChild("Device"))
 local C = UiTheme.Colors
 local NEED = { ["1v1"] = 2, ["2v2"] = 4 }
 
@@ -721,7 +722,7 @@ function renderModal()
 		})
 	end
 
-	if UserInputService.GamepadEnabled then
+	if Device.isGamepad() then
 		GuiService.SelectedObject = closeBtn
 	end
 end

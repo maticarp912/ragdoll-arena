@@ -13,7 +13,6 @@ local RunService = game:GetService("RunService")
 local GuiService = game:GetService("GuiService")
 local HttpService = game:GetService("HttpService")
 local SoundService = game:GetService("SoundService")
-local UserInputService = game:GetService("UserInputService")
 
 local UiTheme = require(ReplicatedStorage:WaitForChild("UiTheme", 10))
 local UiAssets = require(ReplicatedStorage:WaitForChild("UiAssets", 10))
@@ -25,6 +24,7 @@ local WeaponData = require(ReplicatedStorage:WaitForChild("WeaponData", 10))
 local Assets = require(ReplicatedStorage:WaitForChild("Assets", 10))
 
 local player = Players.LocalPlayer
+local Device = require(ReplicatedStorage:WaitForChild("Device"))
 local C = UiTheme.Colors
 local H = Polish.HUD
 
@@ -148,16 +148,16 @@ local function createHorizBar(parent, name, pos, anchor, size, fillColor, border
 	local shine = Instance.new("UIGradient")
 	shine.Rotation = 90
 	shine.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-		ColorSequenceKeypoint.new(0.5, Color3.fromRGB(230, 230, 230)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(165, 165, 165)),
+		ColorSequenceKeypoint.new(0, C.TextPrimary),
+		ColorSequenceKeypoint.new(0.5, C.HealthTrail),
+		ColorSequenceKeypoint.new(1, C.TextSecondary),
 	})
 	shine.Parent = fill
 
 	local flash = Instance.new("Frame")
 	flash.Name = "FeelFlash"
 	flash.Size = UDim2.fromScale(1, 1)
-	flash.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	flash.BackgroundColor3 = C.TextPrimary
 	flash.BackgroundTransparency = 1
 	flash.BorderSizePixel = 0
 	flash.ZIndex = 5
@@ -449,7 +449,7 @@ local function handleCombatFeel(kind, role, info)
 	noteCombat()
 	if role == "Take" then
 		-- Destello carmesí/blanco y sacudida breve en la barra grande de Vida
-		pulseBarFlash(hpFlash, hpStroke, C.Gold, Color3.fromRGB(255, 220, 220), 0.26)
+		pulseBarFlash(hpFlash, hpStroke, C.Gold, C.HealthFlash, 0.26)
 		hpBg.Position = UDim2.new(0.5, math.random(-5, 5), 1, -12 + math.random(-3, 3))
 		TweenService:Create(hpBg, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 			Position = hpBasePos,
@@ -742,7 +742,7 @@ local function updateLayout()
 	statusBanner.Position = UDim2.new(0.5, 0, 0, safeTop)
 
 	-- D14: Abajo al centro tanto en PC como en móvil (deja libre el joystick izquierdo y los botones derechos)
-	local isTouch = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+	local isTouch = Device.isTouch()
 	holder.AnchorPoint = Vector2.new(0.5, 1)
 	holder.Position = UDim2.new(0.5, 0, 1, isTouch and -10 or -16)
 	if not inMatch and not isTouch then
@@ -754,6 +754,7 @@ end
 player:GetAttributeChangedSignal("InMatch"):Connect(updateLayout)
 player:GetAttributeChangedSignal("MenuOpen"):Connect(updateLayout)
 player:GetAttributeChangedSignal("OptUiScale"):Connect(updateLayout)
+Device.Changed:Connect(updateLayout)
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(updateLayout)
 updateLayout()
 
@@ -903,7 +904,7 @@ local function hook(char)
 		if damageTween then damageTween:Cancel() end
 		if hum.Health < previousHealth then
 			noteCombat()
-			pulseBarFlash(hpFlash, hpStroke, C.Gold, Color3.fromRGB(255, 220, 220), 0.22)
+			pulseBarFlash(hpFlash, hpStroke, C.Gold, C.HealthFlash, 0.22)
 		end
 		previousHealth = hum.Health
 		if frac >= hpFill.Size.X.Scale then

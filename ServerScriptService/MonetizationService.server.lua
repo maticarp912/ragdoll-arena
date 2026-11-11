@@ -23,19 +23,19 @@ Manager.registerKind("Souls", function(_, product, data)
 end)
 Manager.registerKind("Spins", function(_, product, data)
 	data.Rewards = data.Rewards or {}
-	data.Rewards.spins = math.min(Rewards.MaxCount, (data.Rewards.spins or 0) + product.amount)
+	data.Rewards.boughtSpins = (data.Rewards.boughtSpins or 0) + product.amount
 	return true
 end, function(_, product, data)
-	return ((data.Rewards and data.Rewards.spins) or 0) + product.amount <= Rewards.MaxCount
+	return ((data.Rewards and data.Rewards.boughtSpins) or 0) + product.amount <= Rewards.MaxCount
 end)
 Manager.registerKind("Luck", function(_, product, data)
-	data.Boosts = data.Boosts or {}
-	-- Rewards.Luck (Codex) aplica Luck y LuckSeconds a las rarezas de los cofres y muestra el cambio en las probabilidades
-	data.Boosts.Luck = math.max(data.Boosts.Luck or 1, product.multiplier)
-	data.Boosts.LuckSeconds = math.min((data.Boosts.LuckSeconds or 0) + product.seconds, product.maxSeconds or product.seconds * 4)
+	local multiplier, remaining = Rewards.Luck(data, os.time())
+	data.Boosts.Luck = math.max(multiplier, product.multiplier)
+	data.Boosts.LuckSeconds = remaining + product.seconds
 	return true
 end, function(_, product, data)
-	return ((data.Boosts and data.Boosts.LuckSeconds) or 0) + product.seconds <= (product.maxSeconds or product.seconds * 4)
+	local _, remaining = Rewards.Luck(data, os.time(), true)
+	return remaining + product.seconds <= product.maxSeconds
 end)
 Manager.registerKind("Aura", function(_, product, data)
 	data.OwnedAuras = data.OwnedAuras or {}
@@ -50,26 +50,36 @@ end)
 
 -- Auras y skins premium: llevan productId en su catálogo
 for id, aura in Auras.Data do
-	if (aura.productId or 0) > 0 then Manager.registerProduct("Aura." .. id, { id = aura.productId, kind = "Aura", item = id }) end
+	if (aura.productId or 0) > 0 and not aura.requiredPass then Manager.registerProduct("Aura." .. id, { id = aura.productId, kind = "Aura", item = id }) end
 end
 for id, skin in Skins.Data do
-	if (skin.productId or 0) > 0 then Manager.registerProduct("Skin." .. id, { id = skin.productId, kind = "Skin", item = id }) end
+	if (skin.productId or 0) > 0 and not skin.roulette and not skin.boxOnly and not skin.comingSoon then Manager.registerProduct("Skin." .. id, { id = skin.productId, kind = "Skin", item = id }) end
 end
 
 -- Remoto para la interfaz
 local RF = Remotes.get("Monetization", "RemoteFunction")
+local catalogBusy = {}
+local catalogAt = {}
+Players.PlayerRemoving:Connect(function(player) catalogBusy[player] = nil catalogAt[player] = nil end)
 RF.OnServerInvoke = function(player, action, key)
 	if type(action) ~= "string" or #action > 20 then return false, "invalid" end
 	if action == "Catalog" then
-		return true, Manager.catalog(player)
+		if key ~= nil and (type(key) ~= "string" or #key > 40 or not Config.Passes[key]) then return false, "invalid" end
+		local now = os.clock()
+		if catalogBusy[player] or (catalogAt[player] and now - catalogAt[player] < Config.PromptCooldown) then return false, "wait" end
+		catalogAt[player] = now catalogBusy[player] = true
+		local ok, list = pcall(Manager.catalog, player, key)
+		catalogBusy[player] = nil
+		return ok, ok and list or "unavailable"
 	elseif action == "StudioTest" and RunService:IsStudio() then
 		-- Solo en Studio (no hay DataStore y los recibos no se pueden guardar): entrega el producto en memoria
 		-- para probar la interfaz y los efectos. Nunca existe en el juego publicado.
 		local product = type(key) == "string" and Config.Products[key]
 		local data = PlayerData.get(player)
-		if not product or not data then return false, "invalid" end
+		if not product or not data or not PlayerData.canMutate(player) then return false, "invalid" end
 		local ok = Manager.grantForTest(player, product, data)
 		PlayerData.refresh(player)
+		if ok then player:SetAttribute("PurchaseVersion", (player:GetAttribute("PurchaseVersion") or 0) + 1) end
 		return ok
 	elseif action == "Prompt" then
 		if type(key) ~= "string" or #key > 40 then return false, "invalid" end

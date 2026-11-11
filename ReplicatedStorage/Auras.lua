@@ -1,8 +1,9 @@
 -- Cosmetic catalogue and all effect tuning. Product IDs remain zero until published.
 -- 9/11 (pedido del usuario): colores saturados y propios de cada aura, más partículas, más brillo.
 local A = {}
-A.Order = { "AshCrown", "SpectralChains", "SmokeWings", "FootShroud", "WatchingEyes", "GraveRunes", "WeepingBlade", "BlackEmbers", "BloodOath", "PaleFracture" }
+A.Order = { "AshCrown", "SpectralChains", "SmokeWings", "FootShroud", "WatchingEyes", "GraveRunes", "WeepingBlade", "BlackEmbers", "BloodOath", "PaleFracture", "VipCrown" }
 A.Data = {
+ VipCrown = { kind = "Body", rarity = "Legendary", currency = "Pass", requiredPass = "VIP", pattern = "crown", color = Color3.fromRGB(244, 96, 125) },
  AshCrown = { kind = "Body", rarity = "Rare", currency = "Coins", price = 1800, pattern = "crown", color = Color3.fromRGB(255,150,60) },
  SpectralChains = { kind = "Body", rarity = "Epic", currency = "Coins", price = 3900, pattern = "chains", color = Color3.fromRGB(90,220,255) },
  SmokeWings = { kind = "Body", rarity = "Legendary", currency = "Coins", price = 8000, pattern = "wings", color = Color3.fromRGB(170,90,255) },

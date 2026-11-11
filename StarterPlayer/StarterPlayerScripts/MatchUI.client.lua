@@ -17,6 +17,7 @@ local UiAssets = require(ReplicatedStorage:WaitForChild("UiAssets"))
 local L = require(ReplicatedStorage:WaitForChild("Localization"))
 
 local player = Players.LocalPlayer
+local Device = require(ReplicatedStorage:WaitForChild("Device"))
 local C = UiTheme.Colors
 
 local gui = Instance.new("ScreenGui")
@@ -340,7 +341,7 @@ local function renderSummary(data)
 	})
 
 	UiTheme.trapGamepadFocus("MatchSummaryModalGroup", { continueBtn })
-	if UserInputService.GamepadEnabled then
+	if Device.isGamepad() then
 		GuiService.SelectedObject = continueBtn
 	end
 end

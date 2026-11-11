@@ -21,6 +21,7 @@ local InputMap = require(RS:WaitForChild("InputMap", 10))
 local player = Players.LocalPlayer
 local remotesFolder = RS:WaitForChild("Remotes", 10)
 local remote = remotesFolder and remotesFolder:WaitForChild("Settings", 10)
+local Device = require(RS:WaitForChild("Device"))
 local C = UiTheme.Colors
 
 ----------------------------------------------------------------------
@@ -510,7 +511,7 @@ function render(messageKey)
 	msg.Name = "Message"
 
 	toggleBtn.Text = L.t("settings")
-	if UIS.GamepadEnabled then
+	if Device.isGamepad() then
 		GuiService.SelectedObject = firstTabBtn or closeBtn
 	end
 end

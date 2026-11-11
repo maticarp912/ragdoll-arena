@@ -29,6 +29,7 @@ function Service.refresh(player)
   end
   local granted = data and data.GrantedRole
   if Roles.Data[granted] and granted ~= "Owner" and Roles.Data[granted].priority > Roles.Data[role].priority then role = granted end
+  if player:GetAttribute("Pass_VIP") == true and Roles.Data.VIP.priority > Roles.Data[role].priority then role = "VIP" end
   if role == "Player" and data and data.PlaySeconds < Roles.NewHours * Roles.SecondsPerHour then role = "Nuevo" end
  end
  player:SetAttribute("Role", role)
@@ -53,7 +54,12 @@ local function resolveNames()
   end
  end
 end
-Players.PlayerAdded:Connect(function(player) Service.refresh(player) end)
+local function track(player)
+ player:GetAttributeChangedSignal("Pass_VIP"):Connect(function() Service.refresh(player) end)
+ Service.refresh(player)
+end
+Players.PlayerAdded:Connect(track)
+for _, player in Players:GetPlayers() do track(player) end
 task.spawn(function()
  while true do
   resolveNames()

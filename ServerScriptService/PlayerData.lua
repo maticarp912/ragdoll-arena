@@ -13,6 +13,8 @@ local HttpService = game:GetService("HttpService")
 local E = require(game:GetService("ReplicatedStorage"):WaitForChild("Economy"))
 local P = require(game:GetService("ReplicatedStorage"):WaitForChild("Progression"))
 local R = require(game:GetService("ReplicatedStorage"):WaitForChild("Rewards"))
+local Auras = require(game:GetService("ReplicatedStorage"):WaitForChild("Auras"))
+local VIP = require(game:GetService("ReplicatedStorage"):WaitForChild("MonetizationConfig")).Passes.VIP.perks
 local tokens, loading = {}, {}
 local lost, leaseUntil = {}, {}
 local finalizing = {}
@@ -63,7 +65,7 @@ local function defaults()
         OwnedWeapons = {}, Titles = {}, Boxes = {}, Boosts = { XP = 1, Coins = 1, XPSeconds = 0, CoinsSeconds = 0 },
         Coins = 0,
         Stats = { Wins = 0, Kills = 0, Knockdowns = 0, Matches = 0, Coins = 0 }, Daily = {}, FirstWinDay = -1,
-        OwnedAuras = {}, EquippedAura = "", Receipts = {}, Options = {},
+        OwnedAuras = {}, EquippedAura = "", Receipts = {}, ReceiptRevision = 0, Options = {},
 		OwnedSkins = { Default = true },
 		EquippedSkin = "Default",
 		WeaponId = "Sword",
@@ -105,9 +107,11 @@ local function refresh(player: Player)
 	player:SetAttribute("Language", data.Language)
  player:SetAttribute("TouchLayoutJson", HttpService:JSONEncode(data.TouchLayout))
  for _, stat in { "Wins", "Kills", "Knockdowns", "Matches" } do player:SetAttribute("Stat" .. stat, data.Stats[stat] or E.Zero) end
- local auras = {} for id, owned in (player:GetAttribute("AllCosmetics") and require(game:GetService("ReplicatedStorage").Auras).Data or data.OwnedAuras) do if owned then table.insert(auras, id) end end
+ local auras = {}
+ for id in Auras.Data do if PlayerData.owns(player, "OwnedAuras", id) then table.insert(auras, id) end end
  table.sort(auras) player:SetAttribute("OwnedAuras", table.concat(auras, ","))
- player:SetAttribute("EquippedAura", data.EquippedAura)
+ local equipped = data.EquippedAura
+ player:SetAttribute("EquippedAura", PlayerData.owns(player, "OwnedAuras", equipped) and equipped or "")
  for key, spec in E.Options do player:SetAttribute(spec.attr, data.Options[key] or spec.default) end
 end
 
@@ -194,12 +198,15 @@ function PlayerData.load(player: Player)
  cache[player] = data player:SetAttribute("ProfileState", writable[player] and "Ready" or "Temporary") refresh(player)
 end
 
-local function persist(player, data, release)
+local function persist(player, data, release, purchaseId)
  if not store or not writable[player] then return false end
  local rejected = false
  local ok, result = pcall(function()
   return store:UpdateAsync("u_" .. player.UserId, function(old)
    if type(old) ~= "table" or type(old.Session) ~= "table" or old.Session.id ~= tokens[player] then rejected = true return nil end
+   local revision = old.ReceiptRevision or 0
+   if purchaseId and type(old.Receipts) == "table" and table.find(old.Receipts, purchaseId) then return old end
+   if revision ~= data.ReceiptRevision - (purchaseId and 1 or 0) then rejected = true return nil end
    local nextData = copy(data)
    if release then nextData.Session = nil
    else nextData.Session = { id = tokens[player], expires = os.time() + E.SessionTTL } end
@@ -212,7 +219,7 @@ local function persist(player, data, release)
   task.defer(function() if player.Parent then player:Kick(require(game:GetService("ReplicatedStorage").LocaleCodex).EN["cx.profile.lost"]) end end)
  end
  if ok and result and result.Session then leaseUntil[player] = result.Session.expires end
- return ok and result ~= nil
+ return ok and result ~= nil, result
 end
 
 function PlayerData.save(player: Player, release)
@@ -267,53 +274,40 @@ function PlayerData.saveSoon(player: Player)
  end)
 end
 
--- Receipt grants are staged outside the live profile. Failed writes cannot erase concurrent rewards.
-function PlayerData.processReceipt(player, purchaseId, itemId, aura)
- while saving[player] do task.wait(E.RetryDelay) end
- local data = PlayerData.get(player)
- if not data or closing[player] or not writable[player] then return false end
- if table.find(data.Receipts, purchaseId) then return true end
- saving[player] = true
- local pending = copy(data)
- local field = aura and "OwnedAuras" or "OwnedSkins"
- pending[field][itemId] = true
- table.insert(pending.Receipts, purchaseId)
- while #pending.Receipts > E.ReceiptLimit do table.remove(pending.Receipts, E.One) end
- local ok = persist(player, pending, false)
- if ok then
-  data[field][itemId] = true
-  data.Receipts = pending.Receipts
-  refresh(player)
+-- Apply the staged receipt fields only. Gameplay can still earn coins while UpdateAsync yields.
+local function applyReceiptChanges(live, before, staged, saved)
+ for key, value in staged do
+  local previous = before[key]
+  if type(value) == "table" and type(previous) == "table" and type(live[key]) == "table" and type(saved[key]) == "table" then
+   applyReceiptChanges(live[key], previous, value, saved[key])
+  elseif value ~= previous then
+   if (key == "Coins" or key == "boughtSpins") and type(value) == "number" and type(live[key]) == "number" then
+    live[key] += value - (previous or 0)
+   else live[key] = copy(saved[key]) end
+  end
  end
- saving[player] = nil
- return ok
 end
 
--- 11/11/2026 (MonetizationManager): recibo genérico. mutate(copia) aplica la compra; se guarda la copia y,
--- solo si se pudo guardar, se aplica lo mismo al perfil en memoria. Un recibo repetido devuelve true sin volver a dar.
 function PlayerData.processReceiptWith(player, purchaseId, mutate)
- while saving[player] do task.wait(E.RetryDelay) end
+ while saving[player] and player.Parent and not closing[player] do task.wait(E.RetryDelay) end
  local data = PlayerData.get(player)
- if not data or closing[player] or not writable[player] then return false end
+ if not player.Parent or not data or closing[player] or not writable[player] or saving[player] then return false end
  if table.find(data.Receipts, purchaseId) then return true end
  saving[player] = true
- local pending = copy(data)
+ local before = copy(data)
+ local pending = copy(before)
  if not pcall(mutate, pending) then saving[player] = nil return false end
  table.insert(pending.Receipts, purchaseId)
- while #pending.Receipts > E.ReceiptLimit do table.remove(pending.Receipts, E.One) end
- local ok = persist(player, pending, false)
+ pending.ReceiptRevision += 1
+ local ok, saved = persist(player, pending, false, purchaseId)
  if ok then
-  -- La copia ya quedó guardada con la compra. Si aplicarla en memoria fallara, se toma la copia guardada
-  -- (así el próximo guardado no borra la compra).
-  local applied = pcall(mutate, data)
-  if not applied then
-   warn("[PlayerData] la compra se guardó pero no se pudo aplicar en memoria; se usa la copia guardada")
-   for key, value in pending do data[key] = value end
-  end
-  data.Receipts = pending.Receipts
-  refresh(player)
+  local receipts, revision = saved.Receipts, saved.ReceiptRevision
+  pending.Receipts, pending.ReceiptRevision = nil, nil
+  applyReceiptChanges(data, before, pending, saved)
+  data.Receipts, data.ReceiptRevision = receipts, revision
  end
  saving[player] = nil
+ if ok then refresh(player) PlayerData.saveSoon(player) end
  return ok
 end
 
@@ -330,7 +324,7 @@ function PlayerData.buyCosmetic(player, id, price, aura)
  if player:GetAttribute("InMatch") then return false, "locked" end
  local field=aura and "OwnedAuras" or "OwnedSkins"
  if data[field][id] then return false, "alreadyOwned" end
- if data.Coins<price then return false, "noCoins" end
+ if data.Coins<price then return false, "noCoins", price - data.Coins end
  data.Coins -= price data[field][id] = true refresh(player) PlayerData.saveSoon(player)
  return true, "acquired"
 end
@@ -358,7 +352,13 @@ end
 
 function PlayerData.owns(player, field, id)
  local data = PlayerData.get(player)
- return data ~= nil and (player:GetAttribute("AllCosmetics") == true or data[field][id] == true)
+ if not data then return false end
+ if field == "OwnedAuras" then
+  local aura = Auras.Data[id]
+  if not aura then return false end
+  if aura.requiredPass then return player:GetAttribute("Pass_" .. aura.requiredPass) == true end
+ end
+ return player:GetAttribute("AllCosmetics") == true or data[field][id] == true
 end
 function PlayerData.refresh(player) refresh(player) end
 function PlayerData.setTouchLayout(player, payload)
@@ -384,6 +384,18 @@ function PlayerData.addCoins(player: Player, amount: number)
 	if not data or type(amount) ~= "number" or amount ~= amount or math.abs(amount) == math.huge then return end
 	data.Coins = math.max(0, data.Coins + math.floor(amount))
 	refresh(player)
+end
+
+function PlayerData.earnedCoins(player, amount)
+ return math.floor(amount * (player:GetAttribute("Pass_VIP") == true and (1 + VIP.soulsBonus) or 1))
+end
+
+function PlayerData.addEarnedCoins(player, amount)
+ local data = PlayerData.get(player) if not data then return 0 end
+ local earned = PlayerData.earnedCoins(player, amount)
+ data.Stats.Coins = (data.Stats.Coins or 0) + earned
+ PlayerData.addCoins(player, earned)
+ return earned
 end
 
 function PlayerData.grantSkin(player: Player, skinId: string)

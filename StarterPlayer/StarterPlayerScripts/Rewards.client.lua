@@ -23,6 +23,7 @@ local player = Players.LocalPlayer
 local UiTheme = require(RS:WaitForChild("UiTheme", 10))
 local UiAssets = require(RS:WaitForChild("UiAssets", 10))
 local L = require(RS:WaitForChild("Localization", 10))
+local Vault = require(RS:WaitForChild("VaultClient"))
 local Device = require(RS:WaitForChild("Device")) -- 11/11: PC, celular o consola
 local Skins = require(RS:WaitForChild("Skins", 10))
 local Weapons = require(RS:WaitForChild("WeaponData", 10))
@@ -30,8 +31,8 @@ local Builder = require(RS:WaitForChild("WeaponBuilder", 10))
 
 -- Presentation tuning only. Never selects, buys or grants a reward.
 local REVEAL = {
-	CarouselSeconds = 2.8, SettleSeconds = 0.22, RevealSeconds = 1.1,
-	FixedSeconds = 0.65, OpenSeconds = 0.22, BrakePower = 3,
+	CarouselSeconds = 3.5, SettleSeconds = 0.3, RevealSeconds = 1.2,
+	FixedSeconds = 0.9, OpenSeconds = 0.55, BrakePower = 3,
 	WheelSeconds = 2.7, WheelPause = 0.24, WheelFinalSeconds = 0.38,
 	WheelTurns = 4, Circle = 360, FinalSectorFraction = 0.72,
 	JackpotSeconds = 2.5, FlashSeconds = 0.55, JackpotFlashSeconds = 1.2,
@@ -46,17 +47,14 @@ local REVEAL = {
 	CardPreviewLimit = 3, PointerWidth = 3, PointerAlpha = 0.25,
 	ChestSize = 138, LidHeight = 34, LidLift = 62, LidRotation = -22, ShakeDegrees = 5, ShakeCycles = 6,
 	ConfirmHeight = 250, ConfirmTextY = 28, ConfirmTextH = 130, ConfirmGap = 12,
-	MobileWheelHeight = 510, MobileBoxHeight = 490, MobileGap = 14, MobileTabHeight = 44,
-	-- 10/11: cajas de Tormenta. Alto de cada tarjeta en PC, arma que se muestra en cada una y color del borde.
-	BoxCardHeight = 460,
-	StormBoxPreview = { StormLesser = { "Dagger", "Relic05Storm" }, StormGreater = { "Sword", "Relic10Storm" }, StormRoyal = { "Greatsword", "Relic19Storm" } },
-	StormBoxColor = { StormLesser = Color3.fromRGB(120, 170, 255), StormGreater = Color3.fromRGB(170, 120, 255), StormRoyal = Color3.fromRGB(255, 70, 90) },
+	MobileWheelHeight = 510, MobileBoxHeight = 245, MobileGap = 14, MobileTabHeight = 44,
+	BoxCardHeight = 204,
 	CompactWidth = 375, CompactHeader = 112, CompactBodyY = 174,
 	CompactMaxHeight = 780, CompactRowHeight = 58, CompactStepHeight = 48,
 	CompactTitleHeight = 30, CompactTextSize = 13, WeeklyHeight = 114, DesktopWeeklyHeight = 82,
 	WheelTop = 62, WheelDiameter = 308, WheelControlsHeight = 130, PityBottom = 128,
 	RequestIntervalFallback = 0.35, WheelDescriptionHeight = 36,
-	OddsHeight = 520, OddsRowHeight = 64, OddsNameFraction = 0.72, PercentScale = 100,
+	OddsHeight = 520, OddsRowHeight = 64, OddsNameFraction = 0.66, PercentScale = 100,
 	OddsHeaderHeight = 32, HeaderTextX = 52,
 	SecondsPerMinute = 60,
 	Layer = { Veil = 70, Box = 71, Stage = 72, Content = 73, Preview = 74, Pointer = 75, Button = 76, Flash = 77 },
@@ -81,6 +79,14 @@ do
 end
 
 local C = UiTheme.Colors
+local CHEST_TIERS = {
+	Souls = { size = 50, stroke = 1, color = C.Stone, bg = C.IronDark, icon = "coin", image = "", openedImage = "" },
+	Relic = { size = 56, stroke = 1.4, color = C.TextSecondary, bg = C.Iron, icon = "trophy", image = "", openedImage = "" },
+	StormLesser = { size = 62, stroke = 1.8, color = C.Accent, bg = C.SuccessDark, icon = "stamina", image = "", openedImage = "" },
+	StormGreater = { size = 68, stroke = 2.2, color = C.InfusionCharge, bg = C.BgPanelLight, icon = "stamina", image = "", openedImage = "" },
+	StormRoyal = { size = 74, stroke = 2.6, color = C.Coins, bg = UiTheme.Rarities.Legendary.bg, icon = "crown", image = "", openedImage = "" },
+	Eclipse = { size = 80, stroke = 3, color = C.GoldBright, bg = C.GoldDark, icon = "crown", lightning = true, image = "", openedImage = "" },
+}
 local remotes = RS:WaitForChild("Remotes", 10)
 
 ----------------------------------------------------------------------
@@ -145,6 +151,9 @@ local currentWheelAngle = 0
 local spins3D = {}
 local state = nil
 local statusLabel = nil
+local luckLabel = nil
+local luckTimerSecond = -1
+local oddsExpireAt = nil
 local subModal = nil
 
 local render
@@ -161,6 +170,10 @@ local subModalSelection = nil
 local renderedViewport = nil
 local boxScroller = nil
 local boxScrollPosition = Vector2.zero
+local function openSouls()
+	setOpen(false)
+	Vault.open(player, "Souls")
+end
 
 local DEFAULT_SECTORS = {
 	{ kind = "Souls", amount = 75, probability = 0.30, rarity = "Common" },
@@ -367,11 +380,18 @@ local function setStatus(text, isError)
 end
 
 local function rewardError(result, fallbackKey)
+	local missing = type(result) == "table" and result.key == "noCoins" and result.missing
 	local text = L.t((type(result) == "table" and result.key) or fallbackKey or "error")
 	UiTheme.playSound("UI_Error") setStatus(text, true)
 	-- A read reconciles an uncertain response; no purchase or claim is repeated.
 	invokeRewards("GetState", nil, nil, function()
-		if opened and not spinning and not busy and not subModal then render() setStatus(text, true) end
+		if not opened or spinning or busy or subModal then return end
+		render()
+		if type(missing) == "number" and missing > 0 then
+			local action = UiTheme.button({ parent = panel, position = statusLabel.Position - UDim2.fromOffset(0, 14), size = UDim2.new(statusLabel.Size.X.Scale, statusLabel.Size.X.Offset, 0, 44),
+				text = Vault.shortfall(missing), textSize = UiTheme.TextSizes.XS, onClick = openSouls })
+			action.TextWrapped = true
+		else setStatus(text, true) end
 	end)
 end
 
@@ -382,8 +402,8 @@ local function makeWeaponPreview3D(parent, wid, sid, rect, large)
 	vp.BackgroundColor3 = C.BgPreview
 	vp.BackgroundTransparency = large and 0.08 or 0.16
 	vp.BorderSizePixel = 0
-	vp.Ambient = Color3.fromRGB(170, 168, 184)
-	vp.LightColor = Color3.fromRGB(255, 240, 214)
+	vp.Ambient = C.PreviewAmbient
+	vp.LightColor = C.PreviewLight
 	vp.LightDirection = Vector3.new(-1, -1, -1)
 	vp.Parent = parent
 	UiTheme.corner(vp, UiTheme.Radius.SM)
@@ -439,15 +459,15 @@ end
 local function sectorColor(sec, idx)
 	local k = sec and sec.kind
 	if k == "WeeklySkin" or k == "Weekly" or k == "Skin" then
-		return Color3.fromRGB(165, 28, 42)
+		return C.DangerDark
 	elseif k == "Box" then
-		return Color3.fromRGB(112, 46, 168)
+		return UiTheme.Rarities.Epic.bg
 	elseif k == "Boost" then
-		return Color3.fromRGB(36, 98, 160)
+		return UiTheme.Rarities.Rare.bg
 	elseif k == "XP" then
-		return Color3.fromRGB(38, 118, 82)
+		return C.SuccessDark
 	end
-	return (idx % 2 == 0) and Color3.fromRGB(44, 38, 30) or Color3.fromRGB(30, 28, 36)
+	return (idx % 2 == 0) and C.BgPanelLight or C.IronDark
 end
 
 ----------------------------------------------------------------------
@@ -540,7 +560,7 @@ end
 -- The same curve drives both motion and ticks; skipping never calls the server.
 local function animateReveal(job, seconds, update, power)
 	local started = os.clock()
-	while activeReveal == job and not job.skip do
+	while activeReveal == job and not job.skip and not job.cancelled do
 		local t = math.clamp((os.clock() - started) / seconds, 0, 1)
 		update(1 - (1 - t) ^ (power or REVEAL.BrakePower))
 		if t >= 1 then break end
@@ -630,18 +650,75 @@ local function animateCarousel(job, stage, pool, reward)
 	animateReveal(job, REVEAL.SettleSeconds, function() end)
 end
 
-local function animateCard(job, stage)
-	local chest = UiTheme.panel({ parent = stage, anchor = Vector2.new(0.5, 0.5), position = UDim2.fromScale(0.5, 0.5),
-		size = UDim2.fromOffset(REVEAL.ChestSize, REVEAL.ChestSize), borderColor = C.GoldBright, zIndex = REVEAL.Layer.Content })
-	local icon = UiAssets.icon(chest, "trophy", REVEAL.ChestSize / 2, C.GoldBright)
-	icon.AnchorPoint = Vector2.new(0.5, 0.5) icon.Position = UDim2.fromScale(0.5, 0.5) icon.ZIndex = REVEAL.Layer.Preview
-	local lid = UiTheme.panel({ parent = chest, size = UDim2.new(1, 0, 0, REVEAL.LidHeight), bg = C.GoldDim, zIndex = REVEAL.Layer.Pointer })
+
+local function drawChest(parent, tier, z)
+ local size = tier.size
+ local frame = UiTheme.panel({ parent = parent, name = "ChestArt", anchor = Vector2.new(0.5, 0.5),
+  position = UDim2.fromScale(0.5, 0.5), size = UDim2.fromOffset(size * 1.35, size),
+  bg = tier.bg, borderColor = tier.color, borderThickness = tier.stroke, ornaments = true, zIndex = z })
+ if tier.image ~= "" then
+  local image = Instance.new("ImageLabel")
+  image.Size = UDim2.fromScale(1, 1) image.ScaleType = Enum.ScaleType.Fit
+  image.BackgroundTransparency = 1 image.Image = tier.image image.ZIndex = z + 1 image.Parent = frame
+  return frame, nil, image
+ end
+ local lid = UiTheme.panel({ parent = frame, size = UDim2.new(1, 0, 0.27, 0),
+  bg = tier.color, borderColor = tier.color, zIndex = z + 2 })
+ local emblem = UiAssets.icon(frame, tier.icon, math.floor(size * 0.56), tier.color)
+ emblem.AnchorPoint = Vector2.new(0.5, 0.5) emblem.Position = UDim2.fromScale(0.5, 0.63) emblem.ZIndex = z + 1
+ if tier.lightning then
+  for _, x in { 0.18, 0.82 } do
+   local spark = UiAssets.icon(frame, "stamina", math.floor(size * 0.32), C.TextPrimary)
+   spark.AnchorPoint = Vector2.new(0.5, 0.5) spark.Position = UDim2.fromScale(x, 0.45) spark.ZIndex = z + 3
+  end
+ end
+ return frame, lid
+end
+
+local function animateCard(job, stage, tier)
+	tier = tier or CHEST_TIERS.Relic
+	local revealTier = table.clone(tier)
+	revealTier.size = math.floor(tier.size * 1.55)
+	local chest, lid, image = drawChest(stage, revealTier, REVEAL.Layer.Content)
 	animateReveal(job, REVEAL.FixedSeconds, function(t)
 		chest.Rotation = math.sin(t * math.pi * REVEAL.ShakeCycles) * REVEAL.ShakeDegrees
 	end, 1)
 	animateReveal(job, REVEAL.OpenSeconds, function(t)
-		lid.Position = UDim2.fromOffset(0, -REVEAL.LidLift * t) lid.Rotation = REVEAL.LidRotation * t
+		if lid then
+			lid.Position = UDim2.fromOffset(0, -REVEAL.LidLift * t) lid.Rotation = REVEAL.LidRotation * t
+		elseif image and t >= 0.5 and tier.openedImage ~= "" then image.Image = tier.openedImage end
 	end)
+end
+
+
+local function showSkipPass(job)
+ if job.offer or job.ready then return end
+ local veil, card = overlayBox("SkipPass", REVEAL.ConfirmHeight)
+ job.offer = veil
+ local before = GuiService.SelectedObject
+ local function close()
+  if job.offer ~= veil then return end
+  job.offer = nil veil:Destroy()
+  if before and before.Parent then GuiService.SelectedObject = before end
+ end
+ revealLabel(card, L.t("mz.pass.SkipOpening"), 12, 48, UiTheme.TextSizes.XL, C.GoldBright)
+ local note = revealLabel(card, L.t("loading"), 64, 72, UiTheme.TextSizes.MD)
+ local cancel = UiTheme.button({ parent = card, anchor = Vector2.new(0, 1), position = UDim2.new(0, 16, 1, -14),
+  size = UDim2.new(0.48, -16, 0, 46), text = L.t("close"), zIndex = REVEAL.Layer.Button, onClick = close })
+ if Device.isGamepad() then GuiService.SelectedObject = cancel end
+ task.spawn(function()
+  local entries = Vault.catalog("SkipOpening")
+  if job.offer ~= veil or not veil.Parent then return end
+  local pass = entries and entries[1]
+  if not pass or not pass.available then note.Text = L.t("mz.noOffers") return end
+  note.Text = L.t("mz.pass.SkipOpening.desc")
+  Vault.priceButton({ parent = card, anchor = Vector2.new(1, 1), position = UDim2.new(1, -16, 1, -14),
+   size = UDim2.new(0.48, -16, 0, 46), zIndex = REVEAL.Layer.Button, onClick = function()
+    local ok, reason = Vault.prompt(pass.key)
+    if not veil.Parent then return end
+    if ok then close() else note.Text = L.t("mz.offer." .. (reason or "unavailable")) end
+   end }, pass)
+ end)
 end
 
 local function runCelebration(job)
@@ -656,26 +733,38 @@ local function runCelebration(job)
 	stage.Position = UDim2.new(0, REVEAL.Margin, 0, REVEAL.StageY)
 	stage.Size = UDim2.new(1, -REVEAL.Margin * 2, 0, REVEAL.StageH + extraHeight)
 	stage.BackgroundTransparency = 1 stage.ClipsDescendants = true stage.ZIndex = REVEAL.Layer.Stage stage.Parent = box
+	local function canSkip() return player:GetAttribute("Pass_SkipOpening") == true end
 	local function activate()
-		if job.ready then job.dismiss = true else job.skip = true end
+		if job.ready then job.dismiss = true
+		elseif canSkip() then job.skip = true
+		else showSkipPass(job) end
 	end
-	local button = UiTheme.button({ parent = box, anchor = Vector2.new(0.5, 1), position = UDim2.new(0.5, 0, 1, -REVEAL.ButtonBottom),
-		size = UDim2.new(1, -REVEAL.Margin * 2, 0, REVEAL.ButtonH), text = L.t("cx.reward.reveal.skip"), variant = "gold", zIndex = REVEAL.Layer.Button, onClick = activate })
-	veil.Activated:Connect(activate)
+	local button = UiTheme.button({ parent = box, anchor = Vector2.new(1, 1), position = UDim2.new(1, -REVEAL.Margin, 1, -REVEAL.ButtonBottom),
+		size = UDim2.fromOffset(128, REVEAL.ButtonH), text = canSkip() and L.t("mz.skipLocked") or ("🔒 " .. L.t("mz.skipLocked")),
+		textSize = UiTheme.TextSizes.XS, variant = "secondary", zIndex = REVEAL.Layer.Button, onClick = activate })
+	local passChanged = player:GetAttributeChangedSignal("Pass_SkipOpening"):Connect(function()
+		if canSkip() and not job.ready then button.Text = L.t("mz.skipLocked") end
+	end)
+	job.passChanged = passChanged
+	veil.Activated:Connect(function() if canSkip() or job.ready then activate() end end)
 	local input = game:GetService("ContextActionService")
 	input:BindActionAtPriority("RewardRevealSkip", function(_, inputState)
+		if job.offer then return Enum.ContextActionResult.Pass end
 		if inputState == Enum.UserInputState.Begin then activate() end
 		return Enum.ContextActionResult.Sink
 	end, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.Return, Enum.KeyCode.KeypadEnter, Enum.KeyCode.ButtonA)
 	job.input = input
-	if UIS.GamepadEnabled then GuiService.SelectedObject = button end
+	if Device.isGamepad() then GuiService.SelectedObject = button end
 	if options.wheel and options.wheel.Parent then
 		box.Visible = false veil.BackgroundTransparency = 1
 		-- Keep a physical-size skip target while the original wheel is visible.
-		button.Parent = veil button.Size = UDim2.new(1, -REVEAL.Margin * 2, 0, REVEAL.ButtonH)
+		button.Parent = veil
 		animateWheel(job, options)
 		button.Parent = box box.Visible = true veil.BackgroundTransparency = REVEAL.PointerAlpha
-	elseif options.pool then animateCarousel(job, stage, options.pool, reward)
+	elseif options.pool then
+		animateCard(job, stage, CHEST_TIERS[options.box])
+		stage:ClearAllChildren()
+		animateCarousel(job, stage, options.pool, reward)
 	else animateCard(job, stage) end
 	stage:ClearAllChildren()
 	local color = rewardColor(reward)
@@ -707,11 +796,17 @@ local function runCelebration(job)
 	animateReveal(job, duration, function(t)
 		stage.GroupTransparency = 1 - t name.TextTransparency = 1 - t
 	end)
-	button.Text = L.t("ui.match.continue") job.ready = true
+	job.ready = true
+	button.Text = L.t("ui.match.continue")
+	button.AnchorPoint = Vector2.new(0.5, 1)
+	button.Position = UDim2.new(0.5, 0, 1, -REVEAL.ButtonBottom)
+	button.Size = UDim2.new(1, -REVEAL.Margin * 2, 0, REVEAL.ButtonH)
+	if Device.isGamepad() and not job.offer then GuiService.SelectedObject = button end
 	-- Result remains readable until Continue; this user-controlled hold is not animation time.
 	while not job.dismiss do RunService.RenderStepped:Wait() end
 	input:UnbindAction("RewardRevealSkip") job.input = nil
 	veil:Destroy()
+	if job.passChanged then job.passChanged:Disconnect() job.passChanged = nil end
 	if previousSelection and previousSelection.Parent then GuiService.SelectedObject = previousSelection else GuiService.SelectedObject = nil end
 end
 
@@ -724,9 +819,11 @@ function showPrizeCelebration(reward, options)
 	task.spawn(function()
 		while #revealQueue > 0 do
 			local job = table.remove(revealQueue, 1) activeReveal = job
-			if player:GetAttribute("InMatch") then job.skip = true job.dismiss = true end
+			if player:GetAttribute("InMatch") then job.cancelled = true job.dismiss = true end
 			local ok, message = pcall(runCelebration, job)
 			if job.input then job.input:UnbindAction("RewardRevealSkip") end
+			if job.passChanged then job.passChanged:Disconnect() end
+			if job.offer then job.offer:Destroy() end
 			if job.veil and job.veil.Parent then job.veil:Destroy() end
 			if not ok then warn("[Rewards] Reveal: " .. tostring(message)) end
 		end
@@ -761,7 +858,7 @@ function showPaidConfirmation(onConfirm)
 				onConfirm()
 			end)
 		end })
-	if UIS.GamepadEnabled then GuiService.SelectedObject = cancel end
+	if Device.isGamepad() then GuiService.SelectedObject = cancel end
 end
 
 ----------------------------------------------------------------------
@@ -779,21 +876,29 @@ function showOddsModal()
 	scroll.BackgroundTransparency = 1 scroll.BorderSizePixel = 0 scroll.ZIndex = REVEAL.Layer.Content
 	scroll.ScrollBarThickness = UiTheme.Spacing.XXS scroll.CanvasSize = UDim2.new() scroll.Parent = box
 	local y = 0
-	local function section(text)
-		revealLabel(scroll, text, y, REVEAL.OddsHeaderHeight, UiTheme.TextSizes.SM, C.GoldBright)
-		y += REVEAL.OddsHeaderHeight
+	local function section(text, height)
+		height = height or REVEAL.OddsHeaderHeight
+		revealLabel(scroll, text, y, height, UiTheme.TextSizes.SM, C.GoldBright)
+		y += height
 	end
-	local function row(item, probability)
+	local activeLuck = state.luck and state.luck.multiplier > 1 and state.luck.endsAt > workspace:GetServerTimeNow()
+	oddsExpireAt = activeLuck and state.luck.endsAt or nil
+	local function row(item, probability, baseProbability)
+		local formatted = string.format("%.6f%%", (probability or 0) * REVEAL.PercentScale)
+		if baseProbability ~= nil and activeLuck then formatted = string.format("%.6f%%\n→ %s", baseProbability * REVEAL.PercentScale, formatted) end
 		local card = UiTheme.panel({ parent = scroll, position = UDim2.fromOffset(0, y), size = UDim2.new(1, -REVEAL.CardGap, 0, REVEAL.OddsRowHeight),
 			borderColor = rewardColor(item), zIndex = REVEAL.Layer.Content })
 		UiTheme.label({ parent = card, position = UDim2.fromOffset(REVEAL.CardGap, 0),
 			size = UDim2.new(REVEAL.OddsNameFraction, -REVEAL.CardGap, 1, 0), text = rewardName(item) .. " · " .. L.t(rewardRarity(item)),
 			textSize = REVEAL.CompactTextSize, color = rewardColor(item), zIndex = REVEAL.Layer.Preview })
 		UiTheme.label({ parent = card, position = UDim2.fromScale(REVEAL.OddsNameFraction, 0),
-			size = UDim2.new(1 - REVEAL.OddsNameFraction, -REVEAL.CardGap, 1, 0), text = string.format("%.2f%%", (probability or 0) * REVEAL.PercentScale),
+			size = UDim2.new(1 - REVEAL.OddsNameFraction, -REVEAL.CardGap, 1, 0), text = formatted,
 			textSize = REVEAL.CompactTextSize, alignX = Enum.TextXAlignment.Right, zIndex = REVEAL.Layer.Preview })
 		y += REVEAL.OddsRowHeight + REVEAL.CardGap
 	end
+	section(L.t("mz.duplicate", { percent = math.floor((state.duplicateFraction or 0.4) * REVEAL.PercentScale) }))
+	section(L.t("mz.oddsRounded"), REVEAL.OddsRowHeight)
+	if activeLuck then section(L.t("mz.oddsCompare")) end
 	section(L.t("ui.rewards.tab.Roulette"))
 	local tutorial = state and state.tutorial and state.tutorial.spinAvailable
 	for _, item in state and state.roulette or DEFAULT_SECTORS do
@@ -806,14 +911,14 @@ function showOddsModal()
 		local spec = state and state.boxes and state.boxes[id]
 		for _, item in spec and spec.probabilities or {} do
 			if item.skins then
-				for _, sid in item.skins do row({ kind = "Skin", id = sid, rarity = item.rarity }, item.probabilityPerSkin) end
-			else row(item, item.probability) end
+				for _, sid in item.skins do row({ kind = "Skin", id = sid, rarity = item.rarity }, activeLuck and item.probabilityPerSkin or item.baseProbabilityPerSkin, item.baseProbabilityPerSkin) end
+			else row(item, activeLuck and item.probability or item.baseProbability, item.baseProbability) end
 		end
 	end
 	scroll.CanvasSize = UDim2.fromOffset(0, y)
 	local close = UiTheme.button({ parent = box, anchor = Vector2.new(0.5, 1), position = UDim2.new(0.5, 0, 1, -REVEAL.ButtonBottom),
 		size = UDim2.new(1, -REVEAL.Margin * 2, 0, REVEAL.ButtonH), text = L.t("close"), zIndex = REVEAL.Layer.Preview, onClick = closeSubModal })
-	if UIS.GamepadEnabled then GuiService.SelectedObject = close end
+	if Device.isGamepad() then GuiService.SelectedObject = close end
 end
 
 ----------------------------------------------------------------------
@@ -913,7 +1018,7 @@ function checkWelcomeModal()
 					renderWelcomeStep()
 				end,
 			})
-			if UIS.GamepadEnabled then GuiService.SelectedObject = nextBtn end
+			if Device.isGamepad() then GuiService.SelectedObject = nextBtn end
 		else
 			UiTheme.label({
 				parent = wBox,
@@ -1002,7 +1107,7 @@ function checkWelcomeModal()
 						end)
 					end,
 				})
-				if idx == 1 and UIS.GamepadEnabled then
+				if idx == 1 and Device.isGamepad() then
 					GuiService.SelectedObject = pickBtn
 				end
 			end
@@ -1087,6 +1192,7 @@ function render()
 		state = buildFallbackState()
 	end
 
+	luckLabel = nil luckTimerSecond = -1
 	local focusedBoxButtonName = nil
 	if boxScroller then
 		boxScrollPosition = boxScroller.CanvasPosition
@@ -1108,9 +1214,9 @@ function render()
 	local mobile = viewport.X < REVEAL.MobileBreakpoint
 	local compact = mobile and tab ~= "Collection"
 	local width = compact and math.min(REVEAL.CompactWidth, viewport.X - REVEAL.Margin * 2) or (mobile and 720 or BASE_W)
-	local height = compact and math.min(REVEAL.CompactMaxHeight, viewport.Y - REVEAL.Margin * 2) or (mobile and 620 or BASE_H)
+	local height = compact and math.clamp(viewport.Y - REVEAL.Margin * 2, 560, REVEAL.CompactMaxHeight) or (mobile and 620 or BASE_H)
 	panel.Size = UDim2.fromOffset(width, height)
-	scale.Scale = compact and 1 or UiTheme.computeScale(viewport, width, height, player)
+	scale.Scale = compact and math.min(1, (viewport.Y - REVEAL.Margin * 2) / height) or UiTheme.computeScale(viewport, width, height, player)
 
 	-- Cabecera
 	local header = Instance.new("Frame")
@@ -1166,13 +1272,17 @@ function render()
 	UiTheme.label({
 		parent = soulPill,
 		position = UDim2.fromOffset(34, 0),
-		size = UDim2.new(1, -42, 1, 0),
-		text = L.t("ui.souls", { amount = soulsAmount }),
+		size = UDim2.new(1, -80, 1, 0),
+		text = tostring(soulsAmount),
+		scaled = true,
 		font = "Number",
 		textSize = UiTheme.TextSizes.SM,
 		color = C.Coins,
 		alignX = Enum.TextXAlignment.Right,
 	})
+
+	UiTheme.button({ name = "GetSouls", parent = soulPill, anchor = Vector2.new(1, 0.5), position = UDim2.fromScale(1, 0.5),
+		size = UDim2.fromOffset(40, 44), text = "+", textColor = C.Coins, variant = "secondary", onClick = openSouls })
 
 	UiTheme.button({
 		name = "CloseButton",
@@ -1413,6 +1523,9 @@ function render()
 		elseif state.freeSpin then
 			spinMode = "Free"
 			spinBtnText = L.t("ui.rewards.spinFree")
+		elseif state.vipAvailable then
+			spinMode = "VIP"
+			spinBtnText = state.vipFallbackSouls and L.t("mz.vipSouls", { amount = state.vipFallbackSouls }) or L.t("mz.vipSpin")
 		elseif (tonumber(state.spins) or 0) > 0 then
 			spinMode = "Ticket"
 			spinBtnText = L.t("ui.rewards.spinTicket", { count = state.spins })
@@ -1432,6 +1545,7 @@ function render()
 				if not ok or type(res) ~= "table" or not res.reward then
 					rewardError(res) return
 				end
+				if res.mode == "VIPFallback" then showPrizeCelebration(res.reward) return end
 				local sector = math.clamp(tonumber(res.sector) or 1, 1, #sectors)
 				local weekly = sectors[sector] and sectors[sector].kind == "WeeklySkin"
 				showPrizeCelebration(res.reward, { wheel = wheelInner, sector = sector, sectors = sectors, jackpot = weekly, bonus = res.bonus })
@@ -1525,178 +1639,91 @@ function render()
 	------------------------------------------------------------------
 	-- PESTAÑA 2: CAJAS DE SUERTE
 	------------------------------------------------------------------
+
 	elseif tab == "Boxes" then
-		-- 10/11/2026: las cajas salen de Rewards.BoxOrder (Almas, Reliquia y las tres de Tormenta) y se listan
-		-- con desplazamiento: dos por fila en PC, una por fila en celular.
+		local oddsHeight = REVEAL.ButtonH + REVEAL.MobileGap
+		local odds = UiTheme.button({ parent = body, position = UDim2.fromOffset(0, 0), size = UDim2.fromOffset(126, REVEAL.ButtonH),
+			text = L.t("mz.odds"), textSize = UiTheme.TextSizes.SM, disabled = not serverStateReady, onClick = showOddsModal })
+		odds.TextWrapped = true
+		luckLabel = UiTheme.label({ parent = body, position = UDim2.fromOffset(136, 0), size = UDim2.new(1, -136, 0, REVEAL.ButtonH),
+			text = "", font = "Number", textSize = UiTheme.TextSizes.SM, color = C.Accent, alignX = Enum.TextXAlignment.Right })
 		local bodyH = compact and REVEAL.MobileBoxHeight or REVEAL.BoxCardHeight
-		local cardW = compact and width - 40 or math.floor((width - 40 - 18 - 8) / 2)
-		local order = (RewardsConfig and RewardsConfig.BoxOrder) or { "Souls", "Relic" }
-		local look = {
-			Souls = { titleKey = "ui.rewards.boxSouls", descKey = "ui.rewards.boxSoulsDesc", color = C.Gold, icon = "coin" },
-			Relic = { titleKey = "ui.rewards.boxRelic", descKey = "ui.rewards.boxRelicDesc", color = C.GoldBright, icon = "trophy", hasPity = true, preview = { "Greatsword", "BloodMoonCleaver" } },
-		}
-		for id, prev in REVEAL.StormBoxPreview do
-			look[id] = { titleKey = "cx.reward.box." .. id, descKey = "cx.reward.box." .. id .. ".desc", color = REVEAL.StormBoxColor[id] or C.GoldBright, icon = "trophy", preview = prev }
-		end
-		local boxSpecs = {}
-		for _, id in order do
-			local st = state.boxes and state.boxes[id]
-			local lk = look[id] or { titleKey = "cx.reward.box." .. id, descKey = "cx.reward.box." .. id .. ".desc", color = C.GoldBright, icon = "trophy" }
-			if st or look[id] then
-				table.insert(boxSpecs, {
-					id = id, titleKey = lk.titleKey, descKey = lk.descKey, color = lk.color, icon = lk.icon,
-					price = st and st.price, count = st and st.count or 0,
-					ready = serverStateReady and st ~= nil,
-					hasPity = lk.hasPity == true, preview = lk.preview,
-				})
-			end
-		end
-		local perRow = compact and 1 or 2
-		local rows = math.ceil(#boxSpecs / perRow)
+		local perRow = compact and 1 or 3
+		local gap = REVEAL.MobileGap
+		local cardW = math.floor((width - 46 - (perRow - 1) * gap) / perRow)
+		local order = RewardsConfig and RewardsConfig.BoxOrder or { "Souls", "Relic" }
 		local holder = body
 		if not compact then
 			holder = Instance.new("ScrollingFrame")
 			holder.Name = "BoxList"
 			holder.Size = UDim2.fromScale(1, 1)
-			holder.BackgroundTransparency = 1
-			holder.BorderSizePixel = 0
-			holder.ScrollBarThickness = UiTheme.Spacing.XXS
-			holder.ScrollingDirection = Enum.ScrollingDirection.Y
+			holder.BackgroundTransparency = 1 holder.BorderSizePixel = 0
+			holder.ScrollBarThickness = UiTheme.Spacing.XXS holder.ScrollingDirection = Enum.ScrollingDirection.Y
 			holder.Parent = body
+			odds.Parent = holder luckLabel.Parent = holder
 		end
 		boxScroller = holder
-		holder.CanvasSize = UDim2.fromOffset(0, rows * (bodyH + REVEAL.MobileGap))
+		holder.CanvasSize = UDim2.fromOffset(0, oddsHeight + math.ceil(#order / perRow) * (bodyH + gap))
 
-		for idx, bSpec in boxSpecs do
-			local col, rowN = (idx - 1) % perRow, math.floor((idx - 1) / perRow)
-			local bCard = UiTheme.panel({
-				name = "BoxCard_" .. bSpec.id,
-				parent = holder,
-				position = UDim2.fromOffset(col * (cardW + 18), rowN * (bodyH + REVEAL.MobileGap)),
-				size = UDim2.fromOffset(cardW, bodyH),
-				bg = C.BgPanel,
-				borderColor = bSpec.color,
-				ornaments = true,
-			})
+		for idx, id in order do
+			local tier = CHEST_TIERS[id]
+			local spec = state.boxes and state.boxes[id]
+			local count = spec and spec.count or 0
+			local openable = spec and spec.openable or 0
+			local hasOwned = openable > 0
+			local canBuy = state.canSpendOnRandom == true
+			local ready = serverStateReady and spec ~= nil
+			local col, row = (idx - 1) % perRow, math.floor((idx - 1) / perRow)
+			local card = UiTheme.panel({ name = "BoxCard_" .. id, parent = holder,
+				position = UDim2.fromOffset(col * (cardW + gap), oddsHeight + row * (bodyH + gap)),
+				size = UDim2.fromOffset(cardW, bodyH), bg = C.BgPanel, borderColor = tier.color,
+				borderThickness = tier.stroke, ornaments = idx >= 4 })
 
-			UiTheme.label({
-				parent = bCard,
-				position = UDim2.fromOffset(20, 18),
-				size = UDim2.new(1, -40, 0, 32),
-				text = L.t(bSpec.titleKey),
-				font = "Title",
-				textSize = UiTheme.TextSizes.XXL,
-				scaled = compact,
-				color = bSpec.color,
-				alignX = Enum.TextXAlignment.Center,
-			})
-
-			-- Cofre central ilustrado / visor 3D
-			if bSpec.preview then
-				makeWeaponPreview3D(bCard, bSpec.preview[1], bSpec.preview[2], { 32, 60, cardW - 64, 175 }, true)
-			else
-				local emblem = Instance.new("Frame")
-				emblem.AnchorPoint = Vector2.new(0.5, 0)
-				emblem.Position = UDim2.new(0.5, 0, 0, 68)
-				emblem.Size = UDim2.fromOffset(152, 152)
-				emblem.BackgroundColor3 = C.BgPreview
-				emblem.BorderSizePixel = 0
-				emblem.Parent = bCard
-				UiTheme.corner(emblem, 76)
-				UiTheme.stroke(emblem, bSpec.color, 2.2, 0.1)
-				local ic = UiAssets.icon(emblem, bSpec.icon, 78, bSpec.color)
-				ic.AnchorPoint = Vector2.new(0.5, 0.5)
-				ic.Position = UDim2.fromScale(0.5, 0.5)
+			UiTheme.label({ parent = card, position = UDim2.fromOffset(10, 4), size = UDim2.new(1, -20, 0, 22),
+				text = L.t("mz.level", { level = idx }), font = "Number", color = tier.color, textSize = UiTheme.TextSizes.XS,
+				alignX = Enum.TextXAlignment.Center })
+			UiTheme.label({ parent = card, position = UDim2.fromOffset(10, 22), size = UDim2.new(1, -20, 0, 28),
+				text = L.t("cx.reward.box." .. id), font = "Title", scaled = true, textSize = UiTheme.TextSizes.XL,
+				color = C.TextPrimary, alignX = Enum.TextXAlignment.Center })
+			local art = Instance.new("Frame")
+			art.Position = UDim2.fromOffset(0, 50) art.Size = UDim2.new(1, 0, 0, compact and 110 or 76)
+			art.BackgroundTransparency = 1 art.Parent = card
+			drawChest(art, tier, card.ZIndex + 1)
+			local meta = L.t("ui.rewards.boxOwned", { count = count })
+			if id == "Relic" then
+				meta = meta .. " · " .. L.t("ui.rewards.relicPity", { cur = state.relicPity or 0, max = state.relicGuarantee or 10 })
 			end
+			UiTheme.label({ parent = card, anchor = Vector2.new(0, 1), position = UDim2.new(0, 8, 1, -54),
+				size = UDim2.new(1, -16, 0, 22), text = meta, scaled = true, textSize = UiTheme.TextSizes.XS,
+				color = C.TextSecondary, alignX = Enum.TextXAlignment.Center })
 
-			UiTheme.label({
-				parent = bCard,
-				position = UDim2.fromOffset(24, 248),
-				size = UDim2.new(1, -48, 0, 54),
-				text = L.t(bSpec.descKey),
-				font = "Body",
-				textSize = UiTheme.TextSizes.SM,
-				color = C.TextPrimary,
-				alignX = Enum.TextXAlignment.Center,
-			})
-
-			if bSpec.hasPity then
-				local pCur = tonumber(state.relicPity) or 0
-				local pMax = math.max(1, tonumber(state.relicGuarantee) or 10)
-				UiTheme.progressBar({
-					parent = bCard,
-					position = UDim2.fromOffset(32, 312),
-					size = UDim2.new(1, -64, 0, 20),
-					fraction = math.clamp(pCur / pMax, 0, 1),
-					fillColor = C.GoldBright,
-					showText = true,
-					text = L.t("ui.rewards.relicPity", { cur = pCur, max = pMax }),
-				})
-			else
-				UiTheme.label({
-					parent = bCard,
-					position = UDim2.fromOffset(24, 312),
-					size = UDim2.new(1, -48, 0, 24),
-					text = L.t("ui.rewards.duplicateRule"),
-					font = "Body",
-					textSize = UiTheme.TextSizes.XS,
-					color = C.TextSecondary,
-					alignX = Enum.TextXAlignment.Center,
-				})
+			local missing = ready and not hasOwned and canBuy and math.max(0, spec.price - soulsAmount) or 0
+			local openText = L.t("loading")
+			if ready then
+				if hasOwned then openText = L.t("ui.rewards.openOwned", { count = openable })
+				elseif not canBuy then openText = L.t("mz.restricted")
+				elseif missing > 0 then openText = Vault.shortfall(missing)
+				else openText = L.t("ui.rewards.buyAndOpen", { price = spec.price }) end
 			end
-
-			UiTheme.label({
-				parent = bCard,
-				position = UDim2.fromOffset(24, 346),
-				size = UDim2.new(1, -48, 0, 24),
-				text = L.t("ui.rewards.boxOwned", { count = bSpec.count }),
-				font = "Bold",
-				textSize = UiTheme.TextSizes.MD,
-				color = bSpec.count > 0 and C.Success or C.TextSecondary,
-				alignX = Enum.TextXAlignment.Center,
-			})
-
-			local hasOwned = bSpec.count > 0
-			local openBtnText = L.t("loading")
-			if bSpec.ready then
-				openBtnText = hasOwned and L.t("ui.rewards.openOwned", { count = bSpec.count })
-					or L.t("ui.rewards.buyAndOpen", { price = bSpec.price })
-			end
-
-			local openButton = UiTheme.button({
-				name = "OpenBox_" .. bSpec.id,
-				parent = bCard,
-				anchor = Vector2.new(0.5, 1),
-				position = UDim2.new(0.5, 0, 1, -24),
-				size = UDim2.fromOffset(cardW - 64, 48),
-				text = openBtnText,
-				font = "Title",
-				textSize = UiTheme.TextSizes.LG,
-				variant = "gold",
-				disabled = not bSpec.ready,
+			local openButton = UiTheme.button({ name = "OpenBox_" .. id, parent = card,
+				anchor = Vector2.new(0.5, 1), position = UDim2.new(0.5, 0, 1, -8), size = UDim2.new(1, -20, 0, 44),
+				text = openText, font = "Title", textSize = UiTheme.TextSizes.MD, variant = "primary",
+				disabled = not ready or (not hasOwned and not canBuy),
 				onClick = function()
 					if busy or spinning then return end
-					local candidates = boxCandidates(bSpec.id)
-					local src = hasOwned and "Owned" or "Buy"
-					invokeRewards("OpenBox", bSpec.id, src, function(ok, res)
+					if missing > 0 then openSouls() return end
+					local candidates = boxCandidates(id)
+					invokeRewards("OpenBox", id, hasOwned and "Owned" or "Buy", function(ok, res)
 						if ok and type(res) == "table" and res.reward then
-							showPrizeCelebration(res.reward, { pool = candidates })
-						else
-							rewardError(res, "noCoins")
-						end
+							showPrizeCelebration(res.reward, { pool = candidates, box = id })
+						else rewardError(res, "noCoins") end
 					end)
-				end,
-			})
-			if compact then
-				openButton.TextScaled = true
-				UiTheme.textConstraint(openButton, UiTheme.TextSizes.XS, UiTheme.TextSizes.LG)
-			end
+				end })
+			openButton.TextWrapped = true openButton.TextScaled = true
+			UiTheme.textConstraint(openButton, UiTheme.TextSizes.XS, UiTheme.TextSizes.MD)
 		end
 		holder.CanvasPosition = boxScrollPosition
 
-	------------------------------------------------------------------
-	-- PESTAÑA 3: RACHA DIARIA (7 DÍAS), BIENVENIDO DE VUELTA Y PRIMEROS PASOS
-	------------------------------------------------------------------
 	elseif tab == "Streak" and compact then
 		compactStreak(body, width - 40)
 	elseif tab == "Streak" then
@@ -2041,7 +2068,7 @@ function render()
 			})
 			local vp = makeWeaponPreview3D(sCard, selectedWeapon, sid, { 8, 8, cellW - 16, 88 }, false)
 			if not has then
-				vp.ImageColor3 = Color3.fromRGB(70, 70, 80)
+				vp.ImageColor3 = C.Disabled
 				vp.ImageTransparency = 0.35
 			end
 			UiTheme.label({
@@ -2151,7 +2178,7 @@ function render()
 		alignX = Enum.TextXAlignment.Right,
 	}), "Gamepad") -- 11/11: solo con mando (Device)
 
-	if UIS.GamepadEnabled and firstTabBtn and not subModal then
+	if Device.isGamepad() and firstTabBtn and not subModal then
 		local focusedBox = boxScroller and focusedBoxButtonName and boxScroller:FindFirstChild(focusedBoxButtonName, true)
 		GuiService.SelectedObject = focusedBox and focusedBox.Selectable and focusedBox or firstTabBtn
 	end
@@ -2212,7 +2239,7 @@ end)
 for _, otherAttr in { "ShopOpen", "ArmoryOpen", "SettingsOpen", "InMatch" } do
 	player:GetAttributeChangedSignal(otherAttr):Connect(function()
 		if player:GetAttribute(otherAttr) == true then
-			if activeReveal then activeReveal.skip = true activeReveal.dismiss = true end
+			if activeReveal and otherAttr == "InMatch" then activeReveal.cancelled = true activeReveal.dismiss = true end
 			if opened then setOpen(false) end
 		end
 	end)
@@ -2240,6 +2267,20 @@ UIS.InputBegan:Connect(function(input, processed)
 end)
 
 RunService.RenderStepped:Connect(function(dt)
+	if subModal and subModal.Name == "RewardOdds" and oddsExpireAt and workspace:GetServerTimeNow() >= oddsExpireAt then
+		oddsExpireAt = nil
+		showOddsModal()
+	end
+	if opened and luckLabel and luckLabel.Parent and state.luck then
+		local remaining = math.max(0, math.ceil(state.luck.endsAt - workspace:GetServerTimeNow()))
+		if remaining ~= luckTimerSecond then
+			luckTimerSecond = remaining
+			luckLabel.Text = remaining > 0 and state.luck.multiplier > 1 and L.t("mz.luckTimer", {
+				multiplier = state.luck.multiplier, time = ("%02d:%02d"):format(math.floor(remaining / 60), remaining % 60),
+			}) or ""
+			if remaining == 0 and state.luck.multiplier > 1 then refreshState(true) end
+		end
+	end
 	if opened and not spinning and not busy and not subModal and usableViewport() ~= renderedViewport then render() end
 	if not opened and not welcomeVeil and not activeReveal then return end
 	for i = #spins3D, 1, -1 do
@@ -2259,6 +2300,10 @@ end)
 ----------------------------------------------------------------------
 -- Eventos del servidor: RewardsChanged y RewardAnnouncement (Legendarias)
 ----------------------------------------------------------------------
+for _, attr in { "Pass_VIP", "PaidRandomAllowed", "PurchaseVersion" } do
+	player:GetAttributeChangedSignal(attr):Connect(function() refreshState(true) end)
+end
+
 task.spawn(function()
 	refreshState(false)
 	if not remotes then remotes = RS:WaitForChild("Remotes", 15) end
@@ -2288,7 +2333,7 @@ task.spawn(function()
 				anchor = Vector2.new(0.5, 0),
 				position = UDim2.new(0.5, 0, 0, 56),
 				size = UDim2.fromOffset(540, 38),
-				bg = Color3.fromRGB(42, 14, 22),
+				bg = C.GoldDark,
 				borderColor = C.GoldBright,
 				borderThickness = 2,
 				ornaments = true,

@@ -16,6 +16,7 @@ local player = Players.LocalPlayer
 local UiTheme = require(RS:WaitForChild("UiTheme", 10))
 local UiAssets = require(RS:WaitForChild("UiAssets", 10))
 local L = require(RS:WaitForChild("Localization", 10))
+local Vault = require(RS:WaitForChild("VaultClient"))
 local Device = require(RS:WaitForChild("Device")) -- 11/11: PC, celular o consola
 local Skins = require(RS:WaitForChild("Skins", 10))
 local Weapons = require(RS:WaitForChild("WeaponData", 10))
@@ -51,7 +52,7 @@ local BOOST_ITEMS = {
 		nameKey = "ui.shop.boost2xCoins",
 		descKey = "ui.shop.boost2xCoinsDesc",
 		icon = "coin",
-		color = Color3.fromRGB(245, 198, 78),
+		color = C.Coins,
 		currency = "Coins",
 		price = 1200,
 	},
@@ -62,7 +63,7 @@ local BOOST_ITEMS = {
 		nameKey = "ui.shop.boost2xXp",
 		descKey = "ui.shop.boost2xXpDesc",
 		icon = "trophy",
-		color = Color3.fromRGB(120, 205, 255),
+		color = C.Guard,
 		currency = "Coins",
 		price = 1400,
 	},
@@ -73,7 +74,7 @@ local BOOST_ITEMS = {
 		nameKey = "ui.shop.boostSoulMagnet",
 		descKey = "ui.shop.boostSoulMagnetDesc",
 		icon = "aura_crown",
-		color = Color3.fromRGB(235, 48, 68),
+		color = C.HealthBright,
 		currency = "Coins",
 		price = 2200,
 	},
@@ -87,7 +88,7 @@ local SOUL_ITEMS = {
 		nameKey = "ui.shop.soulsPack1",
 		descKey = "ui.shop.soulsPack1Desc",
 		icon = "coin",
-		color = Color3.fromRGB(218, 182, 96),
+		color = C.Coins,
 		amount = 500,
 	},
 	{
@@ -97,7 +98,7 @@ local SOUL_ITEMS = {
 		nameKey = "ui.shop.soulsPack2",
 		descKey = "ui.shop.soulsPack2Desc",
 		icon = "coin",
-		color = Color3.fromRGB(242, 202, 92),
+		color = C.Coins,
 		amount = 2000,
 	},
 	{
@@ -107,7 +108,7 @@ local SOUL_ITEMS = {
 		nameKey = "ui.shop.soulsPack3",
 		descKey = "ui.shop.soulsPack3Desc",
 		icon = "trophy",
-		color = Color3.fromRGB(245, 58, 72),
+		color = C.GoldBright,
 		amount = 5000,
 	},
 }
@@ -190,6 +191,31 @@ local messageLabel = nil
 local timerLabel = nil
 local render
 local setOpen
+local vaultEntries, vaultLoading, vaultTarget, luckOdds
+local vaultScroll = Vector2.zero
+local inspecting = false
+local compactShop = false
+
+local function loadVault()
+ if vaultLoading then return end
+ vaultLoading = true
+ task.spawn(function()
+  vaultEntries = Vault.catalog() or {}
+  for _, item in vaultEntries do
+   if item.available and item.kind == "Luck" then luckOdds = Vault.chestOdds() break end
+  end
+  vaultLoading = false
+  if opened and tab == "Vault" then render() end
+ end)
+end
+
+local function openVault(section)
+ if player:GetAttribute("InMatch") then return end
+ vaultTarget = section
+ tab = "Vault" inspecting = false
+ if opened then render() else setOpen(true) end
+ loadVault()
+end
 
 local rarities = { "all", "Common", "Rare", "Epic", "Legendary" }
 local filters = { "all", "owned", "available" }
@@ -314,7 +340,7 @@ local function tryAuraOnCharacter(auraId)
 		zIndex = 60,
 		onClick = function() exitAuraPreview(true) end,
 	})
-	if UIS.GamepadEnabled then GuiService.SelectedObject = auraExitButton end
+	if Device.isGamepad() then GuiService.SelectedObject = auraExitButton end
 end
 
 UIS.InputBegan:Connect(function(input)
@@ -450,6 +476,7 @@ local function state(id)
 	if kind == "Aura" then
 		if player:GetAttribute("EquippedAura") == id then return "equipped" end
 		if ownAuras()[id] then return "equip" end
+		if rec.requiredPass then return "vipPass" end
 		if pending(rec) then return "soon" end
 		return "buy"
 	elseif kind == "Boost" then
@@ -484,8 +511,8 @@ local function preview(parent, wid, sid, rect, manual)
 	vp.BackgroundColor3 = C.BgPreview
 	vp.BackgroundTransparency = manual and 0.05 or 0.15
 	vp.BorderSizePixel = 0
-	vp.Ambient = Color3.fromRGB(165, 165, 180)
-	vp.LightColor = Color3.fromRGB(255, 240, 214)
+	vp.Ambient = C.PreviewAmbient
+	vp.LightColor = C.PreviewLight
 	vp.LightDirection = Vector3.new(-1, -1, -1)
 	vp.Parent = parent
 	UiTheme.corner(vp, UiTheme.Radius.SM)
@@ -534,7 +561,7 @@ local function dismiss()
 		modal:Destroy()
 		modal = nil
 	end
-	if UIS.GamepadEnabled and savedFocusBeforeModal and savedFocusBeforeModal.Parent then
+	if Device.isGamepad() and savedFocusBeforeModal and savedFocusBeforeModal.Parent then
 		GuiService.SelectedObject = savedFocusBeforeModal
 	end
 	savedFocusBeforeModal = nil
@@ -568,6 +595,14 @@ local function act(action, id)
 		UiTheme.playSound("UI_Error")
 	end
 
+	render()
+	if type(msg) == "table" and msg.key == "noCoins" and type(msg.missing) == "number" then
+		messageLabel.Text = ""
+		local missing = UiTheme.button({ parent = panel, position = messageLabel.Position - UDim2.fromOffset(0, 14), size = UDim2.new(messageLabel.Size.X.Scale, messageLabel.Size.X.Offset, 0, 44),
+			text = Vault.shortfall(msg.missing), textSize = UiTheme.TextSizes.XS, onClick = function() openVault("Souls") end })
+		missing.TextWrapped = true
+		return
+	end
 	if type(msg) == "table" and msg.key then
 		setStatus(L.t(msg.key, msg.params), not success)
 	elseif type(msg) == "string" then
@@ -575,7 +610,6 @@ local function act(action, id)
 	else
 		setStatus(success and L.t("purchaseSuccess") or L.t("error"), not success)
 	end
-	render()
 end
 
 local function confirmPurchase(id, item, buyAction)
@@ -599,7 +633,7 @@ local function confirmPurchase(id, item, buyAction)
 		parent = modal,
 		anchor = Vector2.new(0.5, 0.5),
 		position = UDim2.fromScale(0.5, 0.5),
-		size = UDim2.fromOffset(440, 320),
+		size = UDim2.fromOffset(math.min(440, panel.Size.X.Offset - 28), 320),
 		bg = C.BgPrimary,
 		borderColor = C.GoldBright,
 		borderThickness = UiTheme.Stroke.Heavy,
@@ -620,7 +654,7 @@ local function confirmPurchase(id, item, buyAction)
 	})
 
 	if Skins.Data[id] then
-		local pv = preview(box, item.weapon or weapon, id, { 110, 48, 220, 120 }, false)
+		local pv = preview(box, item.weapon or weapon, id, { (box.Size.X.Offset - 220) / 2, 48, 220, 120 }, false)
 		pv.ZIndex = 42
 	else
 		local emblem = Instance.new("Frame")
@@ -644,6 +678,7 @@ local function confirmPurchase(id, item, buyAction)
 		position = UDim2.fromOffset(24, 174),
 		size = UDim2.new(1, -48, 0, 26),
 		text = L.t("confirmAsk", { item = itemName(id), price = priceText(item) }),
+		scaled = true,
 		font = "Bold",
 		textSize = UiTheme.TextSizes.MD,
 		color = C.TextPrimary,
@@ -694,7 +729,7 @@ local function confirmPurchase(id, item, buyAction)
 	})
 
 	UiTheme.trapGamepadFocus("ShopModalGroup", { confirmBtn, cancelBtn })
-	if UIS.GamepadEnabled then
+	if Device.isGamepad() then
 		GuiService.SelectedObject = confirmBtn
 	end
 end
@@ -725,7 +760,7 @@ local function inspect(id)
 		rBadge.AnchorPoint = Vector2.new(1, 0)
 		rBadge.Position = UDim2.new(1, -16, 0, 12)
 		rBadge.Size = UDim2.fromOffset(rec.weeklyPrize and 178 or 110, 22)
-		rBadge.BackgroundColor3 = Color3.fromRGB(115, 18, 28)
+		rBadge.BackgroundColor3 = C.GoldDim
 		rBadge.BorderSizePixel = 0
 		rBadge.Parent = detail
 		UiTheme.corner(rBadge, UiTheme.Radius.Pill)
@@ -747,14 +782,14 @@ local function inspect(id)
 		size = UDim2.new(1, -32, 0, 28),
 		text = itemName(id),
 		font = "Title",
+		scaled = compactShop,
 		textSize = UiTheme.TextSizes.XL,
 		color = C.GoldBright,
-		truncate = Enum.TextTruncate.AtEnd,
+		truncate = compactShop and Enum.TextTruncate.None or Enum.TextTruncate.AtEnd,
 	})
 
-	local dSize = detail.AbsoluteSize
-	local vpW = math.max(200, (dSize.X > 0 and dSize.X or 360) - 32)
-	local vpH = math.clamp(math.floor(((dSize.Y > 0 and dSize.Y or 460) - 210) * 0.62), 140, 230)
+	local vpW = detail.Size.X.Offset - 32
+	local vpH = math.clamp(math.floor((detail.Size.Y.Offset - 210) * 0.62), 76, 230)
 
 	if kind == "Aura" then
 		destroyAuraWorldPreview()
@@ -809,17 +844,19 @@ local function inspect(id)
 				detailSpin.zoom = math.clamp(detailSpin.zoom - inp.Position.Z * 0.1, 0.55, 1.65)
 			end
 		end)
-		UiTheme.label({
-			parent = vp,
-			anchor = Vector2.new(0.5, 1),
-			position = UDim2.new(0.5, 0, 1, -6),
-			size = UDim2.new(1, -12, 0, 16),
-			text = L.t("ui.armory.rotateHint"),
-			font = "Body",
-			textSize = UiTheme.TextSizes.XS,
-			color = C.TextMuted,
-			alignX = Enum.TextXAlignment.Center,
-		})
+		for mode, key in { Keyboard = "mz.rotateKeyboard", Gamepad = "mz.rotateGamepad", Touch = "mz.rotateTouch" } do
+			Device.showFor(UiTheme.label({
+				parent = vp,
+				anchor = Vector2.new(0.5, 1),
+				position = UDim2.new(0.5, 0, 1, -6),
+				size = UDim2.new(1, -12, 0, 16),
+				text = L.t(key),
+				font = "Body",
+				textSize = UiTheme.TextSizes.XS,
+				color = C.TextMuted,
+				alignX = Enum.TextXAlignment.Center,
+			}), mode)
+		end
 	else
 		destroyAuraWorldPreview()
 		local stageBox = Instance.new("Frame")
@@ -865,12 +902,17 @@ local function inspect(id)
 	local labelText = L.t(st)
 	local variant = "primary"
 	local disabled = false
+	local missing = st == "buy" and rec.currency == "Coins" and math.max(0, rec.price - Vault.souls(player)) or 0
 
-	if st == "buy" and kind == "Skin" and rec.roulette then
+	if st == "vipPass" then
+		labelText = L.t("mz.pass.VIP")
+	elseif st == "buy" and kind == "Skin" and rec.roulette then
 		-- Solo ruleta (decisión del usuario, 10/11/2026): no se compra.
 		labelText = L.t("ui.shop.rouletteOnly")
 		variant = "secondary"
 		disabled = true
+	elseif missing > 0 then
+		labelText = Vault.shortfall(missing)
 	elseif st == "buy" then
 		labelText = L.t("buy") .. " · " .. priceText(rec)
 		variant = "gold"
@@ -885,7 +927,7 @@ local function inspect(id)
 		variant = "gold"
 	end
 
-	UiTheme.button({
+	local mainAction = UiTheme.button({
 		name = "MainActionButton",
 		parent = detail,
 		anchor = Vector2.new(0.5, 1),
@@ -897,6 +939,8 @@ local function inspect(id)
 		variant = variant,
 		disabled = disabled,
 		onClick = function()
+			if st == "vipPass" then openVault("VIP") return end
+			if missing > 0 then openVault("Souls") return end
 			if kind == "Aura" then
 				if st == "buy" then
 					confirmPurchase(id, rec, "BuyAura")
@@ -919,12 +963,93 @@ local function inspect(id)
 			end
 		end,
 	})
+	mainAction.TextWrapped = true
+	mainAction.TextScaled = true
+	UiTheme.textConstraint(mainAction, UiTheme.TextSizes.XS, UiTheme.TextSizes.MD)
 end
 
 ----------------------------------------------------------------------
 -- Renderizado completo del Escaparate y Catálogo
 ----------------------------------------------------------------------
+
+local function renderVault(parent, width, mobile)
+ local y = 0
+ local firstPassY, firstPackY, targetY
+ for _, group in { "Pass", "Product" } do
+  local offers = {}
+  for _, item in vaultEntries or {} do
+   if item.available and item.type == group then table.insert(offers, item) end
+  end
+  if #offers == 0 then continue end
+  if group == "Pass" then firstPassY = y else firstPackY = y end
+  UiTheme.label({ parent = parent, position = UDim2.fromOffset(0, y), size = UDim2.fromOffset(width, 36),
+   text = L.t(group == "Pass" and "mz.passes" or "mz.packs"), font = "Title", textSize = UiTheme.TextSizes.XL, color = C.GoldBright })
+  y += 40
+  local columns = mobile and 1 or (group == "Pass" and 2 or 3)
+  local gap = 12
+  local cardWidth = math.floor((width - gap * (columns - 1)) / columns)
+  local heights, offsets = {}, {}
+  for index, item in offers do
+   local row = math.floor((index - 1) / columns) + 1
+   local height = group == "Pass" and 186 or (item.kind == "Luck" and 298 or 165)
+   heights[row] = math.max(heights[row] or 0, height)
+  end
+  local sectionHeight = 0
+  for row, rowHeight in heights do offsets[row] = sectionHeight sectionHeight += rowHeight + gap end
+  for index, item in offers do
+   local row = math.floor((index - 1) / columns) + 1
+   local col = (index - 1) % columns
+   local top = y + offsets[row]
+   local cardHeight = group == "Pass" and 186 or (item.kind == "Luck" and 298 or 165)
+   if vaultTarget == item.key or (vaultTarget == "Souls" and item.kind == "Souls" and targetY == nil) then targetY = top end
+   local card = UiTheme.panel({ parent = parent, position = UDim2.fromOffset(col * (cardWidth + gap), top),
+    size = UDim2.fromOffset(cardWidth, cardHeight), borderColor = item.badge and C.GoldBright or C.BorderDefault, ornaments = group == "Pass" })
+   local title, description = Vault.text(item)
+   local iconByKind = { Souls = "coin", Spins = "trophy", Luck = "stamina", Aura = "crown", Skin = "armory" }
+   local iconName = item.key == "VIP" and "crown" or (iconByKind[item.kind] or "stamina")
+   local crest = UiAssets.icon(card, iconName, 30, item.kind == "Souls" and C.Coins or C.GoldBright)
+   crest.Position = UDim2.fromOffset(14, 18)
+   UiTheme.label({ parent = card, position = UDim2.fromOffset(54, 12), size = UDim2.new(1, -68, 0, 42),
+    text = title, font = "Title", scaled = true, textSize = UiTheme.TextSizes.XL, color = C.TextPrimary })
+   UiTheme.label({ parent = card, position = UDim2.fromOffset(14, 58), size = UDim2.new(1, -28, 0, 62),
+    text = description, textSize = UiTheme.TextSizes.SM, alignY = Enum.TextYAlignment.Top, color = C.TextSecondary })
+   if item.badge then
+    UiTheme.label({ parent = card, position = UDim2.new(0, 14, 1, -50), size = UDim2.new(1, -150, 0, 32),
+     text = L.t("mz.badge." .. item.badge), font = "Bold", scaled = true, textSize = UiTheme.TextSizes.XS, color = C.GoldBright })
+   end
+   if item.kind == "Luck" then
+    UiTheme.label({ parent = card, position = UDim2.fromOffset(14, 115), size = UDim2.new(1, -28, 0, 114),
+     text = luckOdds or L.t("loading"), font = "Number", textSize = UiTheme.TextSizes.XS,
+     alignY = Enum.TextYAlignment.Top, color = C.Accent })
+   end
+   local buy = Vault.priceButton({ parent = card, anchor = Vector2.new(1, 1), position = UDim2.new(1, -14, 1, -12),
+    size = UDim2.fromOffset(112, 44), textSize = UiTheme.TextSizes.SM, disabled = item.kind == "Luck" and not luckOdds,
+    onClick = function()
+     if busy then return end
+     busy = true
+     local ok, reason = Vault.prompt(item.key)
+     busy = false
+     if not ok then setStatus(L.t("mz.offer." .. (reason or "unavailable")), true) loadVault() end
+    end }, item)
+   if item.owned then buy.TextScaled = true UiTheme.textConstraint(buy, UiTheme.TextSizes.XS, UiTheme.TextSizes.SM) end
+  end
+  y += sectionHeight
+ end
+ if not firstPassY and not firstPackY then
+  UiTheme.label({ parent = parent, position = UDim2.fromOffset(4, 16), size = UDim2.new(1, -12, 0, 48),
+   text = L.t(vaultEntries == nil and "loading" or "mz.noOffers"), textSize = UiTheme.TextSizes.MD, color = C.TextSecondary })
+ end
+ parent.AutomaticCanvasSize = Enum.AutomaticSize.None
+ parent.CanvasSize = UDim2.fromOffset(0, y)
+ if vaultTarget and vaultEntries then
+  local target = targetY or firstPackY or firstPassY or 0
+  vaultTarget = nil
+  task.defer(function() if parent.Parent then parent.CanvasPosition = Vector2.new(0, target) end end)
+ end
+end
+
 function render()
+	if content and content.Parent and content.Name == "VaultScroll" then vaultScroll = content.CanvasPosition end
 	table.clear(spins)
 	detailSpin = nil
 	for _, ch in panel:GetChildren() do
@@ -936,15 +1061,18 @@ function render()
 	local cam = workspace.CurrentCamera
 	local viewport = cam and cam.ViewportSize or Vector2.new(BASE_W, BASE_H)
 	local mobile = viewport.X < 780
-	local width = mobile and 700 or BASE_W
-	local height = mobile and 620 or BASE_H
+	local insetA, insetB = GuiService:GetGuiInset()
+	local usable = viewport - insetA - insetB
+	local width = mobile and math.min(700, usable.X - 28) or BASE_W
+	local height = mobile and math.clamp(usable.Y - 28, 540, 760) or BASE_H
+	compactShop = mobile
 	panel.Size = UDim2.fromOffset(width, height)
-	scale.Scale = UiTheme.computeScale(viewport, width, height, player)
+	scale.Scale = mobile and math.min(1, (usable.Y - 28) / height) or UiTheme.computeScale(usable, width, height, player)
 
 	-- Cabecera: título del Escaparate, saldo de monedas, botón Abrir Armería y botón Cerrar
 	local header = Instance.new("Frame")
 	header.Name = "Header"
-	header.Size = UDim2.new(1, 0, 0, 58)
+	header.Size = UDim2.new(1, 0, 0, mobile and 106 or 58)
 	header.BackgroundColor3 = C.BgHeader
 	header.BorderSizePixel = 0
 	header.Parent = panel
@@ -952,13 +1080,14 @@ function render()
 
 	local shopIcon = UiAssets.icon(header, "coin", 26, C.GoldBright)
 	shopIcon.AnchorPoint = Vector2.new(0, 0.5)
-	shopIcon.Position = UDim2.new(0, 18, 0.5, 0)
+	shopIcon.Position = mobile and UDim2.fromOffset(18, 22) or UDim2.new(0, 18, 0.5, 0)
 
 	UiTheme.label({
 		parent = header,
 		position = UDim2.fromOffset(52, 6),
-		size = UDim2.fromOffset(360, 28),
+		size = mobile and UDim2.new(1, -70, 0, 34) or UDim2.fromOffset(360, 28),
 		text = L.t("ui.shop.title"),
+		scaled = mobile,
 		font = "Title",
 		textSize = UiTheme.TextSizes.XL,
 		color = C.GoldBright,
@@ -967,7 +1096,7 @@ function render()
 		parent = header,
 		position = UDim2.fromOffset(52, 32),
 		size = UDim2.fromOffset(380, 18),
-		text = L.t("ui.shop.subtitle"),
+		text = mobile and "" or L.t("ui.shop.subtitle"),
 		font = "Body",
 		textSize = UiTheme.TextSizes.XS,
 		color = C.TextSecondary,
@@ -976,9 +1105,9 @@ function render()
 	local ls = player:FindFirstChild("leaderstats")
 	local coinsVal = ls and ls:FindFirstChild("Coins")
 	local coinBox = Instance.new("Frame")
-	coinBox.AnchorPoint = Vector2.new(1, 0.5)
-	coinBox.Position = UDim2.new(1, -290, 0.5, 0)
-	coinBox.Size = UDim2.fromOffset(165, 36)
+	coinBox.AnchorPoint = mobile and Vector2.zero or Vector2.new(1, 0.5)
+	coinBox.Position = mobile and UDim2.fromOffset(16, 52) or UDim2.new(1, -290, 0.5, 0)
+	coinBox.Size = UDim2.fromOffset(mobile and math.floor((width - 44) * 0.42) or 180, 44)
 	coinBox.BackgroundColor3 = C.BgAbyss
 	coinBox.BorderSizePixel = 0
 	coinBox.Parent = header
@@ -991,21 +1120,25 @@ function render()
 
 	UiTheme.label({
 		parent = coinBox,
-		position = UDim2.fromOffset(34, 0),
-		size = UDim2.new(1, -42, 1, 0),
-		text = L.t("ui.souls", { amount = coinsVal and coinsVal.Value or 0 }),
+		position = UDim2.fromOffset(30, 0),
+		size = UDim2.new(1, -76, 1, 0),
+		text = tostring(coinsVal and coinsVal.Value or 0),
+		scaled = true,
 		font = "Number",
 		textSize = UiTheme.TextSizes.SM,
 		color = C.Coins,
 		alignX = Enum.TextXAlignment.Right,
 	})
 
-	UiTheme.button({
+	UiTheme.button({ name = "GetSouls", parent = coinBox, anchor = Vector2.new(1, 0.5),
+		position = UDim2.fromScale(1, 0.5), size = UDim2.fromOffset(42, 44), text = "+",
+		textColor = C.Coins, variant = "secondary", onClick = function() openVault("Souls") end })
+	local armoryBtn = UiTheme.button({
 		name = "OpenArmoryBtn",
 		parent = header,
 		anchor = Vector2.new(1, 0.5),
-		position = UDim2.new(1, -130, 0.5, 0),
-		size = UDim2.fromOffset(150, 38),
+		position = mobile and UDim2.new(1, -94, 0, 74) or UDim2.new(1, -130, 0.5, 0),
+		size = UDim2.fromOffset(mobile and math.floor((width - 44) * 0.31) or 150, 44),
 		text = L.t("ui.shop.openArmory"),
 		variant = "primary",
 		textSize = UiTheme.TextSizes.SM,
@@ -1018,12 +1151,15 @@ function render()
 		end,
 	})
 
+	armoryBtn.TextWrapped = true
+	armoryBtn.TextScaled = true
+	UiTheme.textConstraint(armoryBtn, UiTheme.TextSizes.XS, UiTheme.TextSizes.SM)
 	UiTheme.button({
 		name = "CloseButton",
 		parent = header,
 		anchor = Vector2.new(1, 0.5),
-		position = UDim2.new(1, -16, 0.5, 0),
-		size = UDim2.fromOffset(104, 38),
+		position = mobile and UDim2.new(1, -16, 0, 74) or UDim2.new(1, -16, 0.5, 0),
+		size = UDim2.fromOffset(mobile and 70 or 104, 44),
 		text = L.t("close"),
 		variant = "secondary",
 		onClick = function()
@@ -1032,10 +1168,14 @@ function render()
 	})
 
 	-- Barra de pestañas del Escaparate: Destacado, Skins, Auras, Multiplicadores, Almas y Monedas
-	local tabsBar = Instance.new("Frame")
+	local tabsBar = Instance.new(mobile and "ScrollingFrame" or "Frame")
+	if mobile then
+		tabsBar.AutomaticCanvasSize = Enum.AutomaticSize.X tabsBar.CanvasSize = UDim2.new()
+		tabsBar.ScrollingDirection = Enum.ScrollingDirection.X tabsBar.ScrollBarThickness = 3 tabsBar.BorderSizePixel = 0
+	end
 	tabsBar.Name = "TabsBar"
-	tabsBar.Position = UDim2.fromOffset(20, 66)
-	tabsBar.Size = UDim2.new(1, -40, 0, 42)
+	tabsBar.Position = UDim2.fromOffset(20, mobile and 112 or 66)
+	tabsBar.Size = UDim2.new(1, -40, 0, 48)
 	tabsBar.BackgroundTransparency = 1
 	tabsBar.Parent = panel
 	local tabLayout = Instance.new("UIListLayout")
@@ -1050,6 +1190,7 @@ function render()
 		{ id = "Skins", label = L.t("ui.shop.tab.Skins") },
 		{ id = "Auras", label = L.t("ui.shop.tab.Auras") },
 		{ id = "Boosts", label = L.t("ui.shop.tab.Boosts") },
+		{ id = "Vault", label = L.t("mz.vault") },
 	}
 	if debugSouls then table.insert(tabDefs, { id = "Souls", label = L.t("ui.shop.tab.Souls") }) end
 	if tab == "Souls" and not debugSouls then tab = "Showcase" end
@@ -1062,18 +1203,23 @@ function render()
 			text = def.label,
 			active = tab == def.id,
 			onClick = function()
-				tab = def.id
+				if def.id == "Vault" then openVault(nil) return end
+				tab = def.id inspecting = false
 				render()
 			end,
 		})
-		if i == 1 then firstButton = b end
+		b.TextWrapped = true
+		if def.id == tab then
+			firstButton = b
+			if mobile then tabsBar.CanvasPosition = Vector2.new((i - 1) * 134, 0) end
+		end
 	end
 
-	local top = 116
+	local top = mobile and 167 or 116
 	local listWidth = mobile and (width - 40) or math.floor(width * 0.61) - 24
 	if tab == "Skins" then
 		local weaponBar = Instance.new("Frame")
-		weaponBar.Position = UDim2.fromOffset(20, 114)
+		weaponBar.Position = UDim2.fromOffset(20, top)
 		weaponBar.Size = UDim2.fromOffset(listWidth, 34)
 		weaponBar.BackgroundTransparency = 1
 		weaponBar.Parent = panel
@@ -1096,8 +1242,8 @@ function render()
 
 		UiTheme.button({
 			parent = panel,
-			position = UDim2.fromOffset(20, 154),
-			size = UDim2.fromOffset(195, 32),
+			position = UDim2.fromOffset(20, top + 40),
+			size = UDim2.fromOffset(mobile and math.floor((listWidth - 8) / 2) or 195, 44),
 			text = L.t("ui.filter.rarity", { value = L.t(rarity) }),
 			textSize = UiTheme.TextSizes.XS,
 			onClick = function()
@@ -1107,8 +1253,8 @@ function render()
 		})
 		UiTheme.button({
 			parent = panel,
-			position = UDim2.fromOffset(222, 154),
-			size = UDim2.fromOffset(195, 32),
+			position = UDim2.fromOffset(mobile and (24 + math.floor(listWidth / 2)) or 222, top + 40),
+			size = UDim2.fromOffset(mobile and math.floor((listWidth - 8) / 2) or 195, 44),
 			text = L.t("ui.filter.ownership", { value = L.t(ownership) }),
 			textSize = UiTheme.TextSizes.XS,
 			onClick = function()
@@ -1116,7 +1262,7 @@ function render()
 				render()
 			end,
 		})
-		top = 194
+		top += 90
 	elseif tab == "Auras" then
 		UiTheme.button({
 			parent = panel,
@@ -1129,11 +1275,11 @@ function render()
 				render()
 			end,
 		})
-		top = 156
+		top += 42
 	end
 
 	local contentH = height - top - 44
-	local listHeight = mobile and math.floor(contentH * 0.52) or contentH
+	local listHeight = contentH
 
 	content = Instance.new("ScrollingFrame")
 	content.Name = "ShopScroll"
@@ -1151,13 +1297,14 @@ function render()
 		name = "DetailPanel",
 		parent = panel,
 		canvasGroup = false, -- 10/11: ver ShopWindow
-		position = UDim2.fromOffset(mobile and 20 or (28 + listWidth), mobile and (top + listHeight + 8) or 116),
-		size = UDim2.fromOffset(mobile and (width - 40) or (width - listWidth - 48), mobile and (contentH - listHeight - 8) or (height - 116 - 44)),
+		position = UDim2.fromOffset(mobile and 20 or (28 + listWidth), mobile and top or 116),
+		size = UDim2.fromOffset(mobile and (width - 40) or (width - listWidth - 48), mobile and contentH or (height - 116 - 44)),
 		bg = C.BgPanel,
 		borderColor = C.Gold,
 		ornaments = true,
 	})
 
+	if mobile then detail.Visible = inspecting content.Visible = not inspecting end
 	local shown = {}
 	local ownedSkinsMap = ownSkins()
 	local ownedAurasMap = ownAuras()
@@ -1176,7 +1323,7 @@ function render()
 		card.Name = "Card_" .. id
 		card.LayoutOrder = orderIdx
 		card.Size = UDim2.fromOffset(cardW, cardH)
-		card.BackgroundColor3 = rec.weeklyPrize and Color3.fromRGB(28, 16, 22) or C.BgCard
+		card.BackgroundColor3 = rec.weeklyPrize and C.BgCardSelected or C.BgCard
 		card.BorderSizePixel = 0
 		card.Parent = parentFrame
 		UiTheme.corner(card, UiTheme.Radius.SM)
@@ -1194,7 +1341,7 @@ function render()
 			rb.AnchorPoint = Vector2.new(1, 0)
 			rb.Position = UDim2.new(1, -8, 0, 6)
 			rb.Size = UDim2.fromOffset(rec.weeklyPrize and 138 or 78, 20)
-			rb.BackgroundColor3 = Color3.fromRGB(120, 18, 28)
+			rb.BackgroundColor3 = C.GoldDim
 			rb.BorderSizePixel = 0
 			rb.ZIndex = 4
 			rb.Parent = card
@@ -1242,7 +1389,7 @@ function render()
 		})
 
 		local rouletteOnly = kind == "Skin" and rec.roulette and st == "buy"
-		local subText = rouletteOnly and L.t("ui.shop.rouletteOnly") or ((st == "buy" or kind == "Souls") and priceText(rec) or L.t(st))
+		local subText = st == "vipPass" and L.t("mz.pass.VIP") or (rouletteOnly and L.t("ui.shop.rouletteOnly")) or ((st == "buy" or kind == "Souls") and priceText(rec) or L.t(st))
 		local subColor = st == "equipped" and C.Success or ((st == "buy" or kind == "Souls") and C.Coins or C.TextSecondary)
 		UiTheme.label({
 			parent = card,
@@ -1264,12 +1411,21 @@ function render()
 		UiTheme.bindGamepadFocus(hit, cardStroke, borderCol, 1.8, 0.18)
 
 		hit.Activated:Connect(function()
+			if mobile then inspecting = true selected = id render() return end
 			UiTheme.playSound("UI_Click")
 			inspect(id)
 		end)
 	end
 
-	if tab == "Showcase" then
+	if tab == "Vault" then
+		content.Name = "VaultScroll"
+		content.CanvasPosition = vaultScroll
+		detail.Visible = false content.Visible = true
+		content.Size = UDim2.fromOffset(width - 40, contentH)
+		timerLabel = nil
+		renderVault(content, width - 50, mobile)
+		if not vaultTarget and vaultScroll.Y > 0 then content.CanvasPosition = vaultScroll end
+	elseif tab == "Showcase" then
 		-- Layout vertical con Sección «Destacado del Día» arriba + «Catálogo Completo» abajo
 		local vLayout = Instance.new("UIListLayout")
 		vLayout.FillDirection = Enum.FillDirection.Vertical
@@ -1290,7 +1446,7 @@ function render()
 		UiTheme.label({
 			parent = featHeader,
 			position = UDim2.fromOffset(12, 2),
-			size = UDim2.fromOffset(280, 20),
+			size = UDim2.new(0.58, -12, 0, 22),
 			text = L.t("ui.shop.featured"),
 			font = "Title",
 			textSize = UiTheme.TextSizes.MD,
@@ -1300,7 +1456,7 @@ function render()
 			parent = featHeader,
 			position = UDim2.fromOffset(12, 20),
 			size = UDim2.fromOffset(320, 16),
-			text = L.t("ui.shop.featuredSub"),
+			text = mobile and "" or L.t("ui.shop.featuredSub"),
 			font = "Body",
 			textSize = UiTheme.TextSizes.XS,
 			color = C.TextSecondary,
@@ -1310,7 +1466,8 @@ function render()
 			parent = featHeader,
 			anchor = Vector2.new(1, 0.5),
 			position = UDim2.new(1, -12, 0.5, 0),
-			size = UDim2.fromOffset(180, 22),
+			size = UDim2.new(0.42, -12, 0, 30),
+			scaled = true,
 			text = L.t("ui.shop.refreshesIn", { time = formatDailyCountdown() }),
 			font = "Number",
 			textSize = UiTheme.TextSizes.SM,
@@ -1326,7 +1483,7 @@ function render()
 		featGridFrame.BackgroundTransparency = 1
 		featGridFrame.Parent = content
 
-		local fCols = math.min(#featuredIds, mobile and 3 or 5)
+		local fCols = math.max(1, math.min(#featuredIds, mobile and 2 or 5))
 		local fGap = 8
 		local fCardW = math.floor((listWidth - 10 - fGap * (fCols - 1)) / fCols)
 		local fLayout = Instance.new("UIListLayout")
@@ -1335,7 +1492,7 @@ function render()
 		fLayout.SortOrder = Enum.SortOrder.LayoutOrder
 		fLayout.Parent = featGridFrame
 
-		for i = 1, fCols do
+		for i = 1, math.min(fCols, #featuredIds) do
 			buildItemCard(featGridFrame, featuredIds[i], fCardW, 210, i, true)
 		end
 
@@ -1439,16 +1596,22 @@ function render()
 	if not selected or not table.find(shown, selected) then
 		selected = shown[1]
 	end
-	if selected then
+	if selected and tab ~= "Vault" and (not mobile or inspecting) then
 		inspect(selected)
+		if mobile then
+			shopIcon.Visible = false
+			local back = UiTheme.button({ parent = header, position = UDim2.fromOffset(4, 2), size = UDim2.fromOffset(44, 44),
+				text = "‹", zIndex = 8, onClick = function() inspecting = false render() end })
+			if Device.isGamepad() then firstButton = back end
+		end
 	end
 
 	messageLabel = UiTheme.label({
 		name = "StatusMessage",
 		parent = panel,
 		position = UDim2.fromOffset(22, height - 34),
-		size = UDim2.fromOffset(width - 280, 24),
-		text = L.t("ui.shop.noRobuxNotice"),
+		size = UDim2.fromOffset(mobile and width - 44 or width - 280, 30),
+		text = "",
 		font = "Bold",
 		textSize = UiTheme.TextSizes.XS,
 		color = C.GoldBright,
@@ -1465,7 +1628,7 @@ function render()
 		alignX = Enum.TextXAlignment.Right,
 	}), "Gamepad") -- 11/11: solo con mando (Device)
 
-	if UIS.GamepadEnabled and not modal then
+	if Device.isGamepad() and not modal then
 		GuiService.SelectedObject = firstButton
 	end
 end
@@ -1494,6 +1657,7 @@ function setOpen(value)
 	UiTheme.playSound(value and "UI_MenuOpen" or "UI_MenuClose")
 
 	if value then
+		if tab == "Vault" then loadVault() end
 		backdrop.Visible = true
 		panel.Visible = true
 		render()
@@ -1520,6 +1684,15 @@ function setOpen(value)
 			end
 		end)
 	end
+end
+
+local vaultEvent = Instance.new("BindableEvent")
+vaultEvent.Name = "OpenVault" vaultEvent.Parent = player
+vaultEvent.Event:Connect(openVault)
+for _, attr in { "Pass_VIP", "Pass_SkipOpening", "PaidRandomAllowed", "PurchaseVersion" } do
+	player:GetAttributeChangedSignal(attr):Connect(function()
+		if opened and tab == "Vault" then loadVault() else vaultEntries = nil end
+	end)
 end
 
 player:GetAttributeChangedSignal("SettingsOpen"):Connect(function()
@@ -1579,6 +1752,8 @@ UIS.InputBegan:Connect(function(input, processed)
 	if input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB then
 		if modal then
 			dismiss()
+		elseif compactShop and inspecting then
+			inspecting = false render()
 		elseif not processed or input.KeyCode == Enum.KeyCode.ButtonB then
 			setOpen(false)
 		end

@@ -81,6 +81,19 @@ end
 ----------------------------------------------------------------------
 -- Construcción visual (inspirada en referencias\idea pantalla de carga.png)
 ----------------------------------------------------------------------
+-- The first loading frame can appear before ReplicatedStorage is available.
+local C = {
+ BgAbyss = Color3.fromRGB(7, 6, 10), BgPanel = Color3.fromRGB(22, 17, 25), BgPrimary = Color3.fromRGB(14, 11, 17),
+ BgModalVeil = Color3.fromRGB(3, 2, 5), BgHeader = Color3.fromRGB(18, 13, 21), BgBarBack = Color3.fromRGB(10, 8, 12),
+ BorderStrong = Color3.fromRGB(204, 40, 60), BorderDefault = Color3.fromRGB(96, 38, 52), Iron = Color3.fromRGB(48, 39, 53),
+ Gold = Color3.fromRGB(204, 40, 60), GoldBright = Color3.fromRGB(255, 122, 116), GoldDim = Color3.fromRGB(132, 30, 46),
+ TextPrimary = Color3.fromRGB(246, 237, 222), TextSecondary = Color3.fromRGB(200, 188, 178),
+}
+local themeModule = ReplicatedStorage:FindFirstChild("UiTheme")
+if themeModule and ReplicatedStorage:FindFirstChild("Assets") then
+ local ok, theme = pcall(require, themeModule)
+ if ok then C = theme.Colors end
+end
 local gui = Instance.new("ScreenGui")
 gui.Name = "LoadingScreenGui"
 gui.IgnoreGuiInset = true
@@ -92,15 +105,15 @@ gui.Parent = player:WaitForChild("PlayerGui")
 local root = Instance.new("CanvasGroup")
 root.Name = "LoadingRoot"
 root.Size = UDim2.fromScale(1, 1)
-root.BackgroundColor3 = Color3.fromRGB(9, 10, 15)
+root.BackgroundColor3 = C.BgAbyss
 root.BorderSizePixel = 0
 root.Parent = gui
 
 local bgGrad = Instance.new("UIGradient")
 bgGrad.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(18, 16, 26)),
-	ColorSequenceKeypoint.new(0.55, Color3.fromRGB(11, 12, 18)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(6, 7, 10)),
+	ColorSequenceKeypoint.new(0, C.BgPanel),
+	ColorSequenceKeypoint.new(0.55, C.BgPrimary),
+	ColorSequenceKeypoint.new(1, C.BgModalVeil),
 })
 bgGrad.Rotation = 90
 bgGrad.Parent = root
@@ -113,7 +126,7 @@ outerFrame.Size = UDim2.new(1, -48, 1, -48)
 outerFrame.BackgroundTransparency = 1
 outerFrame.Parent = root
 local outerStroke = Instance.new("UIStroke")
-outerStroke.Color = Color3.fromRGB(168, 136, 74)
+outerStroke.Color = C.BorderStrong
 outerStroke.Thickness = 1.6
 outerStroke.Transparency = 0.25
 outerStroke.Parent = outerFrame
@@ -125,14 +138,14 @@ crest.AnchorPoint = Vector2.new(0.5, 0.5)
 crest.Position = UDim2.fromScale(0.5, 0.34)
 crest.Size = UDim2.fromOffset(128, 128)
 crest.Rotation = 45
-crest.BackgroundColor3 = Color3.fromRGB(18, 20, 28)
+crest.BackgroundColor3 = C.BgHeader
 crest.BorderSizePixel = 0
 crest.Parent = root
 local crestCorner = Instance.new("UICorner")
 crestCorner.CornerRadius = UDim.new(0, 14)
 crestCorner.Parent = crest
 local crestStroke = Instance.new("UIStroke")
-crestStroke.Color = Color3.fromRGB(234, 198, 118)
+crestStroke.Color = C.GoldBright
 crestStroke.Thickness = 2.5
 crestStroke.Parent = crest
 
@@ -140,7 +153,7 @@ local blade1 = Instance.new("Frame")
 blade1.AnchorPoint = Vector2.new(0.5, 0.5)
 blade1.Position = UDim2.fromScale(0.5, 0.5)
 blade1.Size = UDim2.fromOffset(10, 96)
-blade1.BackgroundColor3 = Color3.fromRGB(238, 231, 215)
+blade1.BackgroundColor3 = C.TextPrimary
 blade1.BorderSizePixel = 0
 blade1.Parent = crest
 
@@ -152,7 +165,7 @@ local innerGem = Instance.new("Frame")
 innerGem.AnchorPoint = Vector2.new(0.5, 0.5)
 innerGem.Position = UDim2.fromScale(0.5, 0.5)
 innerGem.Size = UDim2.fromOffset(32, 32)
-innerGem.BackgroundColor3 = Color3.fromRGB(218, 174, 84)
+innerGem.BackgroundColor3 = C.Gold
 innerGem.BorderSizePixel = 0
 innerGem.Parent = crest
 
@@ -170,7 +183,7 @@ local function safeFont(name)
 end
 title.Font = safeFont("GrenzeGotisch") -- 10/11: tipografía nueva
 title.Text = "RAGDOLL ARENA"
-title.TextColor3 = Color3.fromRGB(242, 212, 138)
+title.TextColor3 = C.GoldBright
 title.TextSize = 46
 title.TextStrokeTransparency = 0.35
 title.Parent = root
@@ -182,7 +195,7 @@ subtitle.Size = UDim2.new(0.8, 0, 0, 26)
 subtitle.BackgroundTransparency = 1
 subtitle.Font = safeFont("Merriweather")
 subtitle.Text = tr("ui.loading.subtitle")
-subtitle.TextColor3 = Color3.fromRGB(184, 176, 160)
+subtitle.TextColor3 = C.TextSecondary
 subtitle.TextSize = 15
 subtitle.Parent = root
 
@@ -191,7 +204,7 @@ local bottomPanel = Instance.new("Frame")
 bottomPanel.AnchorPoint = Vector2.new(0.5, 1)
 bottomPanel.Position = UDim2.new(0.5, 0, 1, -54)
 bottomPanel.Size = UDim2.fromOffset(660, 108)
-bottomPanel.BackgroundColor3 = Color3.fromRGB(16, 18, 25)
+bottomPanel.BackgroundColor3 = C.BgPanel
 bottomPanel.BackgroundTransparency = 0.1
 bottomPanel.BorderSizePixel = 0
 bottomPanel.Parent = root
@@ -199,7 +212,7 @@ local bpCorner = Instance.new("UICorner")
 bpCorner.CornerRadius = UDim.new(0, 8)
 bpCorner.Parent = bottomPanel
 local bpStroke = Instance.new("UIStroke")
-bpStroke.Color = Color3.fromRGB(204, 167, 92)
+bpStroke.Color = C.GoldDim
 bpStroke.Thickness = 1.6
 bpStroke.Parent = bottomPanel
 
@@ -208,7 +221,7 @@ tipLabel.Position = UDim2.fromOffset(20, 12)
 tipLabel.Size = UDim2.new(1, -40, 0, 42)
 tipLabel.BackgroundTransparency = 1
 tipLabel.Font = safeFont("Merriweather")
-tipLabel.TextColor3 = Color3.fromRGB(238, 231, 215)
+tipLabel.TextColor3 = C.TextPrimary
 tipLabel.TextSize = 14
 tipLabel.TextWrapped = true
 tipLabel.Text = tr("ui.loading.tip1")
@@ -217,20 +230,20 @@ tipLabel.Parent = bottomPanel
 local barBack = Instance.new("Frame")
 barBack.Position = UDim2.fromOffset(20, 62)
 barBack.Size = UDim2.new(1, -40, 0, 14)
-barBack.BackgroundColor3 = Color3.fromRGB(9, 10, 14)
+barBack.BackgroundColor3 = C.BgBarBack
 barBack.BorderSizePixel = 0
 barBack.Parent = bottomPanel
 local bbCorner = Instance.new("UICorner")
 bbCorner.CornerRadius = UDim.new(0, 4)
 bbCorner.Parent = barBack
 local bbStroke = Instance.new("UIStroke")
-bbStroke.Color = Color3.fromRGB(142, 115, 64)
+bbStroke.Color = C.BorderDefault
 bbStroke.Thickness = 1
 bbStroke.Parent = barBack
 
 local barFill = Instance.new("Frame")
 barFill.Size = UDim2.fromScale(0.05, 1)
-barFill.BackgroundColor3 = Color3.fromRGB(218, 178, 92)
+barFill.BackgroundColor3 = C.Gold
 barFill.BorderSizePixel = 0
 barFill.Parent = barBack
 local bfCorner = Instance.new("UICorner")
@@ -242,7 +255,7 @@ progressLabel.Position = UDim2.fromOffset(20, 80)
 progressLabel.Size = UDim2.new(1, -40, 0, 22)
 progressLabel.BackgroundTransparency = 1
 progressLabel.Font = safeFont("BuilderSansBold")
-progressLabel.TextColor3 = Color3.fromRGB(204, 167, 92)
+progressLabel.TextColor3 = C.GoldDim
 progressLabel.TextSize = 12
 progressLabel.Text = tr("ui.loading.preparing", { pct = 5 })
 progressLabel.Parent = bottomPanel
@@ -251,8 +264,8 @@ local skipBtn = Instance.new("TextButton")
 skipBtn.AnchorPoint = Vector2.new(1, 0)
 skipBtn.Position = UDim2.new(1, -36, 0, 36)
 skipBtn.Size = UDim2.fromOffset(108, 38)
-skipBtn.BackgroundColor3 = Color3.fromRGB(28, 30, 38)
-skipBtn.TextColor3 = Color3.fromRGB(238, 231, 215)
+skipBtn.BackgroundColor3 = C.Iron
+skipBtn.TextColor3 = C.TextPrimary
 skipBtn.Font = safeFont("BuilderSansBold")
 skipBtn.TextSize = 14
 skipBtn.Text = tr("ui.loading.skip")
@@ -262,7 +275,7 @@ local skCorner = Instance.new("UICorner")
 skCorner.CornerRadius = UDim.new(0, 6)
 skCorner.Parent = skipBtn
 local skStroke = Instance.new("UIStroke")
-skStroke.Color = Color3.fromRGB(204, 167, 92)
+skStroke.Color = C.GoldDim
 skStroke.Thickness = 1.4
 skStroke.Parent = skipBtn
 
