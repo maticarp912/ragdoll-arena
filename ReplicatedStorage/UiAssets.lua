@@ -72,6 +72,13 @@ UiAssets.Ids = {
 	pack_spins_3       = 75417800650244, -- pack_ruleta_3_tiros.png
 	pass_skip          = 120398082207425, -- pase_skip_aperturas.png
 	pass_vip           = 108842582911580, -- pase_vip_eclipse.png
+	-- 11/11/2026: claves nuevas listas para el arte (ver Notas/Arte - lista de imágenes.md)
+	boost_souls        = 0, -- multiplicador ×2 de almas
+	boost_xp           = 0, -- multiplicador ×2 de XP
+	boost_magnet       = 0, -- imán de almas
+	shop               = 0, -- botón Tienda del lobby
+	rewards            = 0, -- botón Recompensas del lobby
+	leaderboard        = 0, -- botón Clasificación del lobby
 	-- Cofres del 1 al 6, cerrado y abierto (subidos el 11/11)
 	chest_1_closed     = 117493290127703, chest_1_open = 131124602014011, -- hierro
 	chest_2_closed     = 112102957287363, chest_2_open = 81121421030094,  -- plata
@@ -89,6 +96,14 @@ local FULL_COLOR = {
 	soul = true, gem = true, amulet = true, lock = true, skip = true, vip = true, frame_obsidian = true,
 	pack_gems_400 = true, pack_gems_850 = true, pack_gems_2200 = true, pack_gems_4600 = true, pack_gems_10000 = true,
 	pack_spins_3 = true, pass_skip = true, pass_vip = true,
+	chest_1_closed = true, chest_1_open = true, chest_2_closed = true, chest_2_open = true, chest_3_closed = true, chest_3_open = true,
+	chest_4_closed = true, chest_4_open = true, chest_5_closed = true, chest_5_open = true, chest_6_closed = true, chest_6_open = true,
+	-- arte a color (cuando tengan ID): multiplicadores, infusiones, auras y rarezas
+	boost_souls = true, boost_xp = true, boost_magnet = true,
+	infusion_fire = true, infusion_lightning = true, infusion_ice = true, infusion_shadow = true,
+	aura_crown = true, aura_chains = true, aura_wings = true, aura_mist = true, aura_eyes = true, aura_runes = true,
+	aura_drip = true, aura_embers = true, aura_blood = true, aura_fracture = true,
+	rarity_common = true, rarity_rare = true, rarity_epic = true, rarity_legendary = true, rarity_mythic = true,
 }
 
 -- Si una clave nueva no tiene imagen, se dibuja este ícono viejo en su lugar
@@ -97,6 +112,8 @@ local FALLBACK = {
 	pack_gems_400 = "rarity_rare", pack_gems_850 = "rarity_rare", pack_gems_2200 = "rarity_rare",
 	pack_gems_4600 = "rarity_rare", pack_gems_10000 = "rarity_rare", pack_spins_3 = "trophy",
 	pass_skip = "dodge", pass_vip = "aura_crown",
+	boost_souls = "coin", boost_xp = "trophy", boost_magnet = "aura_crown",
+	shop = "coin", rewards = "trophy", leaderboard = "trophy",
 }
 UiAssets.FullColor = FULL_COLOR
 

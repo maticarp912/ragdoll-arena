@@ -1157,7 +1157,9 @@ function LobbyBuilder.build(parent)
 		if not ok then warn("[LobbyBuilder] CityProps.build falló:", err) end
 	end
 	-- Contrato ronda 4: pueblerinos que caminan por la ciudad (Codex, CityNPCs.start)
-	local npcModule = script.Parent:FindFirstChild("CityNPCs")
+	-- 11/11/2026: el usuario pidió sacar los NPC de la ciudad. Para volver a ponerlos: ShowCityNPCs = true.
+	local ShowCityNPCs = false
+	local npcModule = ShowCityNPCs and script.Parent:FindFirstChild("CityNPCs")
 	if npcModule then
 		task.spawn(function()
 			local ok, err = pcall(function()
