@@ -153,7 +153,8 @@ function Service.masteryState(player, weapon)
  local m = data and data.Mastery[weapon]
  local rebirths = m and m.rebirths or 0
  return { level = m and m.level or 1, xp = m and m.xp or 0,
-  rebirths = rebirths, price = E.Rebirth.Start + E.Rebirth.Step * rebirths,
+  -- 11/11/2026: cada renacimiento cuesta ×1,5 el anterior (5.000 · 7.500 · 11.250 · 16.875 · 25.000); 5 como máximo
+  rebirths = rebirths, price = E.Rebirth.Prices[rebirths + 1], maxRebirths = #E.Rebirth.Prices,
   maxLevel = P.Mastery.MaxLevel }
 end
 
@@ -165,7 +166,7 @@ function Service.rebirth(player, weapon)
  local m = data.Mastery[weapon]
  if not m or m.level < P.Mastery.MaxLevel then return false, "mz.masteryNotReady" end
  local current = Service.masteryState(player, weapon)
- if current.rebirths >= R.MaxCount then return false, "mz.masteryNotReady" end
+ if not current.price or current.rebirths >= #E.Rebirth.Prices then return false, "mz.masteryNotReady" end
  if data.Coins < current.price then return false, "noCoins" end
  m.rebirths = current.rebirths + 1
  m.level, m.xp = 1, 0

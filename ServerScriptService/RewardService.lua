@@ -186,6 +186,15 @@ function Service.progress(player, event, amount)
    changed = changed or d.steps[step.id] ~= old
   end
  end
+ -- 11/11/2026: monedas por cada paso de Primeros pasos, una sola vez (también para pasos ya cumplidos antes)
+ for _, step in R.FirstSteps do
+  if step.gems and d.steps[step.id] >= step.goal and d.stepsPaid[step.id] ~= true then
+   d.stepsPaid[step.id] = true
+   Data.addGems(player, step.gems)
+   Changed:FireClient(player, { reward = { kind = "Gems", amount = step.gems }, source = "FirstStep" })
+   changed = true
+  end
+ end
  local weekly = R.Weekly[d.weekly.week % #R.Weekly + 1]
  if weekly.event == event and not d.weekly.claimed then
   d.weekly.progress = math.min(weekly.goal, d.weekly.progress + amount) changed = true
@@ -224,7 +233,7 @@ function Service.getState(player)
  local weekly = R.Weekly[d.weekly.week % #R.Weekly + 1]
  local steps, complete = {}, true
  for _, step in R.FirstSteps do
-  table.insert(steps, { id = step.event, nameKey = "cx.firstSteps." .. step.id, progress = d.steps[step.id], goal = step.goal })
+  table.insert(steps, { id = step.event, nameKey = "cx.firstSteps." .. step.id, progress = d.steps[step.id], goal = step.goal, gems = step.gems, paid = d.stepsPaid[step.id] == true })
   complete = complete and d.steps[step.id] >= step.goal
  end
  local allowed = Monetization.paidRandomAllowed(player)

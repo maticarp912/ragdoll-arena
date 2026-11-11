@@ -32,7 +32,7 @@ function Service.get(player)
  local list = {}
  for _, id in selection(d.day) do
   local m = Catalog.Data[id]
-  table.insert(list, { id = id, nameKey = "cx.mission." .. id, params = { goal = m.goal }, progress = d.progress[id] or E.Zero, goal = m.goal, reward = Data.earnedCoins(player, m.reward), gems = Catalog.GemReward, spins = Catalog.SpinReward, claimed = d.claimed[id] == true })
+  table.insert(list, { id = id, nameKey = "cx.mission." .. id, params = { goal = m.goal }, progress = d.progress[id] or E.Zero, goal = m.goal, reward = Data.earnedCoins(player, m.reward), gems = m.gems or Catalog.GemReward, spins = Catalog.SpinReward, claimed = d.claimed[id] == true })
  end
  return { resetAt = (d.day + E.One) * E.DaySeconds + E.DayOffset, list = list }
 end
@@ -64,14 +64,15 @@ RF.OnServerInvoke = function(player, action, id)
  -- No yield between claim marker and reward: duplicate requests cannot grant twice.
  d.claimed[id] = true
  local earnedSouls = Data.addEarnedCoins(player, m.reward)
- Data.addGems(player, Catalog.GemReward)
+ local gems = m.gems or Catalog.GemReward
+ Data.addGems(player, gems)
  Progression.source(player, "Mission")
  Rewards.admin(player, "Spins", Catalog.SpinReward)
  Rewards.progress(player, "Level", 0)
  Telemetry.emit(player, "RewardClaim", 1, nil, nil, "Mission")
  Changed:FireClient(player)
  Data.saveSoon(player)
- return true, { key = "mz.missionClaimed", params = { amount = earnedSouls, gems = Catalog.GemReward, spins = Catalog.SpinReward } }
+ return true, { key = "mz.missionClaimed", params = { amount = earnedSouls, gems = gems, spins = Catalog.SpinReward } }
 end
 task.spawn(function()
  local lastDay = math.floor((os.time() - E.DayOffset) / E.DaySeconds)

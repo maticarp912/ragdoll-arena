@@ -83,11 +83,13 @@ R.SkinSoulValues = { Charcoal = 300, Frost = 400, Gold = 600, Requiem = 3400,
  Relic09 = 1500, Relic10 = 3000, Relic13 = 3500, Relic16 = 2800, Relic15 = 3000, Relic19 = 3800,
  Relic04 = 1400, Relic03 = 3000, Relic21 = 1200, Relic26 = 3200, Relic27 = 3000, Relic31 = 1500, Maw04 = 3900 }
 R.Streak = table.clone(R.DailySouls) table.insert(R.Streak, "Relic")
+-- 11/11/2026: cada paso cumplido da monedas al instante (gems). Total 900 + 200 del tutorial = 1.100: te deja a
+-- 100 de la skin más barata (1.200), que se completa con una o dos misiones diarias el primer día.
 R.FirstSteps = {
- { id = "matches", event = "Match", goal = 3 }, { id = "win", event = "Win", goal = 1 },
- { id = "parries", event = "Parry", goal = 5 }, { id = "equip", event = "Equip", goal = 1 },
- { id = "spin", event = "Spin", goal = 1 }, { id = "box", event = "OpenBox", goal = 1 },
- { id = "level", event = "Level", goal = 5 },
+ { id = "matches", event = "Match", goal = 3, gems = 100 }, { id = "win", event = "Win", goal = 1, gems = 150 },
+ { id = "parries", event = "Parry", goal = 5, gems = 100 }, { id = "equip", event = "Equip", goal = 1, gems = 100 },
+ { id = "spin", event = "Spin", goal = 1, gems = 100 }, { id = "box", event = "OpenBox", goal = 1, gems = 150 },
+ { id = "level", event = "Level", goal = 5, gems = 200 },
 }
 R.Weekly = { { event = "Win", goal = R.WeeklyGoals.Win }, { event = "Parry", goal = R.WeeklyGoals.Parry } }
 R.TutorialSpinSector = 6
@@ -153,7 +155,7 @@ function R.reconcile(data)
  count(d, "streak", 0, #R.Streak) count(d, "spinPity", 0, R.RoulettePity) count(d, "relicPity", 0, R.RelicPity - 1)
  count(d, "paidSpins", 0, #R.ExtraSpinPrices)
  count(d, "sequence", 0, R.MaxSequence) d.sequence = math.max(0, d.sequence)
- object(d, "steps") object(d, "tutorial") object(d, "collection")
+ object(d, "steps") object(d, "tutorial") object(d, "collection") object(d, "stepsPaid")
  if d.tutorialGems ~= true then
   local complete = true
   for i = 1, R.TutorialSteps do if d.tutorial[tostring(i)] ~= true then complete = false break end end

@@ -499,8 +499,9 @@ local function renderTitles(width, height, top, compact)
 					{ level = mastery.level, max = mastery.maxLevel, count = mastery.rebirths }),
 				textSize = UiTheme.TextSizes.XS, font = "Bold", color = C.TextPrimary })
 			local rebirth = UiTheme.button({ parent = row, position = UDim2.fromOffset(10, 28),
-				size = UDim2.new(1, -20, 0, 44), text = L.t("mz.masteryRebirth", { price = mastery.price }),
-				textSize = UiTheme.TextSizes.SM, disabled = mastery.level < mastery.maxLevel or player:GetAttribute("InMatch") == true,
+				size = UDim2.new(1, -20, 0, 44), text = mastery.price and L.t("mz.masteryRebirth", { price = mastery.price }) or L.t("mz.masteryMaxed"),
+				-- 11/11: 5 renacimientos como máximo; después el botón queda en «Maestría máxima»
+				textSize = UiTheme.TextSizes.SM, disabled = not mastery.price or mastery.level < mastery.maxLevel or player:GetAttribute("InMatch") == true,
 				onClick = function() actTitle("Rebirth", weapon) end })
 			rebirth.TextWrapped = true
 			if not first and rebirth.Selectable then first = rebirth end
