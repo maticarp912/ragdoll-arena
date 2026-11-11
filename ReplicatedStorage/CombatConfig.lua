@@ -91,6 +91,17 @@ CombatConfig.Dodge = {
 	LockFollow = 1,            -- cuánto de la velocidad del objetivo se suma (1 = lo sigue)
 }
 
+-- 10/11/2026: separación entre personajes. Al atacar muy cerca te subías encima del rival.
+-- El dash y el paso del golpe se frenan a MinGap del rival, y si igual quedás parado sobre otro
+-- personaje, se te desliza hacia afuera y hacia abajo (Controls.client).
+CombatConfig.Spacing = {
+	MinGap = 3.2,              -- studs entre centros: no te acercás más que esto con dash ni golpe
+	ProbeRadius = 5,           -- radio en el que se buscan rivales cercanos
+	MountProbe = 4.2,          -- largo del rayo hacia abajo para detectar que pisás a alguien
+	SlideSpeed = 18,           -- velocidad con la que te bajan si quedaste encima
+	SlideDown = 22,            -- velocidad hacia abajo al bajarte
+}
+
 CombatConfig.Kick = {
 	Windup = 0.28, Recovery = 0.4, Cooldown = 1.4,
 	Damage = 4, Stun = 18, Knockback = 18,

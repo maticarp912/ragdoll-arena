@@ -72,6 +72,16 @@ local function lunge(char, token, distance, at)
 		local dir = root.CFrame.LookVector * Vector3.new(1, 0, 1)
 		if dir.Magnitude < 0.01 then return end
 		dir = dir.Unit
+		-- 10/11/2026: el paso se frena antes del rival (CombatConfig.Spacing) para no subirse encima
+		local gap = CFG.Spacing.MinGap
+		for _, other in Combat.hitbox(char, distance + gap + 1, 4) do
+			local orR = other:FindFirstChild("HumanoidRootPart")
+			if orR then
+				local ahead = ((orR.Position - root.Position) * Vector3.new(1, 0, 1)):Dot(dir)
+				distance = math.min(distance, math.max(0, ahead - gap))
+			end
+		end
+		if distance <= 0.05 then return end
 		local speed = distance / dur
 		local player = Players:GetPlayerFromCharacter(char)
 		if player then

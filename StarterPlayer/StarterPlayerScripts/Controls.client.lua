@@ -22,6 +22,33 @@ local camera = workspace.CurrentCamera
 
 local WeaponData = require(ReplicatedStorage:WaitForChild("WeaponData"))
 local CombatConfig = require(ReplicatedStorage:WaitForChild("CombatConfig"))
+
+-- 10/11/2026: quita la parte de la velocidad que te mete dentro de otro personaje a menos de
+-- CombatConfig.Spacing.MinGap (dash y paso del golpe). Así no lo atravesás ni te le subís encima.
+local spacingParams = OverlapParams.new()
+spacingParams.FilterType = Enum.RaycastFilterType.Exclude
+local function clampTowardOthers(char, root, v)
+	local SP = CombatConfig.Spacing
+	spacingParams.FilterDescendantsInstances = { char }
+	local seen = {}
+	for _, part in workspace:GetPartBoundsInRadius(root.Position, SP.ProbeRadius, spacingParams) do
+		local model = part:FindFirstAncestorOfClass("Model")
+		if model and not seen[model] and model:FindFirstChildOfClass("Humanoid") then
+			seen[model] = true
+			local oRoot = model:FindFirstChild("HumanoidRootPart")
+			if oRoot then
+				local to = (oRoot.Position - root.Position) * Vector3.new(1, 0, 1)
+				local dist = to.Magnitude
+				if dist > 0.05 and dist <= SP.MinGap then
+					local n = to / dist
+					local into = v:Dot(n)
+					if into > 0 then v -= n * into end
+				end
+			end
+		end
+	end
+	return v
+end
 local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Input = remotes:WaitForChild("Input")
@@ -1061,7 +1088,31 @@ Effect.OnClientEvent:Connect(function(kind, a, b, c)
 					v += target.AssemblyLinearVelocity * Vector3.new(1, 0, 1) * D.LockFollow
 				end
 			end
+			v = clampTowardOthers(char, root, v) -- 10/11: no atravesar ni trepar a nadie
 			root.AssemblyLinearVelocity = Vector3.new(v.X, root.AssemblyLinearVelocity.Y, v.Z)
 		end)
 	end
 end)
+
+----------------------------------------------------------------------
+-- 10/11/2026: anclado al piso. Si quedaste parado sobre otro personaje (atacando muy de cerca),
+-- se te desliza hacia afuera y hacia abajo. Valores en CombatConfig.Spacing.
+----------------------------------------------------------------------
+do
+	local SP = CombatConfig.Spacing
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	RunService.Heartbeat:Connect(function()
+		local char = player.Character
+		local root = char and char:FindFirstChild("HumanoidRootPart")
+		if not root or char:GetAttribute("Ragdolled") or char:GetAttribute("CarriedBy") then return end
+		params.FilterDescendantsInstances = { char }
+		local hit = workspace:Raycast(root.Position, Vector3.new(0, -SP.MountProbe, 0), params)
+		local model = hit and hit.Instance:FindFirstAncestorOfClass("Model")
+		local under = model and model:FindFirstChildOfClass("Humanoid") and model:FindFirstChild("HumanoidRootPart")
+		if not under then return end
+		local away = (root.Position - under.Position) * Vector3.new(1, 0, 1)
+		away = away.Magnitude > 0.05 and away.Unit or -root.CFrame.LookVector * Vector3.new(1, 0, 1)
+		root.AssemblyLinearVelocity = away * SP.SlideSpeed + Vector3.new(0, -SP.SlideDown, 0)
+	end)
+end

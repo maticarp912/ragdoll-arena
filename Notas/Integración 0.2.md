@@ -61,3 +61,4 @@ Implementado, **sin probar en Studio**:
 - **Suspenso de recompensas y tiros pagos:** lo está haciendo Codex (gpt-6.1-sol, high) con [[0.2 Suspenso de recompensas - Codex]].
 
 Para probar: los tres sentidos con cada arma (que el tajo vaya hacia donde apunta el triángulo), el contragolpe contra alguien que spamea dagas o espada, la patada al derribado, «Probar» en una aura de cuerpo y en una de arma, la pestaña Almas con y sin rol de depuración, y las cinco skins del Eclipse.
+- **Subirse encima del rival (23:20):** el paso del golpe y el dash ahora frenan a `CombatConfig.Spacing.MinGap` (3,2 studs) del otro, y si igual quedás parado sobre un personaje, `Controls.client` te desliza hacia afuera y hacia abajo. Guía para el usuario: [[0.2 Guía de pruebas - usuario]].
