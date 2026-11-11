@@ -62,3 +62,18 @@ Implementado, **sin probar en Studio**:
 
 Para probar: los tres sentidos con cada arma (que el tajo vaya hacia donde apunta el triángulo), el contragolpe contra alguien que spamea dagas o espada, la patada al derribado, «Probar» en una aura de cuerpo y en una de arma, la pestaña Almas con y sin rol de depuración, y las cinco skins del Eclipse.
 - **Subirse encima del rival (23:20):** el paso del golpe y el dash ahora frenan a `CombatConfig.Spacing.MinGap` (3,2 studs) del otro, y si igual quedás parado sobre un personaje, `Controls.client` te desliza hacia afuera y hacia abajo. Guía para el usuario: [[0.2 Guía de pruebas - usuario]].
+
+## Pedidos del 10/11, 23:59 (Claude)
+Implementado, **sin probar en Studio**:
+- **Tirones en la tienda y el mouse:** la tienda, la armería y las recompensas eran CanvasGroup con vistas 3D girando adentro, y cada vista que giraba obligaba a redibujar toda la ventana en cada frame. Ahora son Frame (se abren con un deslizamiento, sin fundido). Las tarjetas de la tienda y las miniaturas de la armería quedan quietas; solo gira la vista grande. De paso, las miniaturas de la armería ya no quedan de punta.
+- **Cajas de Tormenta:** las 36 skins con rayos vuelven como `<id>Storm` (`Skins.lua`, generadas desde `Skins.WeeklyPool`) y solo salen de tres cajas nuevas:
+
+  | Caja | Precio | Rara | Épica | Legendaria |
+  |---|---|---|---|---|
+  | Cofre de la Tormenta | 3000 | 72 % | 24 % | 4 % |
+  | Arca de la Tormenta | 6500 | 30 % | 55 % | 15 % |
+  | Relicario del Rayo | 12000 | — | 62 % | 38 % |
+
+  La rareza de cada skin sale del precio de su original: hasta 1500 = Rara (7 skins), hasta 3100 = Épica (16), más = Legendaria (13). No se compran en la tienda y solo aparecen en la armería y la tienda si ya las tenés. La Reliquia ya no puede dar skins de Tormenta. Nombres: «<original> de Tormenta» / «Storm …» / «… da Tempestade».
+- **Tipografía:** títulos en Grenze Gotisch (gótica), textos en Merriweather (serif clásica) y números en Builder Sans. Se cambia en un solo lugar: `UiTheme.Fonts`, `UiTheme.FontFaces` y `Theme.Fonts`. Si una fuente no existiera, cae sola a la anterior. Ojo: Merriweather es más ancha que Gotham y puede que algún texto quede cortado; avisar dónde.
+- **Para Codex:** revisión de las cajas, la colección y sus pendientes en [[0.2 Revisión final - Codex]] (la manda el usuario).

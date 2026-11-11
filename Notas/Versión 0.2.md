@@ -13,7 +13,9 @@ Leyenda (revisada el 10/11 22:50): ✅ hecho y comprobado (en Studio o jugando e
 - Punto doble, niveles, cajas, ruleta, panel de administración, migración del perfil (Schema 2).
 - Celular: editor de botones y cámara (solo emulador).
 - Sin probar todavía: 2v2, mando y teléfono real.
-**🔧 En curso:** suspenso en cajas, ruleta y recompensas, y tiros pagos con almas (Codex, [[0.2 Suspenso de recompensas - Codex]]).
+**👤 Opinión del usuario (10/11 23:59):** «el juego se ve bien en todo» y «en general ya está todo listo». Lo único que marcó fueron los tirones en la tienda y el mouse.
+**🔍 Nuevo, sin probar (23:59):** tienda, armería y recompensas sin tirones (sin CanvasGroup); tres cajas de Tormenta con las 36 skins con rayos; tipografía nueva; anclado al piso (no subirse encima).
+**🔧 Revisión de Codex:** [[0.2 Revisión final - Codex]] (la manda el usuario).
 **⬜ Falta agregar:** sangrado de dagas, animaciones de captura para dagas y estoque, Arena de la Mano, clasificatorias con Elo, tableros en la plaza, ciudad estilo pueblo, cielo, hallazgos 5/7/8/9 de Codex, mallas de Blender (decidir si se rehacen con los diseños de la 0.1), revisión de seguridad de la ronda 3.
 **👤 Usuario:** UserId de Mateito, ícono y miniatura de la página, instalar Rojo (opcional), subir mallas cuando se decida.
 
@@ -58,8 +60,7 @@ Leyenda (revisada el 10/11 22:50): ✅ hecho y comprobado (en Studio o jugando e
 | Pedido | Detalle | Resp. sugerido | Estado |
 |---|---|---|---|
 | Sistema de niveles | XP por partida, victoria, eliminación, derribo y misión. Curva de nivel en un módulo de datos. Nivel visible en el HUD y sobre la cabeza. Recompensas por nivel (monedas, cajas). | Codex | 🔍 niveles 1 a 100 y recompensas (Codex); falta probar la curva y la migración del perfil (Schema 2) |
-| Cajas de suerte | Se abren con monedas del juego (sin Robux por ahora). Dan multiplicadores temporales de XP y de monedas (×1,5, ×2, ×3 por X minutos), y a veces skins. Probabilidades visibles en la caja. Si algún día se venden con Robux, hay que cumplir las reglas de Roblox para premios al azar pagos (ver la guía `roblox-monetization-compliance`). | Codex (servidor) + Gemini (interfaz y animación de apertura) | 🔍 cajas de almas y de reliquia con probabilidades visibles. 🔧 Codex está sumando el suspenso al abrir (10/11 22:50) |
-
+| Cajas de suerte | Se abren con monedas del juego (sin Robux por ahora). Dan multiplicadores temporales de XP y de monedas (×1,5, ×2, ×3 por X minutos), y a veces skins. Probabilidades visibles en la caja. Si algún día se venden con Robux, hay que cumplir las reglas de Roblox para premios al azar pagos (ver la guía `roblox-monetization-compliance`). | Codex (servidor) + Gemini (interfaz y animación de apertura) | 🔍 suspenso al abrir (el usuario no marcó problemas). 23:59: tres cajas de Tormenta (3000 / 6500 / 12000) con las 36 skins con rayos |
 ## 7. Publicación
 - 👤 La página del juego todavía muestra el ícono gris de Roblox. Hay que subir el ícono y la miniatura: el usuario ya tiene un arte «Dark Fantasy 1v1 · 2v2 PvP». Se suben en Creator Dashboard → la experiencia → Places/Thumbnails.
 - 👤 Pasar el UserId de Mateito para darle el rol Tester.
@@ -102,7 +103,7 @@ Números propuestos en [[Equilibrio de armas]] («Propuesta de números para la 
 | Cinemáticas antes del combate | Presentación de los jugadores al entrar a la arena: cámara recorriendo la arena, nombres, armas y pose de entrada. Se hace en el motor (cámara + animaciones), porque tiene que mostrar el avatar, el arma y la skin reales de cada jugador. Opinión de Claude (10/11/2026): Higgsfield u otro generador de video sirve para el tráiler, la página del juego y bocetos de planos, no para esta previa. | Claude (cámara y poses) + Gemini (carteles) | ✅ cinemática de entrada en partida («todo bien», usuario) |
 | Previa de 10 s antes de cada partida | Al menos 10 s antes de que arranque, con una pantalla para elegir **arma, skin e infusión**. Hoy no se puede cambiar de arma en partida. | Codex (servidor) + Gemini (interfaz) | ✅ elección de arma, skin e infusión (lo jugó el usuario) |
 | Patear al rival derribado | Mantener la mecánica de levantar y agregar una patada para tirar al rival derribado fuera de la arena. | Claude | 🔍 ✅ en Studio; 10/11: empuje más largo (16 → 32), falta calibrar |
-| Combate direccional | Ataques y bloqueos arriba, izquierda y derecha, parry perfecto, patada de ring-out, hit-stop y Elo para las clasificatorias. Diseño completo y preguntas abiertas en [[Diseño Combate PvP Direccional Roblox]]. Especificación de Gemini (10/11): [[Especificación Gemini combate direccional]]. Arquitectura y conflictos a decidir: [[Arquitectura Combate Direccional]]. Confirmado como eje de la 0.2 (sección 10). | Claude | ✅ activado y probado por el usuario («me encanta»). 🔍 10/11: golpe animado según la dirección, contragolpe de espadón y maza; falta stick del mando, fijado T/R3, ping, Maza/Estoque y 2v2 |
+| Combate direccional | Ataques y bloqueos arriba, izquierda y derecha, parry perfecto, patada de ring-out, hit-stop y Elo para las clasificatorias. Diseño completo y preguntas abiertas en [[Diseño Combate PvP Direccional Roblox]]. Especificación de Gemini (10/11): [[Especificación Gemini combate direccional]]. Arquitectura y conflictos a decidir: [[Arquitectura Combate Direccional]]. Confirmado como eje de la 0.2 (sección 10). | Claude | ✅ activado y jugado por el usuario. 🔍 falta stick del mando, fijado T/R3, ping, Maza/Estoque y 2v2 |
 | Clasificatorias con Elo | Parte del diseño direccional. Hoy RANKED dice «Próximamente». | Codex | ⬜ RANKED sigue en «Próximamente» |
 
 ## Orden sugerido
@@ -123,14 +124,28 @@ Referencia visual: [[Referencias/espada-concepto.png]] (concepto 2D hecho a part
 | Pedido | Detalle | Resp. sugerido | Estado |
 |---|---|---|---|
 | Combos según dirección | Series de combos por dirección dentro del direccional. Sin definir: secuencias, transiciones, cantidad de golpes, cancelaciones, resistencia. | Claude | 🔍 remate si conectan los 3 golpes (D4, ✅ en Studio); el golpe ya se anima hacia el lado elegido (10/11) |
-| Todas las skins al acabado de la espada | Más detalle, acabado y brillo; formas menos cuadradas y más filosas. El dibujo del usuario es la referencia principal (Pinterest, secundaria). Conservar la identidad de cada skin; revisar silueta, materiales y lectura en juego. | Gemini | 🔍 10/11: el usuario prefirió volver a las skins de la 0.1; los rayos quedan para semanales (`SkinDesignsStorm`), y el Eclipse Carmesí se mantiene en las 5 armas. Falta verlas en Studio y decidir las mallas de Blender |
-| Ruleta diaria y premio semanal | La espada y un par de skins más en la **misma** ruleta de monedas y XP. Tiradas diarias; skin o premio grande que rota cada semana. Sin definir: tiradas por día, reinicio, probabilidades, duplicados, calendario. | Codex (servidor) + Gemini (interfaz) | 🔍 ruleta y premio semanal funcionando (Codex y Gemini). 🔧 suspenso al girar y tiros pagos con almas (Codex, 10/11) |
-| Tienda nueva | Rediseñar la actual reutilizando lo que hay, presentación al estilo Fortnite con vistas previas (sin copiar su identidad). Vende skins, multiplicadores y monedas. | Gemini | 🔍 hecha (Gemini). 10/11: vista previa de auras rehecha («Probar en mi personaje») y pestaña Almas arreglada (era la herramienta de prueba) |
-| Armería separada | Elegir arma, skin e infusión con vista previa antes de salir. | Gemini + Codex | 🔍 hecha; falta arreglar el giro de las miniaturas y el texto «Arrastrá para girar» tapado |
+| Todas las skins al acabado de la espada | Más detalle, acabado y brillo; formas menos cuadradas y más filosas. El dibujo del usuario es la referencia principal (Pinterest, secundaria). Conservar la identidad de cada skin; revisar silueta, materiales y lectura en juego. | Gemini | ✅ skins de la 0.1 de vuelta y Eclipse Carmesí en las 5 armas; las 36 con rayos salen en las cajas de Tormenta. ⬜ mallas de Blender (decidir si se rehacen) |
+| Ruleta diaria y premio semanal | La espada y un par de skins más en la **misma** ruleta de monedas y XP. Tiradas diarias; skin o premio grande que rota cada semana. Sin definir: tiradas por día, reinicio, probabilidades, duplicados, calendario. | Codex (servidor) + Gemini (interfaz) | 🔍 ruleta, premio semanal, suspenso y tiros pagos hechos; el usuario no marcó problemas |
+| Tienda nueva | Rediseñar la actual reutilizando lo que hay, presentación al estilo Fortnite con vistas previas (sin copiar su identidad). Vende skins, multiplicadores y monedas. | Gemini | ✅ hecha. 🔍 23:59: arreglados los tirones (la ventana redibujaba todo en cada frame) |
+| Armería separada | Elegir arma, skin e infusión con vista previa antes de salir. | Gemini + Codex | 🔍 23:59: miniaturas quietas y de perfil (ya no quedan de punta), sin tirones; falta ver el texto «Arrastrá para girar» |
+## 13. Pedidos del 10/11 a la noche
+| Pedido | Detalle | Resp. | Estado |
+|---|---|---|---|
+| Golpe animado según la dirección | `AnimClips.DirMap` por arma | Claude | 🔍 el usuario no marcó problemas |
+| Espadón y maza contra el spam | Más rápidos y contragolpe de peso al bloquear | Claude | 🔍 ajustar con más partidas |
+| Patada al derribado más larga | 16 → 32 de velocidad | Claude | 🔍 calibrar |
+| Whoosh del dash | Sin el sonido pesado con ruido | Claude | 🔍 |
+| Vista previa de auras | «Probar en mi personaje» | Claude | 🔍 |
+| Bug de la ceniza | Era la herramienta de prueba; ahora solo testers y montos correctos | Claude | 🔍 |
+| No subirse encima del rival | Separación mínima y bajada automática | Claude | 🔍 |
+| Tirones en la tienda y el mouse | Ventanas sin CanvasGroup y tarjetas quietas | Claude | 🔍 |
+| Más cajas con las skins retiradas | Tres cajas de Tormenta | Claude + Codex (revisión) | 🔍 |
+| Tipografía nueva | Grenze Gotisch, Merriweather y Builder Sans | Claude | 🔍 avisar si algún texto queda cortado |
 
 ## Registro
 - 09/11/2026: nota creada con los pedidos de la beta 0.1.
 - 10/11/2026: sumadas las correcciones de las 12:28 y los pendientes abiertos de la 0.1; resumidas las secciones repetidas del direccional.
+- 10/11/2026 23:59: el usuario considera la 0.2 casi lista; sección 13 y estados al día.
 - 10/11/2026 22:50: estados revisados contra Git y los reportes de las rondas 1 y 2 (pedido del usuario): ✅ hecho, 🔍 en revisión, ⬜ falta.
 
 ## 12. Retención y almas — 10/11/2026 12:50 (Argentina, UTC-3)

@@ -46,6 +46,10 @@ local REVEAL = {
 	ChestSize = 138, LidHeight = 34, LidLift = 62, LidRotation = -22, ShakeDegrees = 5, ShakeCycles = 6,
 	ConfirmHeight = 250, ConfirmTextY = 28, ConfirmTextH = 130, ConfirmGap = 12,
 	MobileWheelHeight = 510, MobileBoxHeight = 490, MobileGap = 14, MobileTabHeight = 44,
+	-- 10/11: cajas de Tormenta. Alto de cada tarjeta en PC, arma que se muestra en cada una y color del borde.
+	BoxCardHeight = 460,
+	StormBoxPreview = { StormLesser = { "Dagger", "Relic05Storm" }, StormGreater = { "Sword", "Relic10Storm" }, StormRoyal = { "Greatsword", "Relic19Storm" } },
+	StormBoxColor = { StormLesser = Color3.fromRGB(120, 170, 255), StormGreater = Color3.fromRGB(170, 120, 255), StormRoyal = Color3.fromRGB(255, 70, 90) },
 	CompactWidth = 375, CompactHeader = 112, CompactBodyY = 174,
 	CompactMaxHeight = 780, CompactRowHeight = 58, CompactStepHeight = 48,
 	CompactTitleHeight = 30, CompactTextSize = 13, WeeklyHeight = 114, DesktopWeeklyHeight = 82,
@@ -113,7 +117,7 @@ local BASE_W, BASE_H = 1040, 640
 local panel = UiTheme.panel({
 	name = "RewardsWindow",
 	parent = gui,
-	canvasGroup = true,
+	canvasGroup = false, -- 10/11: Frame (con vistas 3D adentro, el CanvasGroup redibujaba todo en cada frame)
 	anchor = Vector2.new(0.5, 0.5),
 	position = UDim2.fromScale(0.5, 0.5),
 	size = UDim2.fromOffset(BASE_W, BASE_H),
@@ -793,7 +797,7 @@ function showOddsModal()
 		if tutorial then probability = item.tutorialProbability or probability end
 		row(item, probability)
 	end
-	for _, id in { "Souls", "Relic" } do
+	for _, id in (RewardsConfig and RewardsConfig.BoxOrder) or { "Souls", "Relic" } do
 		section(L.t("cx.reward.box." .. id))
 		local spec = state and state.boxes and state.boxes[id]
 		for _, item in spec and spec.probabilities or {} do
@@ -1185,7 +1189,7 @@ function render()
 	local notif = state.notifications or {}
 	local tabDefs = {
 		{ id = "Roulette",   label = L.t("ui.rewards.tab.Roulette"),   alert = notif.spin == true },
-		{ id = "Boxes",      label = L.t("ui.rewards.tab.Boxes"),      alert = ((state.boxes and state.boxes.Souls and state.boxes.Souls.count or 0) + (state.boxes and state.boxes.Relic and state.boxes.Relic.count or 0)) > 0 },
+		{ id = "Boxes",      label = L.t("ui.rewards.tab.Boxes"),      alert = (function() local n = 0 for _, b in state.boxes or {} do n += b.count or 0 end return n > 0 end)() },
 		{ id = "Streak",     label = L.t("ui.rewards.tab.Streak"),     alert = (notif.streak == true) or (notif.firstSteps == true) or (notif.weekly == true) },
 		{ id = "Collection", label = L.t("ui.rewards.tab.Collection"), alert = false },
 	}
@@ -1507,37 +1511,51 @@ function render()
 	-- PESTAÑA 2: CAJAS DE SUERTE (Caja de Almas 500 y Caja de Reliquias 1500)
 	------------------------------------------------------------------
 	elseif tab == "Boxes" then
-		local bodyH = compact and REVEAL.MobileBoxHeight or bodyH
-		local cardW = compact and width - 40 or math.floor((width - 40 - 18) / 2)
-		if compact then body.CanvasSize = UDim2.fromOffset(0, bodyH * 2 + REVEAL.MobileGap) end
-		local boxSpecs = {
-			{
-				id = "Souls",
-				titleKey = "ui.rewards.boxSouls",
-				descKey = "ui.rewards.boxSoulsDesc",
-				price = (state.boxes and state.boxes.Souls and state.boxes.Souls.price) or 500,
-				count = (state.boxes and state.boxes.Souls and state.boxes.Souls.count) or 0,
-				color = C.Gold,
-				icon = "coin",
-				hasPity = false,
-			},
-			{
-				id = "Relic",
-				titleKey = "ui.rewards.boxRelic",
-				descKey = "ui.rewards.boxRelicDesc",
-				price = (state.boxes and state.boxes.Relic and state.boxes.Relic.price) or 1500,
-				count = (state.boxes and state.boxes.Relic and state.boxes.Relic.count) or 0,
-				color = C.GoldBright,
-				icon = "trophy",
-				hasPity = true,
-			},
+		-- 10/11/2026: las cajas salen de Rewards.BoxOrder (Almas, Reliquia y las tres de Tormenta) y se listan
+		-- con desplazamiento: dos por fila en PC, una por fila en celular.
+		local bodyH = compact and REVEAL.MobileBoxHeight or REVEAL.BoxCardHeight
+		local cardW = compact and width - 40 or math.floor((width - 40 - 18 - 8) / 2)
+		local order = (RewardsConfig and RewardsConfig.BoxOrder) or { "Souls", "Relic" }
+		local look = {
+			Souls = { titleKey = "ui.rewards.boxSouls", descKey = "ui.rewards.boxSoulsDesc", color = C.Gold, icon = "coin", price = 500 },
+			Relic = { titleKey = "ui.rewards.boxRelic", descKey = "ui.rewards.boxRelicDesc", color = C.GoldBright, icon = "trophy", price = 1500, hasPity = true, preview = { "Greatsword", "BloodMoonCleaver" } },
 		}
+		for id, prev in REVEAL.StormBoxPreview do
+			look[id] = { titleKey = "cx.reward.box." .. id, descKey = "cx.reward.box." .. id .. ".desc", color = REVEAL.StormBoxColor[id] or C.GoldBright, icon = "trophy", preview = prev }
+		end
+		local boxSpecs = {}
+		for _, id in order do
+			local st = state.boxes and state.boxes[id]
+			local lk = look[id] or { titleKey = "cx.reward.box." .. id, descKey = "cx.reward.box." .. id .. ".desc", color = C.GoldBright, icon = "trophy" }
+			if st or look[id] then
+				table.insert(boxSpecs, {
+					id = id, titleKey = lk.titleKey, descKey = lk.descKey, color = lk.color, icon = lk.icon,
+					price = (st and st.price) or lk.price or 0, count = (st and st.count) or 0,
+					hasPity = lk.hasPity == true, preview = lk.preview,
+				})
+			end
+		end
+		local perRow = compact and 1 or 2
+		local rows = math.ceil(#boxSpecs / perRow)
+		local holder = body
+		if not compact then
+			holder = Instance.new("ScrollingFrame")
+			holder.Name = "BoxList"
+			holder.Size = UDim2.fromScale(1, 1)
+			holder.BackgroundTransparency = 1
+			holder.BorderSizePixel = 0
+			holder.ScrollBarThickness = UiTheme.Spacing.XXS
+			holder.ScrollingDirection = Enum.ScrollingDirection.Y
+			holder.Parent = body
+		end
+		holder.CanvasSize = UDim2.fromOffset(0, rows * (bodyH + REVEAL.MobileGap))
 
 		for idx, bSpec in boxSpecs do
+			local col, rowN = (idx - 1) % perRow, math.floor((idx - 1) / perRow)
 			local bCard = UiTheme.panel({
 				name = "BoxCard_" .. bSpec.id,
-				parent = body,
-				position = compact and UDim2.fromOffset(0, (idx - 1) * (bodyH + REVEAL.MobileGap)) or UDim2.fromOffset((idx - 1) * (cardW + 18), 0),
+				parent = holder,
+				position = UDim2.fromOffset(col * (cardW + 18), rowN * (bodyH + REVEAL.MobileGap)),
 				size = UDim2.fromOffset(cardW, bodyH),
 				bg = C.BgPanel,
 				borderColor = bSpec.color,
@@ -1556,8 +1574,8 @@ function render()
 			})
 
 			-- Cofre central ilustrado / visor 3D
-			if bSpec.id == "Relic" then
-				makeWeaponPreview3D(bCard, "Greatsword", "BloodMoonCleaver", { 32, 60, cardW - 64, 175 }, true)
+			if bSpec.preview then
+				makeWeaponPreview3D(bCard, bSpec.preview[1], bSpec.preview[2], { 32, 60, cardW - 64, 175 }, true)
 			else
 				local emblem = Instance.new("Frame")
 				emblem.AnchorPoint = Vector2.new(0.5, 0)
@@ -2136,10 +2154,8 @@ function setOpen(value)
 		panel.Visible = true
 		render()
 		refreshState(true)
-		panel.GroupTransparency = 1
 		panel.Position = UDim2.fromScale(0.5, 0.53)
 		TweenService:Create(panel, UiTheme.Anim.TweenNorm, {
-			GroupTransparency = 0,
 			Position = UDim2.fromScale(0.5, 0.5),
 		}):Play()
 	else

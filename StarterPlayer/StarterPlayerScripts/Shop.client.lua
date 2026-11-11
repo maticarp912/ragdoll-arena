@@ -144,7 +144,9 @@ local BASE_W, BASE_H = 1060, 650
 local panel = UiTheme.panel({
 	name = "ShopWindow",
 	parent = gui,
-	canvasGroup = true,
+	-- 10/11/2026: Frame en vez de CanvasGroup. Con vistas 3D girando adentro, el CanvasGroup redibujaba toda
+	-- la ventana en cada frame y la tienda y el mouse iban a tirones.
+	canvasGroup = false,
 	anchor = Vector2.new(0.5, 0.5),
 	position = UDim2.fromScale(0.5, 0.5),
 	size = UDim2.fromOffset(BASE_W, BASE_H),
@@ -313,7 +315,7 @@ local function getDailyFeaturedIds()
 	local E = require(RS:WaitForChild("Economy"))
 	local ids = {}
 	for skinId, skin in Skins.Data do
-		if skinId ~= "Default" and not skin.comingSoon and not skin.roulette then table.insert(ids, skinId) end
+		if skinId ~= "Default" and not skin.comingSoon and not skin.roulette and not skin.boxOnly then table.insert(ids, skinId) end
 	end
 	table.sort(ids)
 	local featured = {}
@@ -1101,7 +1103,7 @@ function render()
 	detail = UiTheme.panel({
 		name = "DetailPanel",
 		parent = panel,
-		canvasGroup = true,
+		canvasGroup = false, -- 10/11: ver ShopWindow
 		position = UDim2.fromOffset(mobile and 20 or (28 + listWidth), mobile and (top + listHeight + 8) or 116),
 		size = UDim2.fromOffset(mobile and (width - 40) or (width - listWidth - 48), mobile and (contentH - listHeight - 8) or (height - 116 - 44)),
 		bg = C.BgPanel,
@@ -1217,8 +1219,6 @@ function render()
 		hit.Activated:Connect(function()
 			UiTheme.playSound("UI_Click")
 			inspect(id)
-			detail.GroupTransparency = 0.22
-			TweenService:Create(detail, UiTheme.Anim.TweenFast, { GroupTransparency = 0 }):Play()
 		end)
 	end
 
@@ -1362,7 +1362,7 @@ function render()
 		if tab == "Skins" then
 			for idx, id in Skins.Order do
 				local s = Skins.Data[id]
-				if s and id ~= "Default" and not s.comingSoon then
+				if s and id ~= "Default" and not s.comingSoon and (not s.boxOnly or ownedSkinsMap[id]) then -- 10/11: las de Tormenta solo si las tenés
 					local matches = (not s.weapon or s.weapon == weapon)
 						and (rarity == "all" or s.rarity == rarity)
 						and (ownership == "all" or (ownership == "owned" and ownedSkinsMap[id]) or (ownership == "available" and not ownedSkinsMap[id]))
@@ -1450,7 +1450,6 @@ function setOpen(value)
 		backdrop.Visible = true
 		panel.Visible = true
 		render()
-		panel.GroupTransparency = 1
 		panel.Position = UDim2.fromScale(0.5, 0.53)
 	else
 		dismiss()
@@ -1463,7 +1462,6 @@ function setOpen(value)
 	end
 
 	TweenService:Create(panel, UiTheme.Anim.TweenNorm, {
-		GroupTransparency = value and 0 or 1,
 		Position = UDim2.fromScale(0.5, value and 0.5 or 0.53),
 	}):Play()
 
@@ -1569,9 +1567,8 @@ RunService.RenderStepped:Connect(function(dt)
 						v.yaw += dt * 0.35
 					end
 				else
-					v.phase = (v.phase or 0) + dt * 1.35
-					v.yaw = math.sin(v.phase) * 0.36
-					v.pitch = math.cos(v.phase * 0.7) * 0.12
+					-- 10/11: las tarjetas quedan quietas (solo se mueven al tocarlas); antes giraban todas a la vez
+					if not v.flashUntil or os.clock() >= v.flashUntil then continue end
 				end
 				if v.flashUntil and os.clock() < v.flashUntil then
 					v.yaw += dt * 8

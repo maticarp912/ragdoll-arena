@@ -140,6 +140,15 @@ return {
 		["skinDesc.EclipseFang"] = "Premio de la ruleta. Dagas gemelas de obsidiana con bisel de plata espejo, garras en la guarda y una vena de relámpago carmesí.",
 		["skin.EclipseNeedle"] = "Aguja del Eclipse Carmesí",
 		["skinDesc.EclipseNeedle"] = "Premio de la ruleta. Estoque de obsidiana con cazoleta de plata, rubíes de sangre y un relámpago carmesí que corre hasta la punta.",
+		["skin.stormName"] = "%s de Tormenta",
+		["skinDesc.storm"] = "Versión con rayos de la tienda. Solo sale en las cajas de Tormenta.",
+		["cx.reward.box.StormLesser"] = "Cofre de la Tormenta",
+		["cx.reward.box.StormGreater"] = "Arca de la Tormenta",
+		["cx.reward.box.StormRoyal"] = "Relicario del Rayo",
+		["cx.reward.box.StormLesser.desc"] = "Skins con rayos: sobre todo raras, a veces épicas.",
+		["cx.reward.box.StormGreater.desc"] = "Más épicas y mejor chance de legendaria.",
+		["cx.reward.box.StormRoyal.desc"] = "Solo épicas y legendarias.",
+		["ui.shop.stormOnly"] = "Solo en cajas de Tormenta",
 
 		-- 0.2 (D13): Armería separada (Armory.client.lua)
 		["ui.armory.title"] = "ARMERÍA DEL CAMPEÓN",
@@ -404,6 +413,15 @@ return {
 		["skinDesc.EclipseFang"] = "Roulette prize. Twin obsidian daggers with a mirror-silver bevel, clawed guards, and a crimson lightning vein.",
 		["skin.EclipseNeedle"] = "Crimson Eclipse Needle",
 		["skinDesc.EclipseNeedle"] = "Roulette prize. Obsidian rapier with a silver cup hilt, blood rubies, and crimson lightning running to the tip.",
+		["skin.stormName"] = "Storm %s",
+		["skinDesc.storm"] = "Lightning version of the shop skin. Only from Storm boxes.",
+		["cx.reward.box.StormLesser"] = "Storm Chest",
+		["cx.reward.box.StormGreater"] = "Storm Ark",
+		["cx.reward.box.StormRoyal"] = "Lightning Reliquary",
+		["cx.reward.box.StormLesser.desc"] = "Lightning skins: mostly rare, sometimes epic.",
+		["cx.reward.box.StormGreater.desc"] = "More epics and a better legendary chance.",
+		["cx.reward.box.StormRoyal.desc"] = "Epics and legendaries only.",
+		["ui.shop.stormOnly"] = "Storm boxes only",
 
 		-- 0.2 (D13): Armería separada (Armory.client.lua)
 		["ui.armory.title"] = "CHAMPION'S ARMORY",
@@ -668,6 +686,15 @@ return {
 		["skinDesc.EclipseFang"] = "Prêmio da roleta. Adagas gêmeas de obsidiana com bisel de prata espelhada, guardas em garra e uma veia de relâmpago carmesim.",
 		["skin.EclipseNeedle"] = "Agulha do Eclipse Carmesim",
 		["skinDesc.EclipseNeedle"] = "Prêmio da roleta. Estoque de obsidiana com copo de prata, rubis de sangue e um relâmpago carmesim que corre até a ponta.",
+		["skin.stormName"] = "%s da Tempestade",
+		["skinDesc.storm"] = "Versão com raios da loja. Só sai nas caixas da Tempestade.",
+		["cx.reward.box.StormLesser"] = "Baú da Tempestade",
+		["cx.reward.box.StormGreater"] = "Arca da Tempestade",
+		["cx.reward.box.StormRoyal"] = "Relicário do Raio",
+		["cx.reward.box.StormLesser.desc"] = "Skins com raios: quase sempre raras, às vezes épicas.",
+		["cx.reward.box.StormGreater.desc"] = "Mais épicas e mais chance de lendária.",
+		["cx.reward.box.StormRoyal.desc"] = "Só épicas e lendárias.",
+		["ui.shop.stormOnly"] = "Só nas caixas da Tempestade",
 
 		-- 0.2 (D13): Armería separada (Armory.client.lua)
 		["ui.armory.title"] = "ARSENAL DO CAMPEÃO",

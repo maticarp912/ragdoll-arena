@@ -59,10 +59,13 @@ local function profile(player)
  end
  return data, d, day
 end
-local function skinPool(rarity)
+-- 10/11/2026: poolName = Rewards.Boxes[id].pool. Sin pool (Reliquia) quedan afuera las skins solo de caja (boxOnly);
+-- con pool ("Storm") entran solo las de esa caja.
+local function skinPool(rarity, poolName)
  local pool = {}
  for id, skin in Skins.Data do
-  if id ~= "Default" and not skin.comingSoon and skin.currency ~= "Robux" and skin.rarity == rarity then table.insert(pool, id) end
+  if id ~= "Default" and not skin.comingSoon and skin.currency ~= "Robux" and skin.rarity == rarity
+   and (skin.boxOnly or nil) == poolName then table.insert(pool, id) end
  end
  table.sort(pool) return pool
 end
@@ -169,11 +172,11 @@ function Service.getState(player)
   local rows = probabilities(box.rarities or box.rewards, guaranteed and R.GoodRank or nil)
   if box.rarities then
    for _, row in rows do
-    row.skins = skinPool(row.rarity)
+    row.skins = skinPool(row.rarity, box.pool)
     row.probabilityPerSkin = #row.skins > 0 and row.probability / #row.skins or 0
    end
   end
-  boxes[id] = { count = data.Boxes[id], price = box.price, nameKey = box.nameKey, probabilities = rows, guaranteed = guaranteed }
+  boxes[id] = { count = data.Boxes[id], price = box.price, nameKey = box.nameKey, descKey = box.descKey, order = box.order, probabilities = rows, guaranteed = guaranteed }
  end
  local tutorialCount = 0 for i = 1, R.TutorialSteps do if d.tutorial[tostring(i)] == true then tutorialCount += 1 end end
  local roulette = probabilities(R.Roulette)
@@ -329,9 +332,9 @@ local function act(player, action, id, source)
   elseif data.Boxes[id] < 1 then return fail() end
   local row
   if action == "OpenBox" then
-   if id == "Relic" then
-    local rarity = weighted(box.rarities, d.relicPity >= R.RelicPity - 1 and R.GoodRank or nil)
-    local pool = skinPool(rarity.rarity)
+   if box.rarities then
+    local rarity = weighted(box.rarities, id == "Relic" and d.relicPity >= R.RelicPity - 1 and R.GoodRank or nil)
+    local pool = skinPool(rarity.rarity, box.pool)
     if #pool == 0 then return fail("cx.reward.unavailable") end
     row = { kind = "Skin", id = pool[random:NextInteger(1, #pool)], rarity = rarity.rarity }
    else row = weighted(box.rewards) end

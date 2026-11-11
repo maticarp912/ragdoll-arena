@@ -162,7 +162,13 @@ title.AnchorPoint = Vector2.new(0.5, 0)
 title.Position = UDim2.new(0.5, 0, 0.50, 0)
 title.Size = UDim2.new(0.8, 0, 0, 52)
 title.BackgroundTransparency = 1
-title.Font = Enum.Font.Garamond
+-- 10/11/2026: si una fuente no existiera en esta versión de Roblox, no se rompe la interfaz (cae a Gotham/Garamond)
+local function safeFont(name)
+	local ok, f = pcall(function() return Enum.Font[name] end)
+	if ok and f then return f end
+	return name == "GrenzeGotisch" and Enum.Font.Garamond or Enum.Font.GothamMedium
+end
+title.Font = safeFont("GrenzeGotisch") -- 10/11: tipografía nueva
 title.Text = "RAGDOLL ARENA"
 title.TextColor3 = Color3.fromRGB(242, 212, 138)
 title.TextSize = 46
@@ -174,7 +180,7 @@ subtitle.AnchorPoint = Vector2.new(0.5, 0)
 subtitle.Position = UDim2.new(0.5, 0, 0.58, 0)
 subtitle.Size = UDim2.new(0.8, 0, 0, 26)
 subtitle.BackgroundTransparency = 1
-subtitle.Font = Enum.Font.GothamBold
+subtitle.Font = safeFont("Merriweather")
 subtitle.Text = tr("ui.loading.subtitle")
 subtitle.TextColor3 = Color3.fromRGB(184, 176, 160)
 subtitle.TextSize = 15
@@ -201,7 +207,7 @@ local tipLabel = Instance.new("TextLabel")
 tipLabel.Position = UDim2.fromOffset(20, 12)
 tipLabel.Size = UDim2.new(1, -40, 0, 42)
 tipLabel.BackgroundTransparency = 1
-tipLabel.Font = Enum.Font.GothamMedium
+tipLabel.Font = safeFont("Merriweather")
 tipLabel.TextColor3 = Color3.fromRGB(238, 231, 215)
 tipLabel.TextSize = 14
 tipLabel.TextWrapped = true
@@ -235,7 +241,7 @@ local progressLabel = Instance.new("TextLabel")
 progressLabel.Position = UDim2.fromOffset(20, 80)
 progressLabel.Size = UDim2.new(1, -40, 0, 22)
 progressLabel.BackgroundTransparency = 1
-progressLabel.Font = Enum.Font.GothamBold
+progressLabel.Font = safeFont("BuilderSansBold")
 progressLabel.TextColor3 = Color3.fromRGB(204, 167, 92)
 progressLabel.TextSize = 12
 progressLabel.Text = tr("ui.loading.preparing", { pct = 5 })
@@ -247,7 +253,7 @@ skipBtn.Position = UDim2.new(1, -36, 0, 36)
 skipBtn.Size = UDim2.fromOffset(108, 38)
 skipBtn.BackgroundColor3 = Color3.fromRGB(28, 30, 38)
 skipBtn.TextColor3 = Color3.fromRGB(238, 231, 215)
-skipBtn.Font = Enum.Font.GothamBold
+skipBtn.Font = safeFont("BuilderSansBold")
 skipBtn.TextSize = 14
 skipBtn.Text = tr("ui.loading.skip")
 skipBtn.Visible = false

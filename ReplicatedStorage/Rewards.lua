@@ -14,7 +14,17 @@ local R = {
   { kind = "Box", id = "Relic", amount = 1, weight = 4 }, { kind = "Weekly", weight = 1 },
  },
  TutorialBoost = { kind = "Boost", boost = "XP", multiplier = 2, seconds = 1800 },
- Boxes = { Souls = { price = 500 }, Relic = { price = 1500 } },
+ Boxes = { Souls = { price = 500 }, Relic = { price = 1500 },
+  -- 10/11/2026: cajas de Tormenta (skins con rayos, Skins.boxOnly = "Storm"). Más caras = mejores rarezas.
+  StormLesser = { price = 3000, pool = "Storm", order = 3 },
+  StormGreater = { price = 6500, pool = "Storm", order = 4 },
+  StormRoyal = { price = 12000, pool = "Storm", order = 5 },
+ },
+ StormRarities = {
+  StormLesser = { { id = "Rare", weight = 72 }, { id = "Epic", weight = 24 }, { id = "Legendary", weight = 4 } },
+  StormGreater = { { id = "Rare", weight = 30 }, { id = "Epic", weight = 55 }, { id = "Legendary", weight = 15 } },
+  StormRoyal = { { id = "Epic", weight = 62 }, { id = "Legendary", weight = 38 } },
+ },
  Rarities = { { id = "Common", weight = 60 }, { id = "Rare", weight = 28 }, { id = "Epic", weight = 10 }, { id = "Legendary", weight = 2 } },
  GuaranteedRarities = { { id = "Epic", weight = 10 }, { id = "Legendary", weight = 2 } },
  SoulsBox = {
@@ -70,6 +80,13 @@ for i, row in R.SoulsBox do
 end
 R.Boxes.Relic.nameKey = "cx.reward.box.Relic" R.Boxes.Relic.rarities = {}
 for i, row in R.Rarities do R.Boxes.Relic.rarities[i] = { rarity = row.id, weight = row.weight } end
+R.Boxes.Souls.order = 1 R.Boxes.Relic.order = 2
+for id, rows in R.StormRarities do
+ local box = R.Boxes[id] box.nameKey = "cx.reward.box." .. id box.descKey = "cx.reward.box." .. id .. ".desc" box.rarities = {}
+ for i, row in rows do box.rarities[i] = { rarity = row.id, weight = row.weight } end
+end
+R.BoxOrder = {} for id in R.Boxes do table.insert(R.BoxOrder, id) end
+table.sort(R.BoxOrder, function(a, b) return (R.Boxes[a].order or 99) < (R.Boxes[b].order or 99) end)
 R.BoostOrder = { "Boost2xCoins", "Boost2xXp", "BoostSoulMagnet" }
 R.Boosts = {
  Boost2xCoins = { stat = "Coins", multiplier = 2, seconds = 1800, price = 1200, nameKey = "cx.reward.boost.Boost2xCoins", descKey = "cx.reward.boost.desc" },

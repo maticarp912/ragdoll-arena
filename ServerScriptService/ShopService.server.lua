@@ -94,7 +94,7 @@ local function shopAction(player, action, id)
  if action == "GetBoosts" then return true, { items = Rewards.Boosts, order = Rewards.BoostOrder, debugSouls = canDebug(player), collectionAuras = Rewards.Collection } end
  if action == "BuyBoost" then return RewardService.buyBoost(player, id) end
  if action == "GetFeatured" then
-  local ids = {} for skinId, skin in Skins.Data do if skinId ~= "Default" and not skin.comingSoon and not skin.roulette then table.insert(ids, skinId) end end
+  local ids = {} for skinId, skin in Skins.Data do if skinId ~= "Default" and not skin.comingSoon and not skin.roulette and not skin.boxOnly then table.insert(ids, skinId) end end
   table.sort(ids) local result = {} local day = math.floor((os.time() - E.DayOffset) / E.DaySeconds)
   for i = 1, math.min(E.FeaturedCount, #ids) do table.insert(result, ids[(day * E.FeaturedCount + i - 1) % #ids + 1]) end
   return true, { ids = result, resetAt = (day + 1) * E.DaySeconds + E.DayOffset }
@@ -176,6 +176,7 @@ local function shopAction(player, action, id)
 		if skin.comingSoon then return false, { key = "soon" } end
 		-- Decisión del usuario (10/11/2026): las skins de la ruleta solo salen de la ruleta y las cajas.
 		if skin.roulette then return false, { key = "rouletteOnly" } end
+		if skin.boxOnly then return false, { key = "ui.shop.stormOnly" } end -- 10/11: skins de las cajas de Tormenta
 		if PlayerData.owns(player, "OwnedSkins", id) then return false, { key = "alreadyOwned" } end
 
 		if skin.currency == "Coins" then

@@ -1154,5 +1154,9 @@ local Storm = require(script.Parent:WaitForChild("SkinDesignsStorm"))
 for _, id in { "CrimsonEclipse", "BloodMoonCleaver", "CataclysmMaw", "EclipseFang", "EclipseNeedle" } do
 	D[id] = Storm[id]
 end
+-- 10/11/2026: skins de las cajas de Tormenta (Skins.WeeklyPool → "<diseño>Storm")
+for name, design in Storm do
+	if type(design) == "table" and D[name .. "Storm"] == nil then D[name .. "Storm"] = design end
+end
 
 return D

@@ -167,20 +167,28 @@ UiTheme.InfusionThemes = {
 ----------------------------------------------------------------------
 -- 4. Tipografía (FontFace con Font.new / Font.fromEnum + Enum.Font)
 ----------------------------------------------------------------------
+-- 10/11/2026: tipografía nueva (pedido del usuario). Títulos góticos, textos en serif clásica y números
+-- en sans legible. Para cambiarla, tocar solo estas dos tablas (y Theme.Fonts, que usan los textos del combate).
+-- 10/11/2026: si una fuente no existiera en esta versión de Roblox, no se rompe la interfaz (cae a Gotham/Garamond)
+local function safeFont(name)
+	local ok, f = pcall(function() return Enum.Font[name] end)
+	if ok and f then return f end
+	return name == "GrenzeGotisch" and Enum.Font.Garamond or Enum.Font.GothamMedium
+end
 UiTheme.Fonts = {
-	Title  = Enum.Font.Garamond,
-	Header = Enum.Font.Antique,
-	Body   = Enum.Font.GothamMedium,
-	Bold   = Enum.Font.GothamBold,
-	Number = Enum.Font.GothamBold,
+	Title  = safeFont("GrenzeGotisch"),
+	Header = safeFont("Merriweather"),
+	Body   = safeFont("Merriweather"),
+	Bold   = safeFont("Merriweather"),
+	Number = safeFont("BuilderSansBold"),
 }
 
 UiTheme.FontFaces = {
-	Title  = Font.new("rbxasset://fonts/families/RomanAntique.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
-	Header = Font.new("rbxasset://fonts/families/Balthazar.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
-	Body   = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
-	Bold   = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
-	Number = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
+	Title  = Font.new("rbxasset://fonts/families/GrenzeGotisch.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
+	Header = Font.new("rbxasset://fonts/families/Merriweather.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
+	Body   = Font.new("rbxasset://fonts/families/Merriweather.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal),
+	Bold   = Font.new("rbxasset://fonts/families/Merriweather.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
+	Number = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
 }
 
 UiTheme.TextSizes = {

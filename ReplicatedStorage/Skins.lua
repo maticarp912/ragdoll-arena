@@ -223,6 +223,40 @@ Skins.WeeklyPool = {
 	"Flange", "CrimsonShards", "NorthExecutioner", "Forge", "AncientMaw", "OssuaryAxe", "AbyssVertebra", "SepulcherJaws", "OssuaryCrown",
 }
 
+-- 10/11/2026: las 36 versiones con rayos vuelven como skins de las cajas de Tormenta (solo cajas, no se compran
+-- ni salen en la ruleta). Id = id de la original + "Storm"; diseño = SkinDesignsStorm. Rareza según el precio de
+-- la original (Skins.StormRarity), así las cajas caras dan más Legendarias. Nombre: Localization (skin.stormName).
+Skins.StormRarity = { { maxPrice = 1500, rarity = "Rare" }, { maxPrice = 3100, rarity = "Epic" }, { maxPrice = math.huge, rarity = "Legendary" } }
+do
+	local byDesign = {}
+	for _, id in Skins.Order do
+		local s = Skins.Data[id]
+		if s and s.design and not s.roulette and not byDesign[s.design] then byDesign[s.design] = id end
+	end
+	for _, design in Skins.WeeklyPool do
+		local origId = byDesign[design]
+		local o = origId and Skins.Data[origId]
+		if o then
+			local id = origId .. "Storm"
+			local rarity = "Epic"
+			for _, tier in Skins.StormRarity do
+				if (o.price or 0) <= tier.maxPrice then rarity = tier.rarity break end
+			end
+			local s = table.clone(o)
+			s.design = design .. "Storm"
+			s.rarity = rarity
+			s.stormOf = origId
+			s.boxOnly = "Storm"
+			s.roulette = nil
+			s.weeklyPrize = nil
+			s.productId = nil
+			s.source = nil
+			Skins.Order[#Skins.Order + 1] = id
+			Skins.Data[id] = s
+		end
+	end
+end
+
 for id, skin in Skins.Data do
 	skin.nameKey = "skin." .. id
 	skin.descKey = "skinDesc." .. id

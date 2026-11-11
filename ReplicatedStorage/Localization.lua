@@ -27,6 +27,24 @@ for _, name in { "LocaleCodex", "LocaleGemini" } do
  end
 end
 
+-- 10/11/2026: nombres de las skins de Tormenta = nombre traducido de la original con el formato skin.stormName
+do
+ local module = parent:FindFirstChild("Skins") or parent:WaitForChild("Skins", 5)
+ local ok, Skins = false, nil
+ if module then ok, Skins = pcall(require, module) end
+ if ok and type(Skins) == "table" and Skins.Data then
+  for id, s in Skins.Data do
+   if s.stormOf then
+    for _, base in tables do
+     local orig = base["skin." .. s.stormOf] or s.name
+     if base["skin." .. id] == nil then base["skin." .. id] = string.format(base["skin.stormName"] or "%s", orig) end
+     if base["skinDesc." .. id] == nil then base["skinDesc." .. id] = base["skinDesc.storm"] end
+    end
+   end
+  end
+ end
+end
+
 local Localization = {}
 local changed = Instance.new("BindableEvent")
 Localization.Changed = changed.Event

@@ -68,7 +68,9 @@ local BASE_W, BASE_H = 1040, 640
 local panel = UiTheme.panel({
 	name = "ArmoryWindow",
 	parent = gui,
-	canvasGroup = true,
+	-- 10/11/2026: Frame en vez de CanvasGroup. Con vistas 3D girando adentro, el CanvasGroup redibujaba toda
+	-- la ventana en cada frame y la tienda y el mouse iban a tirones.
+	canvasGroup = false,
 	anchor = Vector2.new(0.5, 0.5),
 	position = UDim2.fromScale(0.5, 0.5),
 	size = UDim2.fromOffset(BASE_W, BASE_H),
@@ -683,6 +685,7 @@ function render()
 				show = (not s.weapon or s.weapon == weaponFilter)
 					and not s.comingSoon
 					and (skinOwnership == "all" or ownedSkinsMap[id])
+					and (not s.boxOnly or ownedSkinsMap[id]) -- 10/11: las de Tormenta solo si las tenés
 			elseif tab == "Auras" and a then
 				show = ownedAurasMap[id] or skinOwnership == "all"
 			end
@@ -1019,7 +1022,6 @@ function setOpen(value)
 		backdrop.Visible = true
 		panel.Visible = true
 		render()
-		panel.GroupTransparency = 1
 		panel.Position = UDim2.fromScale(0.5, 0.53)
 	else
 		dragInput = nil
@@ -1030,7 +1032,6 @@ function setOpen(value)
 	end
 
 	TweenService:Create(panel, UiTheme.Anim.TweenNorm, {
-		GroupTransparency = value and 0 or 1,
 		Position = UDim2.fromScale(0.5, value and 0.5 or 0.53),
 	}):Play()
 
@@ -1134,12 +1135,13 @@ RunService.RenderStepped:Connect(function(dt)
 		if not v.vp.Parent then
 			table.remove(spins, i)
 		else
-			-- Oscilación suave de perfil amplio para que las armas nunca queden de punta ni chicas
-			v.phase = (v.phase or 0) + dt * 1.35
-			v.yaw = math.sin(v.phase) * 0.36
-			v.pitch = math.cos(v.phase * 0.7) * 0.12
-			v.model:PivotTo(CFrame.Angles(v.pitch, v.yaw, 0) * v.base)
-			v.camera.CFrame = CFrame.lookAt(Vector3.new(0, 0, v.distance * v.zoom), Vector3.zero)
+			-- 10/11: miniaturas quietas, de perfil (antes oscilaban todas en cada frame y la armería iba a tirones;
+			-- además así no quedan de punta). Se acomodan una sola vez.
+			if not v.placed then
+				v.placed = true
+				v.model:PivotTo(v.base)
+				v.camera.CFrame = CFrame.lookAt(Vector3.new(0, 0, v.distance * v.zoom), Vector3.zero)
+			end
 		end
 	end
 end)
