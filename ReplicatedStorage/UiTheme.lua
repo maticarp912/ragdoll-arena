@@ -1,6 +1,6 @@
 -- ModuleScript: ReplicatedStorage/UiTheme
 -- Sistema de diseño de interfaz (Contrato C15, responsable: Gemini, etapa 8).
--- Estética Dark Fantasy comercial: hierro forjado, piedra nocturna, pergamino hueso y oro viejo bruñido.
+-- Estética Dark Fantasy, paleta «Eclipse» (11/11/2026): obsidiana, carmesí, marfil y verdín espectral; oro solo para dinero.
 -- Provee tokens de color, tipografía (FontFace + Enum.Font), escala, espaciado, bordes, curvas de animación
 -- y constructores de componentes con estados hover, presionado, seleccionado, deshabilitado y foco de mando.
 
@@ -17,101 +17,110 @@ local UiTheme = {}
 -- 1. Paleta de colores (Dark Fantasy)
 ----------------------------------------------------------------------
 UiTheme.Colors = {
+	-- 11/11/2026: paleta «Eclipse» (identidad propia, adiós a los grises y dorados genéricos).
+	--   Obsidiana violácea de fondo · Carmesí del Eclipse como acento de marca · Marfil para el texto ·
+	--   Verdín espectral solo para el foco del mando · El oro queda SOLO para dinero y rareza Legendaria.
+	-- Los nombres viejos (Gold, GoldBright...) se mantienen para no romper nada: ahora son los carmesí.
 	-- Fondos y superficies
-	BgAbyss        = Color3.fromRGB(8, 9, 13),
-	BgPrimary      = Color3.fromRGB(14, 15, 21),
-	BgPanel        = Color3.fromRGB(20, 22, 30),
-	BgPanelLight   = Color3.fromRGB(27, 30, 40),
-	BgHeader       = Color3.fromRGB(17, 18, 25),
-	BgCard         = Color3.fromRGB(24, 26, 35),
-	BgCardHover    = Color3.fromRGB(33, 36, 48),
-	BgCardSelected = Color3.fromRGB(39, 35, 28),
-	BgCardDisabled = Color3.fromRGB(16, 17, 22),
-	BgPreview      = Color3.fromRGB(12, 13, 18),
-	BgBarBack      = Color3.fromRGB(11, 12, 16),
-	BgModalVeil    = Color3.fromRGB(4, 5, 8),
+	BgAbyss        = Color3.fromRGB(7, 6, 10),
+	BgPrimary      = Color3.fromRGB(14, 11, 17),
+	BgPanel        = Color3.fromRGB(22, 17, 25),
+	BgPanelLight   = Color3.fromRGB(31, 24, 35),
+	BgHeader       = Color3.fromRGB(18, 13, 21),
+	BgCard         = Color3.fromRGB(27, 21, 31),
+	BgCardHover    = Color3.fromRGB(39, 30, 44),
+	BgCardSelected = Color3.fromRGB(58, 20, 32),
+	BgCardDisabled = Color3.fromRGB(17, 14, 19),
+	BgPreview      = Color3.fromRGB(11, 9, 13),
+	BgBarBack      = Color3.fromRGB(10, 8, 12),
+	BgModalVeil    = Color3.fromRGB(3, 2, 5),
 
-	-- Hierro y piedra
-	IronDark       = Color3.fromRGB(28, 30, 38),
-	Iron           = Color3.fromRGB(40, 43, 54),
-	IronLight      = Color3.fromRGB(58, 62, 76),
-	Stone          = Color3.fromRGB(74, 76, 86),
+	-- Ceniza (antes hierro y piedra)
+	IronDark       = Color3.fromRGB(34, 27, 38),
+	Iron           = Color3.fromRGB(48, 39, 53),
+	IronLight      = Color3.fromRGB(70, 58, 76),
+	Stone          = Color3.fromRGB(92, 80, 98),
 
-	-- Oro viejo y acentos reales
-	GoldBright     = Color3.fromRGB(242, 212, 138),
-	Gold           = Color3.fromRGB(204, 167, 92),
-	GoldDim        = Color3.fromRGB(142, 115, 64),
-	GoldDark       = Color3.fromRGB(88, 68, 36),
+	-- Carmesí del Eclipse (acento de marca; los nombres «Gold» quedan por compatibilidad)
+	GoldBright     = Color3.fromRGB(255, 122, 116), -- carmesí claro: títulos, resaltados, borde activo
+	Gold           = Color3.fromRGB(204, 40, 60),   -- carmesí: bordes de paneles y tarjetas
+	GoldDim        = Color3.fromRGB(132, 30, 46),
+	GoldDark       = Color3.fromRGB(64, 14, 24),
+
+	-- Acento secundario: verdín espectral (foco de mando, información, elementos interactivos fríos)
+	Accent         = Color3.fromRGB(96, 222, 204),
+	AccentDim      = Color3.fromRGB(40, 112, 104),
 
 	-- Texto (alto contraste sobre fondos oscuros)
-	TextPrimary    = Color3.fromRGB(238, 231, 215), -- Hueso claro / pergamino
-	TextSecondary  = Color3.fromRGB(184, 176, 160), -- Hueso medio
-	TextMuted      = Color3.fromRGB(126, 120, 110), -- Ceniza
-	TextGold       = Color3.fromRGB(224, 188, 110), -- Dorado titular
-	TextDark       = Color3.fromRGB(18, 16, 14),    -- Sobre botones dorados
+	TextPrimary    = Color3.fromRGB(246, 237, 222), -- marfil
+	TextSecondary  = Color3.fromRGB(200, 188, 178), -- hueso
+	TextMuted      = Color3.fromRGB(142, 128, 128), -- ceniza rosada
+	TextGold       = Color3.fromRGB(255, 140, 128), -- títulos
+	TextDark       = Color3.fromRGB(16, 10, 12),
 
 	-- Bordes y foco de mando
-	BorderSubtle   = Color3.fromRGB(54, 56, 68),
-	BorderDefault  = Color3.fromRGB(124, 102, 60),
-	BorderStrong   = Color3.fromRGB(204, 167, 92),
-	BorderFocus    = Color3.fromRGB(255, 232, 160), -- Foco brillante para mando/TV
+	BorderSubtle   = Color3.fromRGB(52, 42, 56),
+	BorderDefault  = Color3.fromRGB(96, 38, 52),
+	BorderStrong   = Color3.fromRGB(204, 40, 60),
+	BorderFocus    = Color3.fromRGB(120, 240, 222), -- verdín: el foco del mando se distingue del carmesí
 
 	-- Estados semánticos y monedas
-	Success        = Color3.fromRGB(92, 184, 116),
-	SuccessDark    = Color3.fromRGB(34, 72, 46),
-	Warning        = Color3.fromRGB(230, 168, 64),
-	Danger         = Color3.fromRGB(214, 68, 62),
-	DangerDark     = Color3.fromRGB(82, 26, 26),
-	Disabled       = Color3.fromRGB(78, 78, 86),
-	Coins          = Color3.fromRGB(240, 196, 84),
+	Success        = Color3.fromRGB(96, 206, 140),
+	SuccessDark    = Color3.fromRGB(30, 74, 52),
+	Warning        = Color3.fromRGB(244, 176, 70),
+	Danger         = Color3.fromRGB(238, 76, 70),
+	DangerDark     = Color3.fromRGB(86, 22, 26),
+	Disabled       = Color3.fromRGB(80, 72, 84),
+	Coins          = Color3.fromRGB(246, 198, 86),   -- el oro es solo para el dinero
 	Robux          = Color3.fromRGB(96, 218, 134),
 
 	-- Barras de combate y equipos
-	Health         = Color3.fromRGB(196, 46, 46),
-	HealthBright   = Color3.fromRGB(232, 72, 68),
-	HealthTrail    = Color3.fromRGB(245, 238, 225),
-	Stamina        = Color3.fromRGB(72, 168, 108),
-	Guard          = Color3.fromRGB(92, 148, 214),
-	GuardBroken    = Color3.fromRGB(110, 110, 120),
-	Stun           = Color3.fromRGB(218, 164, 58),
-	StunDanger     = Color3.fromRGB(235, 86, 48),
-	InfusionCharge = Color3.fromRGB(192, 134, 230),
-	TeamRed        = Color3.fromRGB(218, 72, 68),
-	TeamBlue       = Color3.fromRGB(76, 146, 230),
+	Health         = Color3.fromRGB(206, 40, 56),
+	HealthBright   = Color3.fromRGB(246, 82, 88),
+	HealthTrail    = Color3.fromRGB(250, 240, 226),
+	Stamina        = Color3.fromRGB(96, 206, 140),
+	Guard          = Color3.fromRGB(96, 170, 236),
+	GuardBroken    = Color3.fromRGB(112, 104, 118),
+	Stun           = Color3.fromRGB(244, 176, 70),
+	StunDanger     = Color3.fromRGB(250, 96, 56),
+	InfusionCharge = Color3.fromRGB(190, 128, 255),
+	TeamRed        = Color3.fromRGB(232, 70, 78),
+	TeamBlue       = Color3.fromRGB(84, 156, 244),
 }
 
 ----------------------------------------------------------------------
 -- 2. Rarezas (color + grosor + símbolo + forma para accesibilidad visual)
 ----------------------------------------------------------------------
 UiTheme.Rarities = {
+	-- 11/11/2026: rarezas de la paleta Eclipse (hueso, espectral, violeta, oro y carmesí)
 	Common = {
-		color = Color3.fromRGB(158, 160, 168),
-		bg = Color3.fromRGB(30, 32, 40),
-		glow = Color3.fromRGB(110, 114, 124),
+		color = Color3.fromRGB(176, 168, 164),
+		bg = Color3.fromRGB(32, 28, 34),
+		glow = Color3.fromRGB(120, 112, 116),
 		symbol = "•",
 		stroke = 1.2,
 		doubleBorder = false,
 	},
 	Rare = {
-		color = Color3.fromRGB(78, 156, 235),
-		bg = Color3.fromRGB(20, 36, 58),
-		glow = Color3.fromRGB(52, 118, 196),
+		color = Color3.fromRGB(80, 200, 232),
+		bg = Color3.fromRGB(16, 40, 50),
+		glow = Color3.fromRGB(44, 140, 176),
 		symbol = "◆",
 		stroke = 1.6,
 		doubleBorder = false,
 	},
 	Epic = {
-		color = Color3.fromRGB(178, 98, 238),
-		bg = Color3.fromRGB(40, 22, 58),
-		glow = Color3.fromRGB(138, 64, 198),
+		color = Color3.fromRGB(186, 104, 255),
+		bg = Color3.fromRGB(42, 20, 62),
+		glow = Color3.fromRGB(140, 64, 214),
 		symbol = "❖",
 		stroke = 2.0,
 		doubleBorder = true,
 	},
 	Legendary = {
-		color = Color3.fromRGB(238, 178, 62),
-		bg = Color3.fromRGB(56, 40, 16),
-		glow = Color3.fromRGB(204, 142, 36),
+		color = Color3.fromRGB(255, 184, 60),
+		bg = Color3.fromRGB(60, 40, 12),
+		glow = Color3.fromRGB(220, 146, 32),
 		symbol = "✦",
 		stroke = 2.4,
 		doubleBorder = true,
@@ -191,14 +200,15 @@ UiTheme.FontFaces = {
 	Number = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
 }
 
+-- 11/11/2026: textos más grandes y legibles (pedido del usuario). Antes 11 · 13 · 15 · 18 · 22 · 28 · 36.
 UiTheme.TextSizes = {
-	XS   = 11,
-	SM   = 13,
-	MD   = 15,
-	LG   = 18,
-	XL   = 22,
-	XXL  = 28,
-	Hero = 36,
+	XS   = 13,
+	SM   = 15,
+	MD   = 17,
+	LG   = 20,
+	XL   = 24,
+	XXL  = 30,
+	Hero = 40,
 }
 
 ----------------------------------------------------------------------
@@ -479,9 +489,10 @@ function UiTheme.button(props)
 		borderCol = UiTheme.Colors.Disabled
 		textCol = UiTheme.Colors.TextMuted
 	elseif variant == "primary" or variant == "gold" then
-		bgBase = Color3.fromRGB(168, 132, 62)
-		bgHover = Color3.fromRGB(198, 158, 78)
-		bgPress = Color3.fromRGB(138, 106, 48)
+		-- 11/11: botón principal carmesí con texto marfil
+		bgBase = Color3.fromRGB(178, 32, 52)
+		bgHover = Color3.fromRGB(214, 48, 68)
+		bgPress = Color3.fromRGB(128, 22, 38)
 		borderCol = UiTheme.Colors.GoldBright
 		textCol = UiTheme.Colors.TextPrimary
 	elseif variant == "success" then
@@ -498,8 +509,8 @@ function UiTheme.button(props)
 		textCol = UiTheme.Colors.TextPrimary
 	elseif selected then
 		bgBase = UiTheme.Colors.BgCardSelected
-		bgHover = Color3.fromRGB(52, 46, 36)
-		bgPress = Color3.fromRGB(32, 28, 22)
+		bgHover = Color3.fromRGB(76, 28, 42)
+		bgPress = Color3.fromRGB(42, 14, 24)
 		borderCol = UiTheme.Colors.GoldBright
 		textCol = UiTheme.Colors.GoldBright
 	else

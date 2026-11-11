@@ -16,6 +16,7 @@ local player = Players.LocalPlayer
 local UiTheme = require(RS:WaitForChild("UiTheme", 10))
 local UiAssets = require(RS:WaitForChild("UiAssets", 10))
 local L = require(RS:WaitForChild("Localization", 10))
+local Device = require(RS:WaitForChild("Device")) -- 11/11: PC, celular o consola
 local Skins = require(RS:WaitForChild("Skins", 10))
 local Weapons = require(RS:WaitForChild("WeaponData", 10))
 local Builder = require(RS:WaitForChild("WeaponBuilder", 10))
@@ -199,13 +200,15 @@ local auraKinds = { "all", "Body", "Weapon" }
 ----------------------------------------------------------------------
 local auraPreviewStage = nil
 local auraTryCleanup = nil
-local auraTrying = 0
+local auraPreviewActive = false
+local auraOrbitConn = nil
+local auraExitButton = nil
 
--- 10/11/2026: AuraFx no tiene preview/clearPreview (solo attach) y el pedestal quedaba a 450 studs bajo
--- tierra, así que nunca se veía nada. Los Beam y partículas no se dibujan en un ViewportFrame, por eso la
--- vista previa ahora es «Probar»: se esconde la tienda, la aura aparece sobre tu propio personaje con la
--- cámara de frente unos segundos y la tienda vuelve a abrirse sola.
-local AURA_TRY_SECONDS = 4
+-- 11/11/2026: vista previa de auras con salida explícita. Antes la cámara volvía sola a los 4 s al tipo que
+-- tenía antes; si tocabas «Probar» dos veces, guardaba la cámara de la vista previa y quedaba trabada ahí.
+-- Ahora la cámara gira despacio alrededor de tu personaje hasta que tocás «Salir de la vista previa»
+-- (o Esc / B del mando) y siempre vuelve a Custom siguiendo a tu Humanoid.
+local AURA_PREVIEW = { Distance = 9, Height = 2.2, FocusY = 0.8, OrbitSpeed = 0.35 }
 
 local function destroyAuraWorldPreview()
 	if auraTryCleanup then
@@ -251,31 +254,75 @@ local function showAuraWorldPreview(auraId)
 	return ok
 end
 
+-- Devuelve la cámara al personaje: Custom y CameraSubject = tu Humanoid. Seguro de llamar varias veces.
+local function restoreCamera()
+	local cam = workspace.CurrentCamera
+	if not cam then return end
+	cam.CameraType = Enum.CameraType.Custom
+	local char = player.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	if hum then cam.CameraSubject = hum end
+end
+
+local function exitAuraPreview(reopen)
+	if auraOrbitConn then auraOrbitConn:Disconnect() auraOrbitConn = nil end
+	if auraExitButton then auraExitButton:Destroy() auraExitButton = nil end
+	destroyAuraWorldPreview()
+	if not auraPreviewActive then return end
+	auraPreviewActive = false
+	restoreCamera()
+	if reopen and opened then
+		panel.Visible = true
+		backdrop.Visible = true
+	end
+end
+
 local function tryAuraOnCharacter(auraId)
 	local cam = workspace.CurrentCamera
 	local char = player.Character
 	local root = char and char:FindFirstChild("HumanoidRootPart")
 	if not cam or not root then return end
+	if auraOrbitConn then auraOrbitConn:Disconnect() auraOrbitConn = nil end
+	if auraExitButton then auraExitButton:Destroy() auraExitButton = nil end
 	if not showAuraWorldPreview(auraId) then return end
-	auraTrying += 1
-	local token = auraTrying
-	local oldType, oldCf = cam.CameraType, cam.CFrame
+	auraPreviewActive = true
 	panel.Visible = false
 	backdrop.Visible = false
 	cam.CameraType = Enum.CameraType.Scriptable
-	local focus = root.Position + Vector3.new(0, 0.8, 0)
-	cam.CFrame = CFrame.lookAt(focus + root.CFrame.LookVector * 9 + Vector3.new(0, 2.2, 0), focus)
-	task.delay(AURA_TRY_SECONDS, function()
-		if token ~= auraTrying then return end
-		destroyAuraWorldPreview()
-		cam.CameraType = oldType
-		if oldType == Enum.CameraType.Scriptable then cam.CFrame = oldCf end
-		if opened then
-			panel.Visible = true
-			backdrop.Visible = true
-		end
+	local angle = 0
+	local look = root.CFrame.LookVector * Vector3.new(1, 0, 1)
+	local baseYaw = math.atan2(look.X, look.Z)
+	auraOrbitConn = RunService.RenderStepped:Connect(function(dt)
+		local r = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if not r then exitAuraPreview(true) return end
+		angle += dt * AURA_PREVIEW.OrbitSpeed
+		local yaw = baseYaw + angle
+		local focus = r.Position + Vector3.new(0, AURA_PREVIEW.FocusY, 0)
+		local offset = Vector3.new(math.sin(yaw), 0, math.cos(yaw)) * AURA_PREVIEW.Distance + Vector3.new(0, AURA_PREVIEW.Height, 0)
+		cam.CFrame = CFrame.lookAt(focus + offset, focus)
 	end)
+	auraExitButton = UiTheme.button({
+		name = "ExitAuraPreview",
+		parent = gui,
+		anchor = Vector2.new(0.5, 1),
+		position = UDim2.new(0.5, 0, 1, -40),
+		size = UDim2.fromOffset(280, 52),
+		text = L.t("ui.aura.exitPreview"),
+		font = "Header",
+		textSize = UiTheme.TextSizes.LG,
+		variant = "gold",
+		zIndex = 60,
+		onClick = function() exitAuraPreview(true) end,
+	})
+	if UIS.GamepadEnabled then GuiService.SelectedObject = auraExitButton end
 end
+
+UIS.InputBegan:Connect(function(input)
+	if auraPreviewActive and (input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB) then
+		exitAuraPreview(true)
+	end
+end)
+player.CharacterRemoving:Connect(function() exitAuraPreview(false) end)
 
 ----------------------------------------------------------------------
 -- Rotación diaria determinista para la sección «Destacado del Día» (D12)
@@ -1407,7 +1454,7 @@ function render()
 		color = C.GoldBright,
 	})
 
-	UiTheme.label({
+	Device.showFor(UiTheme.label({
 		parent = panel,
 		position = UDim2.fromOffset(width - 250, height - 34),
 		size = UDim2.fromOffset(228, 24),
@@ -1416,7 +1463,7 @@ function render()
 		textSize = UiTheme.TextSizes.XS,
 		color = C.TextMuted,
 		alignX = Enum.TextXAlignment.Right,
-	})
+	}), "Gamepad") -- 11/11: solo con mando (Device)
 
 	if UIS.GamepadEnabled and not modal then
 		GuiService.SelectedObject = firstButton
@@ -1453,7 +1500,7 @@ function setOpen(value)
 		panel.Position = UDim2.fromScale(0.5, 0.53)
 	else
 		dismiss()
-		destroyAuraWorldPreview()
+		exitAuraPreview(false)
 		drag = nil
 		stick = Vector2.zero
 		zoomAxis = 0

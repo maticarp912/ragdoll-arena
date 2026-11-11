@@ -202,34 +202,6 @@ ShopRF.OnServerInvoke = function(player, action, id)
  return ok,message
 end
 
--- Keep receipt mappings for previously configured products. Ambiguous IDs cannot grant a cosmetic.
-local receiptProducts = {}
-local function registerReceiptProducts(catalog, isAura)
- for id, item in catalog do
-  local productId = item.productId
-  if productId and productId > E.Zero then
-   local existing = receiptProducts[productId]
-   if existing == nil then
-    receiptProducts[productId] = { id = id, isAura = isAura }
-   elseif existing then
-    receiptProducts[productId] = false
-    warn("[Shop] Duplicate receipt productId: " .. tostring(productId))
-   end
-  end
- end
-end
-registerReceiptProducts(Skins.Data, false)
-registerReceiptProducts(Auras.Data, true)
+-- 11/11/2026: los recibos (skins y auras con productId incluidos) los procesa MonetizationManager,
+-- que es el único dueño de MarketplaceService.ProcessReceipt.
 
-MarketplaceService.ProcessReceipt = function(info)
- local player = Players:GetPlayerByUserId(info.PlayerId)
- local product = receiptProducts[info.ProductId]
- if not player or not product or not PlayerData.get(player) then
-  return Enum.ProductPurchaseDecision.NotProcessedYet
- end
-
- if PlayerData.processReceipt(player, tostring(info.PurchaseId), product.id, product.isAura) then
-  return Enum.ProductPurchaseDecision.PurchaseGranted
- end
- return Enum.ProductPurchaseDecision.NotProcessedYet
-end

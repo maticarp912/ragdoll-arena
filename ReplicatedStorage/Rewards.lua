@@ -19,11 +19,14 @@ local R = {
   StormLesser = { price = 3000, pool = "Storm", order = 3 },
   StormGreater = { price = 6500, pool = "Storm", order = 4 },
   StormRoyal = { price = 12000, pool = "Storm", order = 5 },
+  -- 11/11/2026: sexto cofre, el mejor: siempre Legendaria, de Tormenta o del Eclipse Carmesí (D23).
+  Eclipse = { price = 20000, pools = { "Storm", "Roulette" }, order = 6 },
  },
  StormRarities = {
   StormLesser = { { id = "Rare", weight = 72 }, { id = "Epic", weight = 24 }, { id = "Legendary", weight = 4 } },
   StormGreater = { { id = "Rare", weight = 30 }, { id = "Epic", weight = 55 }, { id = "Legendary", weight = 15 } },
   StormRoyal = { { id = "Epic", weight = 62 }, { id = "Legendary", weight = 38 } },
+  Eclipse = { { id = "Legendary", weight = 100 } },
  },
  Rarities = { { id = "Common", weight = 60 }, { id = "Rare", weight = 28 }, { id = "Epic", weight = 10 }, { id = "Legendary", weight = 2 } },
  GuaranteedRarities = { { id = "Epic", weight = 10 }, { id = "Legendary", weight = 2 } },

@@ -11,7 +11,7 @@ if not folder then
 end
 
 local Remotes = {}
-local classes = { Admin = "RemoteFunction", Shop = "RemoteFunction", Settings = "RemoteFunction", Missions = "RemoteFunction", Rewards = "RemoteFunction", RewardsChanged = "RemoteEvent", RewardAnnouncement = "RemoteEvent" }
+local classes = { Admin = "RemoteFunction", Shop = "RemoteFunction", Settings = "RemoteFunction", Missions = "RemoteFunction", Rewards = "RemoteFunction", Monetization = "RemoteFunction", RewardsChanged = "RemoteEvent", RewardAnnouncement = "RemoteEvent" }
 
 function Remotes.get(name: string, className: string?)
 	className = className or classes[name] or "RemoteEvent"

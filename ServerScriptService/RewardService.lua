@@ -61,11 +61,16 @@ local function profile(player)
 end
 -- 10/11/2026: poolName = Rewards.Boxes[id].pool. Sin pool (Reliquia) quedan afuera las skins solo de caja (boxOnly);
 -- con pool ("Storm") entran solo las de esa caja.
-local function skinPool(rarity, poolName)
+-- 11/11/2026: cada skin pertenece a un grupo: "Storm" (boxOnly), "Roulette" o "Shop". Una caja con pools = {...}
+-- usa esos grupos; con pool = "Storm" solo ese; sin nada (Reliquia), tienda y ruleta (D23).
+local function skinGroup(skin) return skin.boxOnly or (skin.roulette and "Roulette") or "Shop" end
+local DEFAULT_POOLS = { "Shop", "Roulette" }
+local function skinPool(rarity, poolName, pools)
+ local groups = pools or (poolName and { poolName }) or DEFAULT_POOLS
  local pool = {}
  for id, skin in Skins.Data do
   if id ~= "Default" and not skin.comingSoon and skin.currency ~= "Robux" and skin.rarity == rarity
-   and (skin.boxOnly or nil) == poolName then table.insert(pool, id) end
+   and table.find(groups, skinGroup(skin)) then table.insert(pool, id) end
  end
  table.sort(pool) return pool
 end
@@ -173,7 +178,7 @@ function Service.getState(player)
   local rows = probabilities(box.rarities or box.rewards, guaranteed and R.GoodRank or nil)
   if box.rarities then
    for _, row in rows do
-    row.skins = skinPool(row.rarity, box.pool)
+    row.skins = skinPool(row.rarity, box.pool, box.pools)
     row.probabilityPerSkin = #row.skins > 0 and row.probability / #row.skins or 0
    end
   end
@@ -335,7 +340,7 @@ local function act(player, action, id, source)
   if action == "OpenBox" then
    if box.rarities then
     local rarity = weighted(box.rarities, id == "Relic" and d.relicPity >= R.RelicPity - 1 and R.GoodRank or nil)
-    local pool = skinPool(rarity.rarity, box.pool)
+    local pool = skinPool(rarity.rarity, box.pool, box.pools)
     if #pool == 0 then return fail("cx.reward.unavailable") end
     row = { kind = "Skin", id = pool[random:NextInteger(1, #pool)], rarity = rarity.rarity }
    else row = weighted(box.rewards) end

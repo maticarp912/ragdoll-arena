@@ -289,6 +289,34 @@ function PlayerData.processReceipt(player, purchaseId, itemId, aura)
  return ok
 end
 
+-- 11/11/2026 (MonetizationManager): recibo genérico. mutate(copia) aplica la compra; se guarda la copia y,
+-- solo si se pudo guardar, se aplica lo mismo al perfil en memoria. Un recibo repetido devuelve true sin volver a dar.
+function PlayerData.processReceiptWith(player, purchaseId, mutate)
+ while saving[player] do task.wait(E.RetryDelay) end
+ local data = PlayerData.get(player)
+ if not data or closing[player] or not writable[player] then return false end
+ if table.find(data.Receipts, purchaseId) then return true end
+ saving[player] = true
+ local pending = copy(data)
+ if not pcall(mutate, pending) then saving[player] = nil return false end
+ table.insert(pending.Receipts, purchaseId)
+ while #pending.Receipts > E.ReceiptLimit do table.remove(pending.Receipts, E.One) end
+ local ok = persist(player, pending, false)
+ if ok then
+  -- La copia ya quedó guardada con la compra. Si aplicarla en memoria fallara, se toma la copia guardada
+  -- (así el próximo guardado no borra la compra).
+  local applied = pcall(mutate, data)
+  if not applied then
+   warn("[PlayerData] la compra se guardó pero no se pudo aplicar en memoria; se usa la copia guardada")
+   for key, value in pending do data[key] = value end
+  end
+  data.Receipts = pending.Receipts
+  refresh(player)
+ end
+ saving[player] = nil
+ return ok
+end
+
 function PlayerData.equipAura(player, id)
  local data = PlayerData.get(player)
  if not data or (id~="" and not PlayerData.owns(player, "OwnedAuras", id)) then return false end

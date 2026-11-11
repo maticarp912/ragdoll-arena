@@ -23,6 +23,7 @@ local player = Players.LocalPlayer
 local UiTheme = require(RS:WaitForChild("UiTheme", 10))
 local UiAssets = require(RS:WaitForChild("UiAssets", 10))
 local L = require(RS:WaitForChild("Localization", 10))
+local Device = require(RS:WaitForChild("Device")) -- 11/11: PC, celular o consola
 local Skins = require(RS:WaitForChild("Skins", 10))
 local Weapons = require(RS:WaitForChild("WeaponData", 10))
 local Builder = require(RS:WaitForChild("WeaponBuilder", 10))
@@ -2139,7 +2140,7 @@ function render()
 		color = C.GoldBright,
 	})
 
-	UiTheme.label({
+	Device.showFor(UiTheme.label({
 		parent = panel,
 		position = UDim2.fromOffset(width - 240, height - 34),
 		size = UDim2.fromOffset(220, 24),
@@ -2148,7 +2149,7 @@ function render()
 		textSize = UiTheme.TextSizes.XS,
 		color = C.TextMuted,
 		alignX = Enum.TextXAlignment.Right,
-	})
+	}), "Gamepad") -- 11/11: solo con mando (Device)
 
 	if UIS.GamepadEnabled and firstTabBtn and not subModal then
 		local focusedBox = boxScroller and focusedBoxButtonName and boxScroller:FindFirstChild(focusedBoxButtonName, true)
