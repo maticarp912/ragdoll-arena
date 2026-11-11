@@ -10,7 +10,9 @@ return {
  LoadAttempts = 5, LoadRetryDelay = 2, -- Claude: hasta ~20 s de reintentos al cargar el perfil antes de expulsar
  SaveDebounce = 6, -- Claude: opciones, idioma y auras se agrupan en un solo guardado cada 6 s (evita saturar el DataStore)
  Zero = 0, One = 1, DebugAmounts = { Small = 500, Medium = 2000, Large = 5000 },
- Options = { MusicVolume = { default = 1, min = 0, max = 1, attr = "OptMusic" }, SfxVolume = { default = 1, min = 0, max = 1, attr = "OptSfx" }, CameraShake = { default = 1, min = 0, max = 1, attr = "OptShake" }, UiScale = { default = 1, min = 0.8, max = 1.2, attr = "OptUiScale" } },
+ Options = { MusicVolume = { default = 1, min = 0, max = 1, attr = "OptMusic" }, SfxVolume = { default = 1, min = 0, max = 1, attr = "OptSfx" }, CameraShake = { default = 1, min = 0, max = 1, attr = "OptShake" }, UiScale = { default = 1, min = 0.8, max = 1.2, attr = "OptUiScale" },
+  -- 11/11/2026: contador de FPS (0 = oculto, 1 = visible) y efectos visuales (0 = reducidos, 1 = completos)
+  ShowFps = { default = 0, min = 0, max = 1, attr = "OptFps" }, Effects = { default = 1, min = 0, max = 1, attr = "OptFx" } },
  DaySeconds = 86400, LeaderboardInterval = 60, LeaderboardSize = 10,
  TouchLayout = { MaxButtons = 11, MinX = -140, MaxX = 372, MinY = -80, MaxY = 342, MinScale = 0.75, MaxScale = 1.4,
   Actions = { Attack = true, Heavy = true, Block = true, Dodge = true, Interact = true, Kick = true, Infuse = true, LockOn = true, SwitchTarget = true, Menu = true, Armory = true } },

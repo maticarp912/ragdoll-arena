@@ -241,7 +241,8 @@ updateArenaLighting()
 ----------------------------------------------------------------------
 RunService.RenderStepped:Connect(function(dt)
 	local t = os.clock()
-	for _, r in rocks do
+	-- 11/11 (rendimiento): con efectos reducidos las rocas de fondo no orbitan
+	for _, r in (player:GetAttribute("OptFx") == 0 and {} or rocks) do
 		r.angle += r.speed * dt
 		local pos = r.center + Vector3.new(
 			math.cos(r.angle) * r.orbit,

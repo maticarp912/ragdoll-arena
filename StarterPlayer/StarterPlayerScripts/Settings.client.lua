@@ -92,7 +92,7 @@ veil.BorderSizePixel = 0
 veil.Visible = false
 veil.Parent = gui
 
-local BASE_W, BASE_H = 820, 580
+local BASE_W, BASE_H = 820, 720 -- 11/11: más alto para las opciones de rendimiento
 local panel = UiTheme.panel({
 	name = "SettingsPanel",
 	parent = gui,
@@ -119,6 +119,8 @@ local options = {
 	SfxVolume = 1,
 	CameraShake = 1,
 	UiScale = 1,
+	ShowFps = 0,
+	Effects = 1,
 }
 local capturing = nil
 local busy = false
@@ -129,6 +131,8 @@ local function syncOptionsFromAttributes()
 	options.SfxVolume = tonumber(player:GetAttribute("OptSfx")) or options.SfxVolume or 1
 	options.CameraShake = tonumber(player:GetAttribute("OptShake")) or options.CameraShake or 1
 	options.UiScale = tonumber(player:GetAttribute("OptUiScale")) or options.UiScale or 1
+	options.ShowFps = tonumber(player:GetAttribute("OptFps")) or options.ShowFps or 0
+	options.Effects = tonumber(player:GetAttribute("OptFx")) or options.Effects or 1
 	topBtnScale.Scale = options.UiScale
 end
 syncOptionsFromAttributes()
@@ -162,6 +166,8 @@ local function updateOption(key, newVal)
 		SfxVolume = options.SfxVolume,
 		CameraShake = options.CameraShake,
 		UiScale = options.UiScale,
+		ShowFps = options.ShowFps,
+		Effects = options.Effects,
 	}
 	payload[key] = newVal
 	options[key] = newVal
@@ -187,6 +193,9 @@ local OPTION_ROWS = {
 	{ key = "SfxVolume",   labelKey = "ui.settings.sfx",   min = 0, max = 1, step = 0.1, isScale = false },
 	{ key = "CameraShake", labelKey = "ui.settings.shake", min = 0, max = 1, step = 0.1, isScale = false },
 	{ key = "UiScale",     labelKey = "ui.settings.uiScale", min = 0.8, max = 1.2, step = 0.05, isScale = true },
+	-- 11/11: interruptores (paso 1): el texto de la barra dice Apagado/Encendido o Reducidos/Completos
+	{ key = "ShowFps",     labelKey = "ui.settings.fps", min = 0, max = 1, step = 1, labels = { "ui.settings.off", "ui.settings.on" } },
+	{ key = "Effects",     labelKey = "ui.settings.effects", min = 0, max = 1, step = 1, labels = { "ui.settings.fxLow", "ui.settings.fxHigh" } },
 }
 
 function render(messageKey)
@@ -296,7 +305,7 @@ function render(messageKey)
 
 		-- Controles deslizantes por pasos (compatibles con ratón, táctil y mando)
 		for idx, spec in OPTION_ROWS do
-			local y = 200 + (idx - 1) * 76
+			local y = 200 + (idx - 1) * 72
 			local rowCard = UiTheme.panel({
 				parent = panel,
 				position = UDim2.fromOffset(22, y),
@@ -307,7 +316,8 @@ function render(messageKey)
 
 			local curVal = options[spec.key] or 1
 			local frac = math.clamp((curVal - spec.min) / (spec.max - spec.min), 0, 1)
-			local pctText = ("%d%%"):format(math.floor(curVal * 100 + 0.5))
+			local pctText = spec.labels and L.t(spec.labels[math.floor(curVal + 0.5) + 1] or spec.labels[1])
+				or ("%d%%"):format(math.floor(curVal * 100 + 0.5))
 
 			UiTheme.label({
 				parent = rowCard,
@@ -629,11 +639,15 @@ L.Changed:Connect(function()
 	if panel.Visible then render() end
 end)
 
+-- 11/11: solo se recalcula cuando cambia la pantalla o la escala elegida (antes en cada frame)
+local lastScaleKey = nil
 RunService.Heartbeat:Connect(function()
 	local cam = workspace.CurrentCamera
-	if cam then
-		scale.Scale = UiTheme.computeScale(cam.ViewportSize, BASE_W, BASE_H, player)
-	end
+	if not cam then return end
+	local key = tostring(cam.ViewportSize) .. tostring(player:GetAttribute("OptUiScale"))
+	if key == lastScaleKey then return end
+	lastScaleKey = key
+	scale.Scale = UiTheme.computeScale(cam.ViewportSize, BASE_W, BASE_H, player)
 end)
 
 -- Al iniciar la sesión, pedimos GetOptions para sincronizar volúmenes y escala guardados

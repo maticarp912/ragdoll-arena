@@ -215,9 +215,13 @@ local function attach(model)
 	shade.Rotation = 90
 	shade.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 140, 150))
 	shade.Parent = name
+	local lastSmoke = 0
 	table.insert(a.conns, game:GetService("RunService").Heartbeat:Connect(function()
-		if not gui.Enabled then return end
+		-- 11/11 (rendimiento): 15 veces por segundo y nada con efectos reducidos
+		if not gui.Enabled or Players.LocalPlayer:GetAttribute("OptFx") == 0 then return end
 		local t = os.clock()
+		if t - lastSmoke < 1 / 15 then return end
+		lastSmoke = t
 		shade.Offset = Vector2.new(0, math.sin(t * 1.4) * 0.18)
 		smoke.BackgroundTransparency = 0.15 + 0.12 * math.sin(t * 0.9)
 	end))

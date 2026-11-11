@@ -102,13 +102,16 @@ local function recenter(at)
 	workspace:BulkMoveTo(parts, cframes, Enum.BulkMoveMode.FireCFrameChanged)
 end
 
+local lastTwinkle = 0
 RunService.RenderStepped:Connect(function()
 	local cam = workspace.CurrentCamera
 	if not cam then return end
 	local pos = cam.CFrame.Position
 	if not center or (pos - center).Magnitude > S.FollowDistance then recenter(pos) end
-	-- Titileo de una parte de las estrellas
+	-- Titileo de una parte de las estrellas. 11/11 (rendimiento): 15 veces por segundo, y nada con efectos reducidos
 	local t = os.clock()
+	if t - (lastTwinkle or 0) < 1 / 15 or Players.LocalPlayer:GetAttribute("OptFx") == 0 then return end
+	lastTwinkle = t
 	for _, tw in twinkles do
 		tw.part.Transparency = (math.sin(t * tw.speed + tw.phase) * 0.5 + 0.5) * S.TwinkleDepth
 	end

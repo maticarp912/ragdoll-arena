@@ -24,15 +24,22 @@ Collection:GetInstanceRemovedSignal("FloatingRock"):Connect(function(p)
 	rocks[p] = nil
 end)
 
+-- 11/11 (rendimiento): todas las rocas se mueven de una vez (BulkMoveTo) y quietas con efectos reducidos
+local player = game:GetService("Players").LocalPlayer
+local movedParts, movedCFrames = {}, {}
 RunService.RenderStepped:Connect(function()
+	if player:GetAttribute("OptFx") == 0 then return end
 	local t = workspace:GetServerTimeNow() * Config.RockSpeed
+	table.clear(movedParts) table.clear(movedCFrames)
 	for p, cf in rocks do
 		if p.Parent then
 			local phase = t + cf.Position.X
-			p.CFrame = cf
+			table.insert(movedParts, p)
+			table.insert(movedCFrames, cf
 				* CFrame.new(N.Zero, math.sin(phase) * Config.RockBob, N.Zero)
-				* CFrame.Angles(math.cos(phase) * Config.RockRoll, N.Zero, math.sin(phase) * Config.RockRoll)
+				* CFrame.Angles(math.cos(phase) * Config.RockRoll, N.Zero, math.sin(phase) * Config.RockRoll))
 		end
 	end
+	if #movedParts > 0 then workspace:BulkMoveTo(movedParts, movedCFrames, Enum.BulkMoveMode.FireCFrameChanged) end
 end)
 

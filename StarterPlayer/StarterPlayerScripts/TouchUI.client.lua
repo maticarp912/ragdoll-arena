@@ -465,7 +465,14 @@ end)
 Device.Changed:Connect(updateVisibilityAndScale)
 player:GetAttributeChangedSignal("MenuOpen"):Connect(updateVisibilityAndScale)
 player:GetAttributeChangedSignal("OptUiScale"):Connect(updateVisibilityAndScale)
-RunService.Heartbeat:Connect(updateVisibilityAndScale)
+-- 11/11 (rendimiento): 10 veces por segundo en vez de cada frame
+local touchAcc = 0
+RunService.Heartbeat:Connect(function(dt)
+	touchAcc += dt
+	if touchAcc < 0.1 then return end
+	touchAcc = 0
+	updateVisibilityAndScale()
+end)
 updateVisibilityAndScale()
 
 L.Changed:Connect(function()

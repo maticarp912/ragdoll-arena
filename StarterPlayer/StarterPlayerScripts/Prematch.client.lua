@@ -505,9 +505,13 @@ L.Changed:Connect(function()
 	refreshPhaseState()
 end)
 
+local lastPrematchKey = nil
 RunService.RenderStepped:Connect(function()
 	local cam = workspace.CurrentCamera
-	if cam then
+	-- 11/11 (rendimiento): la escala solo se recalcula si cambia la pantalla
+	local key = cam and (tostring(cam.ViewportSize) .. tostring(player:GetAttribute("OptUiScale")))
+	if cam and key ~= lastPrematchKey then
+		lastPrematchKey = key
 		local sc = UiTheme.computeScale(cam.ViewportSize, 1020, 620, player)
 		topScale.Scale = sc
 		dockScale.Scale = sc

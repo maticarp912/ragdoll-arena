@@ -70,8 +70,18 @@ end)
 ----------------------------------------------------------------------
 -- Marcador de la arena: solo en el lobby
 ----------------------------------------------------------------------
-RunService.RenderStepped:Connect(function()
-	local marker = workspace:FindFirstChild("ArenaMarker", true)
-	if marker then marker.Enabled = player:GetAttribute("InMatch") ~= true end
+-- 11/11/2026 (rendimiento): antes buscaba ArenaMarker en TODO el workspace en cada frame. Ahora se busca
+-- una vez por segundo como mucho y solo cambia cuando cambia InMatch.
+local arenaMarker = nil
+local function updateMarker()
+	if not arenaMarker or not arenaMarker.Parent then arenaMarker = workspace:FindFirstChild("ArenaMarker", true) end
+	if arenaMarker then arenaMarker.Enabled = player:GetAttribute("InMatch") ~= true end
+end
+player:GetAttributeChangedSignal("InMatch"):Connect(updateMarker)
+task.spawn(function()
+	while true do
+		if not arenaMarker or not arenaMarker.Parent then updateMarker() end
+		task.wait(1)
+	end
 end)
 

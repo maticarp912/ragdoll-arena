@@ -819,7 +819,11 @@ L.Changed:Connect(function()
 	if activeModal then renderModal() end
 end)
 
-RunService.Heartbeat:Connect(function()
+local barAcc = 0 -- 11/11 (rendimiento): 5 veces por segundo en vez de cada frame
+RunService.Heartbeat:Connect(function(dt)
+	barAcc += dt
+	if barAcc < 0.2 then return end
+	barAcc = 0
 	if gui.Enabled then
 		refreshBar()
 		if activeModal == "Missions" and missionsData then
