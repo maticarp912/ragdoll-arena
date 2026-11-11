@@ -54,7 +54,7 @@ return {
 		["infusionMotto.Ice"] = "Escarcha · Ralentiza y vuelve frágil al rival",
 		["infusionMotto.Shadow"] = "Velo · Castigo letal desde las sombras",
 		["ui.infusion.beats"] = "Ventaja contra: {target}",
-		["ui.infusion.weak"] = "Débil contra: {target}",
+		["ui.infusion.weak"] = "Débil contra: {target} (si las dos están encendidas)",
 
 		-- Clasificatorias (Próximamente)
 		["ui.ranked.title"] = "CLASIFICATORIAS — PRÓXIMAMENTE",
@@ -346,7 +346,7 @@ return {
 		["infusionMotto.Ice"] = "Frost · Slows and shatters enemy resilience",
 		["infusionMotto.Shadow"] = "Veil · Lethal strikes from the shadows",
 		["ui.infusion.beats"] = "Strong vs: {target}",
-		["ui.infusion.weak"] = "Weak vs: {target}",
+		["ui.infusion.weak"] = "Weak vs: {target} (when both are active)",
 
 		-- Clasificatorias (Próximamente)
 		["ui.ranked.title"] = "RANKED — COMING SOON",
@@ -638,7 +638,7 @@ return {
 		["infusionMotto.Ice"] = "Geada · Desacelera e torna o rival frágil",
 		["infusionMotto.Shadow"] = "Véu · Punição letal a partir das sombras",
 		["ui.infusion.beats"] = "Vantagem contra: {target}",
-		["ui.infusion.weak"] = "Fraco contra: {target}",
+		["ui.infusion.weak"] = "Fraco contra: {target} (se as duas estiverem ativas)",
 
 		-- Clasificatorias (Próximamente)
 		["ui.ranked.title"] = "RANQUEADAS — EM BREVE",

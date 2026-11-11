@@ -3,6 +3,7 @@
 -- Mientras está activa, el efecto se aplica a los golpes básicos (M1) y a los fuertes.
 -- Cada una tiene ventajas (mods sobre ti), efectos al golpear (sobre el rival) y un coste.
 -- Contras en ciclo (piedra-papel-tijera): Fuego > Rayo > Hielo > Sombra > Fuego.
+-- 11/11/2026: solo cuentan en una «pelea de infusiones» (las dos encendidas). Apagada, no hace nada en el PvP.
 -- Todo valor es una propuesta a calibrar. Sangre y Veneno quedan para más adelante (solo datos).
 
 local Theme = require(script.Parent:WaitForChild("Theme"))
@@ -15,7 +16,7 @@ Infusions.Duration = 12          -- segundos activa
 Infusions.Exhaust = 5            -- segundos sin ganar carga tras apagarse
 Infusions.ActivateTime = 0.5     -- animación de encendido (no se puede atacar durante ella)
 Infusions.InfusedHeavyUnblockable = true -- el fuerte infundido es imbloqueable (parreable y esquivable)
-Infusions.Affinity = 0.08        -- ±8 % de daño y Stun según el emparejamiento
+Infusions.Affinity = 0.08        -- ±8 % de daño y Stun según el emparejamiento (solo con las dos infusiones encendidas)
 
 -- A quién gana cada una (y por tanto, quién le gana a ella)
 Infusions.Beats = { Fire = "Lightning", Lightning = "Ice", Ice = "Shadow", Shadow = "Fire" }

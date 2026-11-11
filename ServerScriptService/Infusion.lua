@@ -151,7 +151,9 @@ Combat.hooks.damageMods = function(attacker, victim, hit)
 	local def, id = activeDef(attacker)
 	if not def then return dm, sm end
 
-	local m = Infusions.matchup(id, victim:GetAttribute("InfusionId"))
+	-- 11/11/2026: «pelea de infusiones». La ventaja o debilidad solo cuenta si el rival también tiene la suya
+	-- encendida. Una infusión apagada no tiene ningún efecto en el PvP.
+	local m = victim:GetAttribute("InfusionActive") == true and Infusions.matchup(id, victim:GetAttribute("InfusionId")) or 0
 	if m ~= 0 then
 		dm *= 1 + m * Infusions.Affinity
 		sm *= 1 + m * Infusions.Affinity
