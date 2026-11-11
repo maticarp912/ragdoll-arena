@@ -105,6 +105,11 @@ function Infusion.deactivate(char)
 	if base then char:SetAttribute("GuardMax", base) end
 	Combat.refreshSpeed(char)
 	Fx.soundAt("Infusion." .. tostring(char:GetAttribute("InfusionId")) .. ".End", char, 0.8)
+	-- 11/11/2026: si elegiste otra infusión mientras esta estaba encendida, ahora se aplica la elegida
+	-- (antes el personaje se quedaba con la vieja, casi siempre Fuego)
+	local player = Players:GetPlayerFromCharacter(char)
+	local chosen = player and player:GetAttribute("InfusionId")
+	if chosen and chosen ~= char:GetAttribute("InfusionId") then char:SetAttribute("InfusionId", chosen) end
 end
 
 -- Sombra: tras esquivar, el siguiente golpe es más fuerte

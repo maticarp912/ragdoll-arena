@@ -152,6 +152,9 @@ local function shopAction(player, action, id)
 		local char = player.Character
 		if char and not char:GetAttribute("InfusionActive") then
 			char:SetAttribute("InfusionId", id)
+		elseif char then
+			-- 11/11: encendida ahora mismo; se cambia cuando se apague (Infusion.deactivate). Se avisa.
+			return true, { key = "infusion.afterActive" }
 		end
 		return true, { key = "infusion." .. id }
 
