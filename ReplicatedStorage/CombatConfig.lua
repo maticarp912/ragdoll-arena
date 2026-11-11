@@ -81,6 +81,9 @@ CombatConfig.Dodge = {
 	-- 9/11: combate más ágil. La esquiva cancela la recuperación de un golpe básico o de la patada
 	-- (después del impacto), y un M1 pulsado durante la esquiva sale apenas termina.
 	CancelsRecovery = true,
+	-- 11/11/2026: se puede atacar (básico o fuerte) apenas pasó este tiempo desde que empezó el dash, sin esperar a
+	-- que termine: el golpe corta el final del dash y sale al instante.
+	AttackCancelAfter = 0.12,
 	CancelsHeavy = true,       -- esquivar cancela la preparación del fuerte (finta)
 	AfterSlowMult = 0.8,       -- al terminar el dash: velocidad reducida... (9/11: era 0.6)
 	AfterSlowTime = 0.25,      -- ...durante este tiempo (s) (9/11: era 0.35)
@@ -101,6 +104,11 @@ CombatConfig.Spacing = {
 	SlideSpeed = 18,           -- velocidad con la que te bajan si quedaste encima
 	SlideDown = 22,            -- velocidad hacia abajo al bajarte
 }
+
+-- 11/11/2026: el derribo depende de la vida del rival. Con poca vida la barra de aturdimiento se llena más
+-- rápido; con mucha, cuesta más. Multiplicador = full con la vida llena, empty con la vida en 0 (lineal).
+-- Cada arma puede tener su curva en WeaponData.stunVsHealth (las pesadas derriban bien aunque tenga vida).
+CombatConfig.StunByHealth = { full = 0.6, empty = 1.4 }
 
 CombatConfig.Kick = {
 	Windup = 0.28, Recovery = 0.4, Cooldown = 1.4,

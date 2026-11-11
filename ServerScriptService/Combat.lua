@@ -670,7 +670,12 @@ local function doHit(attacker, victim, hit, damage)
 	end
 
 	local knockVel = dir * CFG.Knockdown.Knockback + Vector3.new(0, 14, 0)
-	Combat.addStun(victim, (hit.stun or 0) * (attacker:GetAttribute("StunMult") or 1), knockVel)
+	-- 11/11/2026: cuanto menos vida tiene el rival, más fácil derribarlo (curva por arma del atacante)
+	local curve = WeaponData.StunVsHealth[attacker:GetAttribute("WeaponId") or "Sword"] or CFG.StunByHealth
+	local vHum = victim:FindFirstChildOfClass("Humanoid")
+	local hpFrac = vHum and math.clamp(vHum.Health / math.max(1, vHum.MaxHealth), 0, 1) or 1
+	local healthMult = curve.empty + (curve.full - curve.empty) * hpFrac
+	Combat.addStun(victim, (hit.stun or 0) * (attacker:GetAttribute("StunMult") or 1) * healthMult, knockVel)
 	if not victim:GetAttribute("Ragdolled") then
 		push(victim, dir * (hit.knockback or 0) + Vector3.new(0, 2, 0))
 	end

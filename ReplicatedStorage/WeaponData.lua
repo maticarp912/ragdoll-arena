@@ -167,6 +167,17 @@ WeaponData.Data = {
 --   Estoque  5 básicos, o 3 básicos + 1 fuerte (entre espada y dagas)  (20 / 40)
 --   Dagas    6 básicos, o 4 básicos + 1 fuerte          (16 / 32)
 -- Antes: 6/20, 10/28, 11/30, 5/16 y 4/14.
+-- 11/11/2026: curva de derribo según la vida del rival (ver CombatConfig.StunByHealth).
+-- full = multiplicador con el rival a vida llena · empty = con el rival casi muerto.
+-- Espadón y maza derriban bien aunque el rival tenga vida; dagas y estoque casi solo cuando ya está bajo.
+WeaponData.StunVsHealth = {
+	Sword = { full = 0.65, empty = 1.35 },
+	Greatsword = { full = 0.9, empty = 1.3 },
+	Mace = { full = 0.95, empty = 1.3 },
+	Rapier = { full = 0.55, empty = 1.35 },
+	Dagger = { full = 0.5, empty = 1.4 },
+}
+
 WeaponData.Stamina = {
 	Sword = { m1 = 25, heavy = 50 },
 	Greatsword = { m1 = 33, heavy = 67 },

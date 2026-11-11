@@ -116,10 +116,20 @@ end
 ----------------------------------------------------------------------
 -- M1: combo de 3 golpes (no rompe guardia; drena Guardia)
 ----------------------------------------------------------------------
+-- 11/11/2026: atacar corta el final del dash (CombatConfig.Dodge.AttackCancelAfter)
+local function dashCancel(char, st, t)
+	if st.action == "Dodge" and st.busyUntil > t and t - (st.dodgeStartAt or 0) >= CFG.Dodge.AttackCancelAfter then
+		Combat.cancelAction(char)
+		return true
+	end
+	return false
+end
+
 function Actions.m1(char)
 	if not Combat.canAct(char) then return false end
 	local st = Combat.state(char)
 	local t = now()
+	dashCancel(char, st, t)
 
 	if st.busyUntil > t then
 		-- Buffer: si estás terminando un golpe, encola el siguiente
@@ -236,6 +246,7 @@ function Actions.heavy(char)
 	if not Combat.canAct(char) then return false end
 	local st = Combat.state(char)
 	local t = now()
+	dashCancel(char, st, t)
 	if st.busyUntil > t or t < st.heavyReadyAt then return false end
 	if not Combat.spendStamina(char, WeaponData.staminaCost(char:GetAttribute("WeaponId"), "heavy")) then return false end
 
@@ -499,6 +510,7 @@ function Actions.dodge(char, dir, target)
 	local distance = D.Distance * (mobility.dodgeDistance or 1) * (char:GetAttribute("DodgeDistanceMult") or 1)
 	local iframes = D.IFrames + (char:GetAttribute("DodgeIFrameBonus") or 0)
 	local token = Combat.beginAction(char, "Dodge", D.Duration + D.Recovery, "Active")
+	st.dodgeStartAt = t
 	st.dodgeReadyAt = t + D.Cooldown
 	st.comboStep = 0
 	char:SetAttribute("IFrameUntil", t + iframes)
