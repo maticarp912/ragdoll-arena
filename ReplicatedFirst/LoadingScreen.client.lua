@@ -182,11 +182,25 @@ local function safeFont(name)
 	return name == "GrenzeGotisch" and Enum.Font.Garamond or Enum.Font.GothamMedium
 end
 title.Font = safeFont("GrenzeGotisch") -- 10/11: tipografía nueva
-title.Text = "RAGDOLL ARENA"
+-- 11/11/2026: mismo nombre que la página de Roblox «[BETA] Dark Fantasy Plataforme 2v2 1v1 PVP»
+title.Text = "DARK FANTASY PLATAFORME"
 title.TextColor3 = C.GoldBright
 title.TextSize = 46
+title.TextScaled = true
+local titleMax = Instance.new("UITextSizeConstraint") titleMax.MaxTextSize = 46 titleMax.Parent = title
 title.TextStrokeTransparency = 0.35
 title.Parent = root
+
+local tagline = Instance.new("TextLabel")
+tagline.AnchorPoint = Vector2.new(0.5, 1)
+tagline.Position = UDim2.new(0.5, 0, 0.50, -4)
+tagline.Size = UDim2.new(0.8, 0, 0, 22)
+tagline.BackgroundTransparency = 1
+tagline.Font = safeFont("BuilderSansBold")
+tagline.Text = "[BETA]  ·  2V2  ·  1V1  ·  PVP"
+tagline.TextColor3 = C.TextSecondary
+tagline.TextSize = 16
+tagline.Parent = root
 
 local subtitle = Instance.new("TextLabel")
 subtitle.AnchorPoint = Vector2.new(0.5, 0)
