@@ -85,3 +85,10 @@ Respondé con la verdad. Para este juego:
 2. Comprobá que tus datos (almas, skins) se guardan entre partidas.
 3. Probá desde el celular (Mateito).
 4. Mirá «Datos analíticos» en unos días: retención D1/D7 y compras.
+
+## Si publicar se traba (11/11/2026, así se publicó la 0.2)
+Publicar el .rbxlx entero se colgaba. Se hizo así:
+1. `node tools/make_pack.js . "Paquete juego.rbxmx"` (todos los scripts en una carpeta __PACK).
+2. En Studio, abrir la experiencia publicada desde Roblox → Archivo → Importar modelos Roblox → ese archivo.
+3. En la barra de comandos, mover el contenido de __PACK a ReplicatedStorage, ServerScriptService, StarterPlayerScripts y ReplicatedFirst (comando en el historial de la sesión), y sacar __PACK.
+4. Archivo → Publicar. Salió como versión 7.
