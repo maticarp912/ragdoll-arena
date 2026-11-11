@@ -459,21 +459,10 @@ local function ownAuras()
 end
 
 
+-- 11/11/2026: píldora de saldo compartida (ReplicatedStorage/BalancePill)
+local BalancePillModule = require(RS:WaitForChild("BalancePill"))
 local function balancePill(parent, position, size, kind, amount, getGems)
-	local gems = kind == "Gems"
-	local tint = gems and C.Guard or C.Coins
-	local pill = UiTheme.panel({ parent = parent, position = position, size = size,
-		anchor = Vector2.new(1, 0.5), bg = C.BgAbyss, borderColor = tint, radius = UiTheme.Radius.Pill })
-	local icon = UiAssets.icon(pill, gems and "gem" or "soul", 18, tint) -- 11/11: arte de moneda y alma
-	icon.AnchorPoint = Vector2.new(0, 0.5) icon.Position = UDim2.new(0, 8, 0.5, 0)
-	UiTheme.label({ parent = pill, position = UDim2.fromOffset(30, 0), size = UDim2.new(1, gems and -78 or -38, 1, 0),
-		text = L.t(gems and "mz.gemsAmount" or "ui.souls", { amount = amount }), font = "Number", scaled = true,
-		textSize = UiTheme.TextSizes.SM, minTextSize = 10, color = tint, alignX = Enum.TextXAlignment.Center })
-	if gems then
-		UiTheme.button({ name = "GetGems", parent = pill, anchor = Vector2.new(1, 0.5),
-			position = UDim2.fromScale(1, 0.5), size = UDim2.fromOffset(42, 44), text = "+",
-			textColor = tint, variant = "secondary", onClick = getGems })
-	end
+	return BalancePillModule.create(parent, position, size, kind, amount, getGems)
 end
 
 local function pending(item)
