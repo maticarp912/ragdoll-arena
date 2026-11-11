@@ -189,6 +189,38 @@ local function attach(model)
 	name.TextStrokeTransparency = N.Value_0_35
 	name.TextColor3 = C.Bone
 	name.Parent = gui
+	-- 11/11/2026: efecto de oscuridad. Humo negro detrás del nombre y una sombra que respira sobre el texto.
+	local smoke = Instance.new("Frame")
+	smoke.Name = "DarkSmoke"
+	smoke.AnchorPoint = Vector2.new(N.Half, N.Half)
+	smoke.Position = UDim2.new(N.Half, N.Zero, N.Zero, N.Value_22 + 8)
+	smoke.Size = UDim2.new(N.One, 12, N.Zero, 22)
+	smoke.BackgroundColor3 = Color3.new(0, 0, 0)
+	smoke.BorderSizePixel = N.Zero
+	smoke.ZIndex = N.Zero
+	smoke.Parent = gui
+	local smokeFade = Instance.new("UIGradient")
+	smokeFade.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.25, 0.45),
+		NumberSequenceKeypoint.new(0.75, 0.45), NumberSequenceKeypoint.new(1, 1),
+	})
+	smokeFade.Parent = smoke
+	name.ZIndex = N.Two
+	-- nombres largos con rangos: se achica el texto en vez de cortarse (máximo 15)
+	name.TextScaled = true
+	local nameMax = Instance.new("UITextSizeConstraint") nameMax.MaxTextSize = N.Value_15 nameMax.MinTextSize = 8 nameMax.Parent = name
+	name.TextStrokeColor3 = Color3.fromRGB(10, 0, 4)
+	name.TextStrokeTransparency = 0.1
+	local shade = Instance.new("UIGradient")
+	shade.Rotation = 90
+	shade.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 140, 150))
+	shade.Parent = name
+	table.insert(a.conns, game:GetService("RunService").Heartbeat:Connect(function()
+		if not gui.Enabled then return end
+		local t = os.clock()
+		shade.Offset = Vector2.new(0, math.sin(t * 1.4) * 0.18)
+		smoke.BackgroundTransparency = 0.15 + 0.12 * math.sin(t * 0.9)
+	end))
 
 	local hpFill = bar(gui, N.Value_40, N.Value_8, C.Health)
 	local stunFill = bar(gui, N.Value_50, N.Value_5, C.Stun)
@@ -223,18 +255,19 @@ local function attach(model)
 			name.Text = L.t("dummy", { mode = L.t("dummy." .. (workspace:GetAttribute("DummyMode") or "Idle")) })
 			name.TextColor3 = C.BoneDim
 		else
+			-- 11/11/2026: «Nombre [OWNER][VIP]»: el nombre primero y los rangos después, cada uno con su color.
+			-- El título (por ejemplo «El Rey Muerto») no va acá: va en la tarjeta (CallingCard.client).
 			local display = player and player.DisplayName or model.Name
-			if player and player:GetAttribute("Pass_VIP") == true then display = "♛ " .. display end
+			local tags = ""
 			local role = player and player:GetAttribute("Role")
-			if type(role) == "string" and not HIDDEN_ROLES[role] then
-				-- [ROL] Nombre: el rol con su color, el nombre con el del equipo
-				name.RichText = true
-				name.Text = ('<font color="#%s">[%s]</font> %s'):format(roleColor(role):ToHex(),
-					escapeRich(string.upper(roleText(role))), escapeRich(display))
-			else
-				name.RichText = false
-				name.Text = display
+			if type(role) == "string" and not HIDDEN_ROLES[role] and role ~= "VIP" and role ~= "Nuevo" then
+				tags ..= ('<font color="#%s">[%s]</font>'):format(roleColor(role):ToHex(), escapeRich(string.upper(roleText(role))))
 			end
+			if player and (player:GetAttribute("Pass_VIP") == true or role == "VIP") then
+				tags ..= ('<font color="#%s">[VIP]</font>'):format(roleColor("VIP"):ToHex())
+			end
+			name.RichText = true
+			name.Text = escapeRich(display) .. (tags ~= "" and (" " .. tags) or "")
 			name.TextColor3 = teamColorOf(model) or C.Bone
 		end
 	end

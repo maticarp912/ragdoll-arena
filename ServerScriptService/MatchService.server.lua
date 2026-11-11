@@ -27,6 +27,7 @@ local E = require(ReplicatedStorage:WaitForChild("Economy"))
 local RunService = game:GetService("RunService")
 local RoleService = require(ServerScriptService:WaitForChild("RoleService"))
 local Progression = require(ServerScriptService:WaitForChild("ProgressionService"))
+local Party = require(ServerScriptService:WaitForChild("PartyService")) -- 11/11: party de 2
 require(ServerScriptService:WaitForChild("AdminService"))
 local function phase(name, duration, group)
  local ends = workspace:GetServerTimeNow() + (duration or 0)
@@ -306,7 +307,12 @@ local function runRound(roundNumber: number, modeName: string, teamsMap)
  local lastEliminated
  local function eliminate(f, at)
   if f.eliminatedAt then return end
-  f.eliminatedAt = at f.player:SetAttribute("Eliminated", true)
+  f.eliminatedAt = at
+  -- 11/11: quién lo eliminó (la tarjeta de título del que te eliminó, estilo Call of Duty)
+  local killerChar = f.player.Character and CombatEvents.lastAttacker(f.player.Character)
+  local killer = killerChar and Players:GetPlayerFromCharacter(killerChar)
+  f.player:SetAttribute("EliminatedBy", killer and killer.UserId or 0)
+  f.player:SetAttribute("Eliminated", true)
   if not lastEliminated or at > lastEliminated.eliminatedAt or (at == lastEliminated.eliminatedAt and f.player.UserId > lastEliminated.player.UserId) then lastEliminated = f end
  end
 
@@ -419,7 +425,8 @@ local function runRound(roundNumber: number, modeName: string, teamsMap)
 end
 
 local variantCursor = {}
-local function runMatch(group, modeName: string)
+-- keepTeams (11/11, party): el grupo viene ordenado; primera mitad Rojo, segunda mitad Azul (sin mezclar)
+local function runMatch(group, modeName: string, keepTeams: boolean?)
  local old = arenas[modeName]
  old.token += 1
  -- Falling slabs can be temporarily unparented; explicitly dispose those too.
@@ -429,10 +436,11 @@ local function runMatch(group, modeName: string)
  variantCursor[modeName] = index
  arenas[modeName] = ArenaBuilder.build(map,modeName,MODES[modeName],ArenaConfig.Variants[index])
  workspace:SetAttribute("ArenaVariant" .. modeName,ArenaConfig.Variants[index])
-	shuffle(group)
+	if not keepTeams then shuffle(group) end
 	local teamsMap = { Red = {}, Blue = {} }
 	for i, player in group do
-		local teamName = (i % 2 == 1) and "Red" or "Blue"
+		local teamName
+		if keepTeams then teamName = i <= #group / 2 and "Red" or "Blue" else teamName = (i % 2 == 1) and "Red" or "Blue" end
 		table.insert(teamsMap[teamName], player)
 		player.Team = TeamObjs[teamName]
 		player:SetAttribute("InMatch", true)
@@ -526,12 +534,67 @@ QueueRemote.OnServerEvent:Connect(function(player, action, mode)
  if queueAt[player] and now - queueAt[player] < E.QueueInterval then return end
  queueAt[player] = now
 	if type(action) ~= "string" then return end
+	-- 11/11: en party solo el líder busca partida; el otro entra con él
+	if Party.inParty(player) and not Party.isLeader(player) then return end
+	local partner = Party.partner(player)
 	if action == "Join" and type(mode) == "string" and QUEUE_NEED[mode] and not player:GetAttribute("InMatch") then
 		queueRequests[player] = mode
 	elseif action == "Leave" then
 		queueRequests[player] = nil
+		if partner then queueRequests[partner] = nil end
 	end
 end)
+-- Si la party cambia, se cancela la búsqueda de los dos
+Party.Changed:Connect(function(p) queueRequests[p] = nil end)
+
+-- 11/11 (party): ¿puede entrar a una partida ahora?
+local function eligible(p)
+	local char = p.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	return p.Parent and hum and hum.Health > 0 and not p:GetAttribute("InMatch") and PlayerData.get(p) ~= nil
+end
+
+-- Arma la lista de la cola en unidades: el líder y su compañero juntos, o un jugador solo.
+-- Los compañeros (no líderes) que entren solos a un círculo se ignoran: los mete su líder.
+local function units(list)
+	local out, used = {}, {}
+	for _, p in list do
+		if not used[p] then
+			if Party.inParty(p) then
+				if Party.isLeader(p) then
+					local partner = Party.partner(p)
+					if partner and eligible(partner) and not used[partner] then
+						used[p], used[partner] = true, true
+						table.insert(out, { p, partner })
+					elseif not partner then
+						used[p] = true
+						table.insert(out, { p })
+					end
+				end
+			else
+				used[p] = true
+				table.insert(out, { p })
+			end
+		end
+	end
+	return out
+end
+
+-- Elige el grupo de la partida respetando las parties. Devuelve grupo, keepTeams (o nil si no alcanza).
+local function pickGroup(list, mode)
+	local u = units(list)
+	local duos, solos = {}, {}
+	for _, unit in u do if #unit == 2 then table.insert(duos, unit) else table.insert(solos, unit[1]) end end
+	if mode == "1v1" then
+		if duos[1] then return { duos[1][1], duos[1][2] }, true end -- duelo privado de la party
+		if #solos >= 2 then return { solos[1], solos[2] }, false end
+	else
+		if #duos >= 2 then return { duos[1][1], duos[1][2], duos[2][1], duos[2][2] }, true end
+		if #duos == 1 and #solos >= 2 then return { duos[1][1], duos[1][2], solos[1], solos[2] }, true end
+		if #solos >= 4 then return { solos[1], solos[2], solos[3], solos[4] }, false end
+	end
+	return nil
+end
 Players.PlayerRemoving:Connect(function(p) queueRequests[p] = nil end)
 
 local function playersInZone(zone)
@@ -578,6 +641,17 @@ task.spawn(function()
      table.insert(queued[mode], p)
     end
    end
+   -- 11/11 (party): el líder en cola mete a su compañero en la misma cola
+   for _, list in queued do
+    for i = #list, 1, -1 do
+     local p = list[i]
+     if Party.inParty(p) and not Party.isLeader(p) then table.remove(list, i) end
+    end
+    for _, p in table.clone(list) do
+     local partner = Party.isLeader(p) and Party.partner(p)
+     if partner and eligible(partner) and not table.find(list, partner) then table.insert(list, partner) end
+    end
+   end
    for mode, list in queued do
     for _, p in list do p:SetAttribute("QueueMode", mode) end
     local zone = zones[mode]
@@ -588,14 +662,15 @@ task.spawn(function()
 				local mode = p:GetAttribute("QueueMode")
 				if mode and not (queued[mode] and table.find(queued[mode], p)) then p:SetAttribute("QueueMode", nil) end
 			end
-			if #queued["2v2"] >= QUEUE_NEED["2v2"] then
-				local g = queued["2v2"]
-				for i = 1, 4 do queueRequests[g[i]] = nil g[i]:SetAttribute("QueueMode", nil) end
-				runMatch({ g[1], g[2], g[3], g[4] }, "2v2")
-			elseif #queued["1v1"] >= QUEUE_NEED["1v1"] then
-				local g = queued["1v1"]
-				for i = 1, 2 do queueRequests[g[i]] = nil g[i]:SetAttribute("QueueMode", nil) end
-				runMatch({ g[1], g[2] }, "1v1")
+			local g2, keep2 = pickGroup(queued["2v2"], "2v2")
+			local g1, keep1 = nil, false
+			if not g2 then g1, keep1 = pickGroup(queued["1v1"], "1v1") end
+			if g2 then
+				for _, p in g2 do queueRequests[p] = nil p:SetAttribute("QueueMode", nil) end
+				runMatch(g2, "2v2", keep2)
+			elseif g1 then
+				for _, p in g1 do queueRequests[p] = nil p:SetAttribute("QueueMode", nil) end
+				runMatch(g1, "1v1", keep1)
 			else
 				setStatus("cx.match.queue")
 				task.wait(0.5)
