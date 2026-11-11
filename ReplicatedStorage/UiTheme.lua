@@ -342,6 +342,16 @@ function UiTheme.textConstraint(label, minSize, maxSize)
 end
 
 -- Ornamento sutil de esquinas estilo fantasía oscura (4 escuadras doradas)
+-- 11/11/2026: esquinas de plata clásica del usuario (esquina_clasica_01 a 04). Mismos IDs que UiAssets
+-- (corner_classic_*); UiAssets.UseArt = false las apaga y vuelven las líneas de antes.
+UiTheme.CornerArt = {
+	Enabled = true,
+	Ids = { 95600733860151, 98692641434464, 78148340074076, 122947440560620 }, -- arriba izq, arriba der, abajo izq, abajo der
+	Scale = 2.6,       -- tamaño de la esquina = largo del ornamento × Scale
+	MinSize = 26, MaxSize = 64,
+	Transparency = 0.05,
+}
+
 function UiTheme.ornamentCorners(parent, color, length, thickness)
 	local col = color or UiTheme.Colors.Gold
 	local len = length or 10
@@ -351,6 +361,27 @@ function UiTheme.ornamentCorners(parent, color, length, thickness)
 	folder = Instance.new("Folder")
 	folder.Name = "Ornaments"
 	folder.Parent = parent
+
+	local art = UiTheme.CornerArt
+	if art.Enabled then
+		local size = math.clamp(math.floor(len * art.Scale), art.MinSize, art.MaxSize)
+		local spots = { { Vector2.new(0, 0), UDim2.fromScale(0, 0) }, { Vector2.new(1, 0), UDim2.fromScale(1, 0) },
+			{ Vector2.new(0, 1), UDim2.fromScale(0, 1) }, { Vector2.new(1, 1), UDim2.fromScale(1, 1) } }
+		for i, spot in spots do
+			local img = Instance.new("ImageLabel")
+			img.Name = "CornerArt" .. i
+			img.AnchorPoint = spot[1]
+			img.Position = spot[2]
+			img.Size = UDim2.fromOffset(size, size)
+			img.BackgroundTransparency = 1
+			img.Image = "rbxassetid://" .. art.Ids[i]
+			img.ImageTransparency = art.Transparency
+			img.ScaleType = Enum.ScaleType.Fit
+			img.ZIndex = parent.ZIndex + 2
+			img.Parent = folder
+		end
+		return folder
+	end
 
 	local corners = {
 		{ Vector2.new(0, 0), UDim2.fromOffset(3, 3), 1, 1 },

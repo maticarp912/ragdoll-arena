@@ -17,7 +17,10 @@ M.Passes = {
 	VIP = {
 		id = 0, robux = 399, order = 2, nameKey = "mz.pass.VIP", descKey = "mz.pass.VIP.desc",
 		-- Ventajas (las aplica cada servicio leyendo el atributo Pass_VIP del jugador):
-		perks = { soulsBonus = 0.2, extraDailySpin = 1, fallbackSouls = 150, role = "VIP", aura = "VipCrown" },
+		perks = { soulsBonus = 0.2, extraDailySpin = 1, fallbackSouls = 150, role = "VIP", aura = "VipCrown",
+			-- 11/11/2026: regalo de bienvenida, una sola vez por cuenta, al tener el pase
+			welcome = { spins = 10, boxes = { StormLesser = 5, StormGreater = 5, StormRoyal = 5, Eclipse = 5 },
+				restrictedSouls = 15000 } }, -- si Roblox restringe el azar pago: almas en vez de tiros y cofres
 	},
 }
 

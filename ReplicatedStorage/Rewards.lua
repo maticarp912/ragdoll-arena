@@ -20,8 +20,8 @@ local R = {
   -- 10/11/2026: cajas de Tormenta (skins con rayos, Skins.boxOnly = "Storm"). Más caras = mejores rarezas.
   StormLesser = { price = 600, currency = "Gems", pool = "Storm", order = 3 },
   StormGreater = { price = 1300, currency = "Gems", pool = "Storm", order = 4 },
-  StormRoyal = { price = 2400, currency = "Gems", pool = "Storm", order = 5 },
-  Eclipse = { price = 4000, currency = "Gems", pool = "Storm", order = 6,
+  StormRoyal = { price = 1800, currency = "Gems", pool = "Storm", order = 5 },
+  Eclipse = { price = 3000, currency = "Gems", pool = "Storm", order = 6,
    guarantees = { { rarity = "Legendary", every = 10 }, { rarity = "Exclusive", every = 40 } } },
  },
  StormRarities = {

@@ -106,5 +106,33 @@ RF.OnServerInvoke = function(player, action, key)
 	return false, "invalid"
 end
 
+-- 11/11/2026: regalo de bienvenida del VIP (una vez por cuenta). Se da al confirmarse el pase, también al entrar.
+local function vipWelcome(player, key)
+	if key ~= "VIP" then return end
+	local gift = Config.Passes.VIP.perks.welcome
+	local data = PlayerData.get(player)
+	for _ = 1, 20 do
+		if data or not player.Parent then break end
+		task.wait(0.5)
+		data = PlayerData.get(player)
+	end
+	if not gift or not data or data.VipWelcome == true then return end
+	data.VipWelcome = true
+	if Manager.paidRandomAllowed(player) then
+		data.Rewards = data.Rewards or {}
+		data.Rewards.spins = math.min(Rewards.MaxCount, (data.Rewards.spins or 0) + gift.spins)
+		data.Boxes = data.Boxes or {}
+		for box, count in gift.boxes do
+			data.Boxes[box] = math.min(Rewards.MaxCount, (data.Boxes[box] or 0) + count)
+		end
+	else
+		data.Coins = (data.Coins or 0) + gift.restrictedSouls
+	end
+	PlayerData.refresh(player)
+	PlayerData.saveSoon(player)
+	player:SetAttribute("VipWelcomeGiven", true)
+end
+Manager.onPassGranted(vipWelcome)
+
 Players.PlayerAdded:Connect(Manager.track)
 for _, player in Players:GetPlayers() do Manager.track(player) end

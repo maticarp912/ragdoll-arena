@@ -86,6 +86,10 @@ UiAssets.Ids = {
 	frame_classic_1 = 115146949745382, frame_classic_2 = 109248225662281, frame_classic_3 = 111357391303578,
 	frame_classic_4 = 119928089104368, frame_classic_5 = 118714582114035,
 	border_dark_1 = 108420885024617, border_dark_2 = 88938737242151,
+	corner_classic_tl = 95600733860151, corner_classic_tr = 98692641434464, -- esquina_clasica_01 y 02
+	corner_classic_bl = 78148340074076, corner_classic_br = 122947440560620, -- esquina_clasica_03 y 04
+	separator_classic_1 = 117795436187814, separator_classic_2 = 73562321296609, separator_classic_3 = 102087210021827,
+	ornament_side_1 = 73138940308028, ornament_side_2 = 117707830823722, ornament_side_3 = 81933802141293, ornament_side_4 = 139928985111950,
 	-- Cofres del 1 al 6, cerrado y abierto (subidos el 11/11)
 	chest_1_closed     = 117493290127703, chest_1_open = 131124602014011, -- hierro
 	chest_2_closed     = 112102957287363, chest_2_open = 81121421030094,  -- plata
@@ -97,6 +101,8 @@ UiAssets.Ids = {
 
 -- Interruptor general del arte nuevo: false = todo vuelve a los íconos dibujados (para probar y retirar).
 UiAssets.UseArt = true
+-- Las esquinas de plata de las ventanas las dibuja UiTheme (no puede leer este módulo): se apagan con el mismo interruptor
+UiTheme.CornerArt.Enabled = UiAssets.UseArt
 
 -- Arte a todo color: no se tiñe con el color del botón o tarjeta (los íconos viejos son blancos y sí se tiñen)
 local FULL_COLOR = {
