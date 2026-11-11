@@ -13,47 +13,47 @@ local UiAssets = {}
 -- 1. IDs de imágenes en Roblox (0 = usar respaldo procedural hasta subir los PNG de ui_assets/)
 ----------------------------------------------------------------------
 UiAssets.Ids = {
-	infusion_fire      = 0,
-	infusion_lightning = 0,
-	infusion_ice       = 0,
-	infusion_shadow    = 0,
+	infusion_fire      = 98108965227022,
+	infusion_lightning = 91017839053016,
+	infusion_ice       = 74993689207241,
+	infusion_shadow    = 115593789424085,
 	coin               = 0,
 	robux              = 0,
-	rarity_common      = 0,
-	rarity_rare        = 0,
-	rarity_epic        = 0,
-	rarity_legendary   = 0,
-	rarity_mythic      = 0,
-	mission            = 0,
-	trophy             = 0,
-	skull              = 0,
-	knockdown          = 0,
-	settings           = 0,
-	armory             = 0,
-	ranked             = 0,
+	rarity_common      = 131226750677691,
+	rarity_rare        = 89294555509656,
+	rarity_epic        = 129863316909924,
+	rarity_legendary   = 127635052618810,
+	rarity_mythic      = 98296435471760,
+	mission            = 133623637778999,
+	trophy             = 136349065744162,
+	skull              = 86377107640527,
+	knockdown          = 128311218795352,
+	settings           = 77685706747835,
+	armory             = 124633247653330,
+	ranked             = 71137851432656,
 	aura               = 0,
-	aura_crown         = 0,
-	aura_chains        = 0,
-	aura_wings         = 0,
-	aura_mist          = 0,
-	aura_eyes          = 0,
-	aura_runes         = 0,
-	aura_drip          = 0,
-	aura_embers        = 0,
-	aura_blood         = 0,
-	aura_fracture      = 0,
-	health             = 0,
-	stamina            = 0,
-	guard              = 0,
-	stun               = 0,
-	attack             = 0,
-	heavy              = 0,
-	block              = 0,
-	dodge              = 0,
-	kick               = 0,
-	interact           = 0,
-	lockon             = 0,
-	switch_target      = 0,
+	aura_crown         = 136086513621503,
+	aura_chains        = 116185918507221,
+	aura_wings         = 109214059690456,
+	aura_mist          = 132413137974881,
+	aura_eyes          = 112605069209050,
+	aura_runes         = 109774474771026,
+	aura_drip          = 131373499791124,
+	aura_embers        = 115762454736544,
+	aura_blood         = 136282213639075,
+	aura_fracture      = 74549041831811,
+	health             = 139933301616232,
+	stamina            = 140179622776190,
+	guard              = 134517700676170,
+	stun               = 104566802498854,
+	attack             = 92397119386979,
+	heavy              = 107605541113614,
+	block              = 94205575739714,
+	dodge              = 126727775856538,
+	kick               = 126659133151194,
+	interact           = 116198625062555,
+	lockon             = 93147386926972,
+	switch_target      = 119801881211413,
 
 	-- 11/11/2026: arte del usuario (Referencias 0.2/Arte interfaz). Pegar acá el ID de cada imagen subida.
 	-- Con 0 se usa el ícono dibujado de antes. Para retirar TODO el arte de una vez: UiAssets.UseArt = false.
@@ -73,12 +73,19 @@ UiAssets.Ids = {
 	pass_skip          = 120398082207425, -- pase_skip_aperturas.png
 	pass_vip           = 108842582911580, -- pase_vip_eclipse.png
 	-- 11/11/2026: claves nuevas listas para el arte (ver Notas/Arte - lista de imágenes.md)
-	boost_souls        = 0, -- multiplicador ×2 de almas
-	boost_xp           = 0, -- multiplicador ×2 de XP
-	boost_magnet       = 0, -- imán de almas
-	shop               = 0, -- botón Tienda del lobby
-	rewards            = 0, -- botón Recompensas del lobby
-	leaderboard        = 0, -- botón Clasificación del lobby
+	boost_souls        = 123471410469112, -- multiplicador ×2 de almas
+	boost_xp           = 74738766081022, -- multiplicador ×2 de XP
+	boost_magnet       = 74588142879948, -- imán de almas
+	shop               = 87987182061269, -- botón Tienda del lobby
+	rewards            = 137580237006433, -- botón Recompensas del lobby
+	leaderboard        = 77265873799987, -- botón Clasificación del lobby
+	-- 11/11/2026 (tanda 3): guardia rota y recursos de HUD de plata clásica (marcos todavía sin conectar)
+	guard_broken = 93659499765234,
+	hud_bar_red = 121288131222477, hud_bar_cyan = 114096602913235, hud_bar_blue = 115799578034954, hud_bar_05 = 94464479484599,
+	frame_avatar = 98703661478369, frame_arch = 128983919450093,
+	frame_classic_1 = 115146949745382, frame_classic_2 = 109248225662281, frame_classic_3 = 111357391303578,
+	frame_classic_4 = 119928089104368, frame_classic_5 = 118714582114035,
+	border_dark_1 = 108420885024617, border_dark_2 = 88938737242151,
 	-- Cofres del 1 al 6, cerrado y abierto (subidos el 11/11)
 	chest_1_closed     = 117493290127703, chest_1_open = 131124602014011, -- hierro
 	chest_2_closed     = 112102957287363, chest_2_open = 81121421030094,  -- plata
@@ -145,9 +152,17 @@ function UiAssets.resolveKey(key)
 	return ALIASES[key] or key
 end
 
+-- Todas las claves con arte del usuario (11/11): con UiAssets.UseArt = false vuelven todas al dibujo de antes
+UiAssets.ArtKeys = {}
+for k in FULL_COLOR do UiAssets.ArtKeys[k] = true end
+for _, k in { "armory", "shop", "rewards", "settings", "mission", "leaderboard", "health", "stamina", "guard", "guard_broken",
+	"stun", "knockdown", "skull", "attack", "heavy", "block", "dodge", "kick", "interact", "lockon", "switch_target", "trophy", "ranked" } do
+	UiAssets.ArtKeys[k] = true
+end
+
 function UiAssets.imageUri(key)
 	local k = UiAssets.resolveKey(key)
-	if FULL_COLOR[k] and not UiAssets.UseArt then return nil end
+	if UiAssets.ArtKeys[k] and not UiAssets.UseArt then return nil end
 	local id = UiAssets.Ids[k]
 	if type(id) == "number" and id > 0 then
 		return "rbxassetid://" .. tostring(id)
