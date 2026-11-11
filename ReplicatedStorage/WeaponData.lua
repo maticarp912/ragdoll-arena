@@ -87,7 +87,8 @@ WeaponData.Data = {
 		hp = 216, speed = 18.5, guardMax = 80, -- etapa 8: +35 % (era 160)
 		combo = {
 			-- 0.2 (D3): 7·8·12 → 6·7·11; los golpes 2 y 3 impactan más tarde para dejar lugar al parry
-			damage = { 6, 7, 11 }, stun = { 11, 11, 20 }, knockback = { 3, 3, 8 },
+			-- 11/11: el combo derriba menos (aturdimiento 11·11·20 → 6·6·11)
+			damage = { 6, 7, 11 }, stun = { 6, 6, 11 }, knockback = { 3, 3, 8 },
 			duration = { 0.32, 0.40, 0.48 }, hitTime = { 0.15, 0.19, 0.25 },
 			reach = 5, width = 4,
 			hyperArmor = { false, false, false }, guardDrainMult = 0.9, staggerMult = 0.85,
@@ -136,14 +137,16 @@ WeaponData.Data = {
 			-- 0.2 (D3): 13·15·20 → 17·19·26, alcance 7 → 8, golpe 3 más ancho (5 → 6,5)
 			-- 10/11/2026: más rápida. Duración 1,00·1,00·1,12 → 0,84·0,84·0,95 e impacto 0,56·0,56·0,63 → 0,44·0,44·0,52
 			damage = { 17, 19, 26 }, stun = { 32, 32, 52 }, knockback = { 8, 8, 22 },
-			duration = { 0.84, 0.84, 0.95 }, hitTime = { 0.44, 0.44, 0.52 },
+			-- 11/11: más rápida todavía (0,84·0,84·0,95 → 0,70·0,70·0,80; impacto 0,44·0,44·0,52 → 0,36·0,36·0,42).
+			-- Queda un poco más rápida que el espadón pero con menos alcance (8 contra 10).
+			duration = { 0.7, 0.7, 0.8 }, hitTime = { 0.36, 0.36, 0.42 },
 			reach = 8, width = 5, widths = { 5, 5, 6.5 },
 			hyperArmor = { false, false, true }, guardDrainMult = 2.0, staggerMult = 1.3,
 		},
 		heavy = {
 			-- 10/11: el knockback = 36 había quedado adentro del comentario (el fuerte no empujaba)
 			name = "Machaque Pesado", damage = 46, stun = 85, knockback = 36, -- 0.2 (D3): 40 → 46
-			windup = 0.52, hitDelay = 0.1, recovery = 0.62, reach = 7.5, width = 5.5, -- 9/11: 7 → 7.5 · 10/11: 0,60 / 0,68 → 0,52 / 0,62
+			windup = 0.46, hitDelay = 0.1, recovery = 0.5, reach = 7.5, width = 5.5, -- 11/11: 0,52 / 0,62 → 0,46 / 0,50 -- 9/11: 7 → 7.5 · 10/11: 0,60 / 0,68 → 0,52 / 0,62
 			feintable = true, hyperArmor = false, unblockable = true,
 			blockDamageMult = 1.0, guardBreakStunMult = 1,
 		},
@@ -157,12 +160,19 @@ WeaponData.Data = {
 -- Stamina por arma (etapa 8): cada golpe básico (m1) y cada fuerte (heavy) la gastan.
 -- Máximo 100, se recupera 30/s tras 0,8 s sin gastar (CombatConfig.Stamina). Las armas pesadas
 -- vacían la barra con menos golpes: un combo completo de espadón cuesta 30 y uno de dagas 12.
+-- 11/11/2026 (pedido del usuario): cada golpe gasta mucho más. Con la barra llena (100) se puede encadenar:
+--   Espada   4 básicos, o 2 básicos + 1 fuerte          (25 / 50)
+--   Espadón  3 básicos, o 1 fuerte + 1 básico           (33 / 67)
+--   Maza     igual que el espadón                       (33 / 67)
+--   Estoque  5 básicos, o 3 básicos + 1 fuerte (entre espada y dagas)  (20 / 40)
+--   Dagas    6 básicos, o 4 básicos + 1 fuerte          (16 / 32)
+-- Antes: 6/20, 10/28, 11/30, 5/16 y 4/14.
 WeaponData.Stamina = {
-	Sword = { m1 = 6, heavy = 20 },
-	Greatsword = { m1 = 10, heavy = 28 },
-	Dagger = { m1 = 4, heavy = 14 },
-	Rapier = { m1 = 5, heavy = 16 },
-	Mace = { m1 = 11, heavy = 30 },
+	Sword = { m1 = 25, heavy = 50 },
+	Greatsword = { m1 = 33, heavy = 67 },
+	Dagger = { m1 = 16, heavy = 32 },
+	Rapier = { m1 = 20, heavy = 40 },
+	Mace = { m1 = 33, heavy = 67 },
 }
 
 function WeaponData.staminaCost(id, kind)
