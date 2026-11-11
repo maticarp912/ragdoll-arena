@@ -90,7 +90,7 @@ function Builder:look(role)
 		return skin.trail or skin.accent or rgb(235, 32, 46), M.Neon
 	elseif role == "Edge" then
 		local c = (skin.blade or p.blade)
-		return c:Lerp(rgb(240, 242, 248), 0.45), M.Foil
+		return c:Lerp(rgb(235, 235, 240), 0.35), M.Metal -- 10/11: vuelve al acabado de la 0.1
 	elseif role == "Trim" then
 		return skin.accent or rgb(150, 120, 70), M.Metal
 	elseif role == "Leather" then

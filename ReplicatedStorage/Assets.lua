@@ -68,7 +68,7 @@ Assets.Sounds = {
 	ParrySpark = 9119742466,
 	GuardBreak = { 9116673678, 9116546593 },
 	Kick_Swing = 9120729339, Kick_Hit = { 9113564874, 9113513328 },
-	Dodge = 0, -- 9/11: sin los sonidos de librería (golpecitos); queda solo el woosh propio (Assets.Custom)
+	Dodge = SWING_LIGHT, -- 10/11: whoosh de aire corto (librería), más grave y suave que un tajo; antes era swing_pesado_2 con ruido
 
 	-- 3.3 Derribo, agarre y rescate
 	Body_Fall = { 9113480915, 9113469292, 9113475819 }, Crawl_Loop = 0, GetUp = { 9113534108 },
@@ -122,7 +122,7 @@ Assets.Custom = {
 		{ file = "swing_corte_espada.mp3", id = 93877443722238, keys = { "Swing.Sword.Light", "Swing.Sword.Heavy", "Swing.Dagger.Light", "Swing.Dagger.Heavy", "Swing.Greatsword.Light" } },
 		{ file = "swing_estoque.mp3", id = 119825603106581, keys = { "Swing.Rapier.Light", "Swing.Rapier.Heavy" }, region = { 0, 1.2 } }, -- archivo de 10 s: ajustar tramo
 		{ file = "swing_pesado.mp3", id = 129083719160056, keys = { "Swing.Greatsword.Heavy", "Swing.Mace.Light", "Swing.Mace.Heavy", "Cue_HeavyWindup" } }, -- "sfx animation"
-		{ file = "swing_pesado_2.mp3", id = 136483486196947, keys = { "Dodge", "Throw_Far" }, region = { 0, 1.5 } }, -- "sfx animation 2" (12 s)
+		{ file = "swing_pesado_2.mp3", id = 136483486196947, keys = { "Throw_Far" }, region = { 0, 1.5 } }, -- "sfx animation 2" (12 s). 10/11: ya no suena en el dash
 		{ file = "golpe_espada.mp3", id = 138156964972112, keys = { "Hit_Light" } },
 		{ file = "golpe_espada_2.mp3", id = 71796772336933, keys = { "Hit_Light", "Hit_Heavy" } },
 		{ file = "golpe.mp3", id = 88283526744383, keys = { "Hit_Blunt", "Kick_Hit" } },
@@ -156,7 +156,7 @@ Assets.SoundSettings = {
 	GuardBreak = { volume = 1, pitch = 0.9, var = 0.05 },
 	Kick_Swing = { volume = 0.5, pitch = 1.1, var = 0.05 },
 	Kick_Hit = { volume = 0.9, pitch = 0.8, var = 0.08 },
-	Dodge = { volume = 0.45, pitch = 1.2, var = 0.1 },
+	Dodge = { volume = 0.32, pitch = 0.78, var = 0.06 }, -- whoosh de cuerpo: más grave que el tajo del arma
 	Body_Fall = { volume = 0.9, pitch = 1, var = 0.08 },
 	Throw_Impact = { volume = 1, pitch = 0.85, var = 0.08 },
 	Throw_Far = { volume = 0.8, pitch = 0.9, var = 0.05 },

@@ -134,15 +134,24 @@ function Actions.m1(char)
 	end
 
 	local atkSpeed = char:GetAttribute("AttackSpeedMult") or 1
+	-- 10/11/2026: contragolpe de peso listo (bloqueaste un básico hace poco con Espadón o Maza)
+	local riposte = def.riposte and t <= (char:GetAttribute("RiposteUntil") or 0) and def.riposte or nil
+	if riposte then
+		char:SetAttribute("RiposteUntil", 0)
+		atkSpeed = atkSpeed / riposte.speedMult
+	end
 	local duration = combo.duration[step] * tempo() / atkSpeed
 	local wid = char:GetAttribute("WeaponId") or "Sword"
 	local animKey = "Weapons." .. wid .. ".M1_" .. step
-	local animSpeed, marker = timing(animKey, duration)
-	local hitTime = marker("Hit") or (combo.hitTime[step] * tempo() / atkSpeed)
 
 	-- Direccional: el golpe sale por la postura de este momento (D4). Remate si los anteriores conectaron.
 	local dirOn = Directional.enabled()
 	local dir = dirOn and (char:GetAttribute("Stance") or CFG.Directional.DefaultStance) or ""
+	-- 10/11/2026: la animación sigue la dirección del golpe (AnimClips.DirMap): de derecha, de izquierda o de arriba.
+	-- Si alguna vez hay animaciones subidas (ID en Assets) para M1_n, se siguen usando esas.
+	if dir ~= "" and not Assets.anim(animKey) then animKey = "Weapons." .. wid .. ".Dir" .. dir end
+	local animSpeed, marker = timing(animKey, duration)
+	local hitTime = marker("Hit") or (combo.hitTime[step] * tempo() / atkSpeed)
 	if step == 1 then
 		st.comboChain = (st.comboChain or 0) + 1
 		st.comboLanded = {}
@@ -165,7 +174,7 @@ function Actions.m1(char)
 	char:SetAttribute("AttackDir", dir)
 	char:SetAttribute("Finisher", finisher == true) -- el remate (D4) se anima más exagerado
 	-- Hiperarmadura por golpe (Espadón 2-3, Maza 3): los golpes básicos no lo interrumpen al preparar
-	char:SetAttribute("HyperArmor", combo.hyperArmor ~= nil and combo.hyperArmor[step] == true)
+	char:SetAttribute("HyperArmor", riposte ~= nil or (combo.hyperArmor ~= nil and combo.hyperArmor[step] == true))
 
 	Anim.play(char, animKey, { speed = animSpeed, duration = duration, hitTime = hitTime })
 	Fx.soundAt("Swing." .. wid .. ".Light", char)
@@ -179,7 +188,7 @@ function Actions.m1(char)
 		local F = CFG.Directional.Finisher
 		local results = strike(char, Actions.reach(combo.reach), (combo.widths and combo.widths[step]) or combo.width, {
 			kind = "Light",
-			damage = combo.damage[step] * (finisher and F.DamageMult or 1),
+			damage = combo.damage[step] * (finisher and F.DamageMult or 1) * (riposte and riposte.damageMult or 1),
 			stun = combo.stun[step] * (finisher and F.StunMult or 1),
 			knockback = combo.knockback[step] * (finisher and F.KnockbackMult or 1),
 			guardDrainMult = combo.guardDrainMult,

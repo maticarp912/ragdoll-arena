@@ -196,10 +196,19 @@ local auraKinds = { "all", "Body", "Weapon" }
 -- Pedestal de vista previa de Auras en el mundo (Contrato C11)
 ----------------------------------------------------------------------
 local auraPreviewStage = nil
+local auraTryCleanup = nil
+local auraTrying = 0
+
+-- 10/11/2026: AuraFx no tiene preview/clearPreview (solo attach) y el pedestal quedaba a 450 studs bajo
+-- tierra, así que nunca se veía nada. Los Beam y partículas no se dibujan en un ViewportFrame, por eso la
+-- vista previa ahora es «Probar»: se esconde la tienda, la aura aparece sobre tu propio personaje con la
+-- cámara de frente unos segundos y la tienda vuelve a abrirse sola.
+local AURA_TRY_SECONDS = 4
 
 local function destroyAuraWorldPreview()
-	if AuraFx then
-		pcall(function() AuraFx.clearPreview() end)
+	if auraTryCleanup then
+		pcall(auraTryCleanup)
+		auraTryCleanup = nil
 	end
 	if auraPreviewStage then
 		auraPreviewStage:Destroy()
@@ -209,33 +218,61 @@ end
 
 local function showAuraWorldPreview(auraId)
 	destroyAuraWorldPreview()
-	if not AuraFx or not Auras or not Auras.Data[auraId] then return end
-	local stage = Instance.new("Model")
-	stage.Name = "AuraPreviewPedestal"
-
-	local root = Instance.new("Part")
-	root.Name = "HumanoidRootPart"
-	root.Size = Vector3.new(2, 2, 1)
-	root.Anchored = true
-	root.CanCollide = false
-	root.CanQuery = false
-	root.CanTouch = false
-	root.Transparency = 0.85
-	root.Color = C.Gold
-	root.CFrame = CFrame.new(0, -450, 0)
-	root.Parent = stage
-	stage.PrimaryPart = root
-
-	local wModel = Builder.buildModel(weapon, player:GetAttribute("EquippedSkin") or "Default")
-	wModel.Name = "PreviewWeapon"
-	for _, p in wModel:GetDescendants() do
-		if p:IsA("BasePart") then p.Anchored = true end
+	if not AuraFx or not Auras or not Auras.Data[auraId] then return false end
+	local char = player.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	if not root then return false end
+	local data = Auras.Data[auraId]
+	local target = char
+	if data.kind ~= "Body" then
+		target = char:FindFirstChildOfClass("Tool")
+		if not target then
+			-- Sin arma en la mano (lobby): arma de muestra flotando delante del pecho
+			local stage = Builder.buildModel(weapon, player:GetAttribute("EquippedSkin") or "Default")
+			stage.Name = "AuraPreviewWeapon"
+			for _, part in stage:GetDescendants() do
+				if part:IsA("BasePart") then
+					part.Anchored = true
+					part.CanCollide = false
+					part.CanQuery = false
+					part.CanTouch = false
+				end
+			end
+			stage:PivotTo(root.CFrame * CFrame.new(0, 0.6, -2.2) * CFrame.Angles(math.rad(-70), 0, 0))
+			stage.Parent = workspace
+			auraPreviewStage = stage
+			target = stage
+		end
 	end
-	wModel:PivotTo(root.CFrame * CFrame.new(1.2, 0, -0.8))
-	wModel.Parent = stage
-	stage.Parent = workspace
-	auraPreviewStage = stage
-	pcall(function() AuraFx.preview(stage, auraId) end)
+	local ok, cleanup = pcall(AuraFx.attach, target, auraId, { character = char, preview = true })
+	if ok and type(cleanup) == "function" then auraTryCleanup = cleanup end
+	return ok
+end
+
+local function tryAuraOnCharacter(auraId)
+	local cam = workspace.CurrentCamera
+	local char = player.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	if not cam or not root then return end
+	if not showAuraWorldPreview(auraId) then return end
+	auraTrying += 1
+	local token = auraTrying
+	local oldType, oldCf = cam.CameraType, cam.CFrame
+	panel.Visible = false
+	backdrop.Visible = false
+	cam.CameraType = Enum.CameraType.Scriptable
+	local focus = root.Position + Vector3.new(0, 0.8, 0)
+	cam.CFrame = CFrame.lookAt(focus + root.CFrame.LookVector * 9 + Vector3.new(0, 2.2, 0), focus)
+	task.delay(AURA_TRY_SECONDS, function()
+		if token ~= auraTrying then return end
+		destroyAuraWorldPreview()
+		cam.CameraType = oldType
+		if oldType == Enum.CameraType.Scriptable then cam.CFrame = oldCf end
+		if opened then
+			panel.Visible = true
+			backdrop.Visible = true
+		end
+	end)
 end
 
 ----------------------------------------------------------------------
@@ -244,8 +281,13 @@ end
 -- I2 (integración 0.2): la lista oficial la calcula el servidor (`Shop` → `GetFeatured`, día de Argentina).
 -- El cálculo local queda solo como respaldo si el servidor no respondió.
 local serverFeatured, serverResetAt = nil, nil
+-- 10/11/2026: la pestaña «Almas» es una herramienta de prueba (suma almas gratis, acción DebugCoins), no una
+-- compra. Solo se muestra si el servidor dice que este jugador puede depurar (GetBoosts → debugSouls).
+local debugSouls = false
 local function fetchServerFeatured()
 	if not remote then return end
+	local okB, successB, info = pcall(function() return remote:InvokeServer("GetBoosts") end)
+	if okB and successB and type(info) == "table" then debugSouls = info.debugSouls == true end
 	local ok, success, data = pcall(function() return remote:InvokeServer("GetFeatured") end)
 	if ok and success and type(data) == "table" and type(data.ids) == "table" and #data.ids > 0 then
 		serverFeatured = data.ids
@@ -667,7 +709,6 @@ local function inspect(id)
 
 	if kind == "Aura" then
 		destroyAuraWorldPreview()
-		showAuraWorldPreview(id)
 
 		local stageBox = Instance.new("Frame")
 		stageBox.Position = UDim2.fromOffset(16, 70)
@@ -692,6 +733,16 @@ local function inspect(id)
 			textSize = UiTheme.TextSizes.XS,
 			color = C.GoldBright,
 			alignX = Enum.TextXAlignment.Center,
+		})
+		UiTheme.button({
+			name = "TryAuraBtn",
+			parent = stageBox,
+			anchor = Vector2.new(0.5, 1),
+			position = UDim2.new(0.5, 0, 1, -32),
+			size = UDim2.fromOffset(190, 34),
+			text = L.t("ui.aura.tryOn"),
+			variant = "gold",
+			onClick = function() tryAuraOnCharacter(id) end,
 		})
 	elseif kind == "Skin" then
 		destroyAuraWorldPreview()
@@ -950,8 +1001,9 @@ function render()
 		{ id = "Skins", label = L.t("ui.shop.tab.Skins") },
 		{ id = "Auras", label = L.t("ui.shop.tab.Auras") },
 		{ id = "Boosts", label = L.t("ui.shop.tab.Boosts") },
-		{ id = "Souls", label = L.t("ui.shop.tab.Souls") },
 	}
+	if debugSouls then table.insert(tabDefs, { id = "Souls", label = L.t("ui.shop.tab.Souls") }) end
+	if tab == "Souls" and not debugSouls then tab = "Showcase" end
 	for i, def in tabDefs do
 		local b = UiTheme.tabButton({
 			name = "Tab_" .. def.id,

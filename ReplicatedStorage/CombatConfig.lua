@@ -247,9 +247,9 @@ CombatConfig.Directional = {
 		Recovery = 0.35,
 		WhiffRecovery = 0.65,  -- recuperación extra si no conecta (castigo)
 		GuardBrokenTime = 0.8, -- estado GuardBroken: abierto a un golpe seguro
-		DownedPush = 2,        -- studs que debería recorrer un derribado pateado (D1); se logra con la velocidad de abajo
-		DownedPushSpeed = 16,  -- velocidad del empujón (studs/s). Calibrar en Studio para que recorra ~DownedPush
-		DownedPushUp = 4,      -- componente vertical del empujón (despega el cuerpo del suelo para que deslice)
+		DownedPush = 5,        -- 10/11: era 2 (el usuario pidió más). Studs que debería recorrer un derribado pateado (D1); se logra con la velocidad de abajo
+		DownedPushSpeed = 32,  -- 10/11: era 16. Velocidad del empujón (studs/s). Calibrar en Studio para que recorra ~DownedPush
+		DownedPushUp = 7,      -- 10/11: era 4. Componente vertical del empujón (despega el cuerpo del suelo para que deslice)
 		LiftHold = 0.35,       -- mantener F este tiempo sobre un derribado = levantarlo
 		Cooldown = 1.2,
 	},

@@ -177,6 +177,52 @@ Skins.Data.CataclysmMaw = {
 	material = Enum.Material.Metal,
 }
 
+-- 10/11/2026: Eclipse Carmesí para dagas y estoque (mismo concepto que la espada), también de la ruleta
+Skins.Order[#Skins.Order + 1] = "EclipseFang"
+Skins.Data.EclipseFang = {
+	name = "Colmillos del Eclipse Carmesí",
+	desc = "Premio de la ruleta. Dagas gemelas de obsidiana con bisel de plata espejo, garras en la guarda y una vena de relámpago carmesí.",
+	weapon = "Dagger",
+	rarity = "Legendary",
+	currency = "Coins",
+	price = 9000,
+	comingSoon = false,
+	roulette = true,
+	design = "EclipseFang",
+	blade = Color3.fromRGB(22, 22, 28),
+	accent = Color3.fromRGB(214, 220, 232),
+	trail = Color3.fromRGB(235, 22, 38),
+	material = Enum.Material.Metal,
+}
+
+Skins.Order[#Skins.Order + 1] = "EclipseNeedle"
+Skins.Data.EclipseNeedle = {
+	name = "Aguja del Eclipse Carmesí",
+	desc = "Premio de la ruleta. Estoque de obsidiana con cazoleta de plata, rubíes de sangre y un relámpago carmesí que corre hasta la punta.",
+	weapon = "Rapier",
+	rarity = "Legendary",
+	currency = "Coins",
+	price = 9000,
+	comingSoon = false,
+	roulette = true,
+	design = "EclipseNeedle",
+	blade = Color3.fromRGB(22, 22, 28),
+	accent = Color3.fromRGB(214, 220, 232),
+	trail = Color3.fromRGB(235, 22, 38),
+	material = Enum.Material.Metal,
+}
+
+-- 10/11/2026: candidatas a skin exclusiva semanal (versión "con rayos" de las skins de la tienda, en
+-- SkinDesignsStorm). Todavía no están activas: para usar una, crearle su entrada en Skins.Data con
+-- roulette = true y un design que la lea de SkinDesignsStorm, y sumarla a Rewards.WeeklySkins.
+Skins.WeeklyPool = {
+	"Fangs", "LivingThorns", "VoidMoons", "SilverCrescent", "EclipseClaws",
+	"RequiemHorns", "Solar", "Ossuary", "DawnCrown", "DragonEdge", "Violet", "Void", "ExileTooth", "DraconicRelic",
+	"EmeraldTomb", "Devourer", "RoyalMourning", "DuskCross", "Shroud", "AbyssWings",
+	"Duel", "SilverCut", "FireTongue", "TwilightDuel", "SpectralSting", "AmethystVeil", "DarkLament",
+	"Flange", "CrimsonShards", "NorthExecutioner", "Forge", "AncientMaw", "OssuaryAxe", "AbyssVertebra", "SepulcherJaws", "OssuaryCrown",
+}
+
 for id, skin in Skins.Data do
 	skin.nameKey = "skin." .. id
 	skin.descKey = "skinDesc." .. id

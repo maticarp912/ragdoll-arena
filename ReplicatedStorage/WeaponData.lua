@@ -28,6 +28,9 @@ local WeaponData = {}
 
 WeaponData.Order = { "Sword", "Greatsword", "Dagger", "Rapier", "Mace" }
 
+-- 10/11/2026 «Contragolpe de peso» (riposte, solo Espadón y Maza): al bloquear un golpe básico, el atacante
+-- queda trabado recoil s (se le corta el combo y lo que tenía encolado) y durante window s tu próximo golpe
+-- básico sale con hiperarmadura, speedMult de la duración (más rápido) y damageMult de daño.
 -- Armas con las que empieza un jugador nuevo. Se usa en la Fase E.
 WeaponData.Starters = { "Sword", "Greatsword", "Dagger" }
 
@@ -59,18 +62,21 @@ WeaponData.Data = {
 		hp = 290, speed = 12.5, guardMax = 115, -- etapa 8: +35 % (era 215)
 		combo = {
 			-- 0.2 (D3): 17·19·26 → 19·21·29 y alcance 9,5 → 10
+			-- 10/11/2026: más rápido (el usuario: «contra alguien que te spamee no tenés oportunidad»)
+			-- duración 0,92·0,92·1,05 → 0,78·0,78·0,90 e impacto 0,50·0,50·0,58 → 0,40·0,40·0,48
 			damage = { 19, 21, 29 }, stun = { 25, 28, 45 }, knockback = { 14, 14, 32 },
-			duration = { 0.92, 0.92, 1.05 }, hitTime = { 0.5, 0.5, 0.58 },
+			duration = { 0.78, 0.78, 0.9 }, hitTime = { 0.4, 0.4, 0.48 },
 			reach = 10, width = 7.5,
 			hyperArmor = { false, true, true }, guardDrainMult = 1.6, staggerMult = 1.3,
 		},
 		heavy = {
 			name = "Tajo Aplastante", damage = 50, stun = 70, knockback = 55, -- 0.2 (D3): 45 → 50
-			windup = 0.64, hitDelay = 0.1, recovery = 0.66, reach = 10, width = 7,
+			windup = 0.56, hitDelay = 0.1, recovery = 0.6, reach = 10, width = 7, -- 10/11: 0,64 / 0,66 → 0,56 / 0,60
 			feintable = true, hyperArmor = true, unblockable = false,
 			blockDamageMult = 0.5, guardBreakStunMult = 1.6,
 		},
 		mobility = { dodgeDistance = 0.9, dodgeCost = 1.25 },
+		riposte = { window = 0.8, damageMult = 1.5, speedMult = 0.6, recoil = 0.35 }, -- 10/11: contragolpe de peso
 		trait = "Hiperarmadura en golpes 2-3 y en el fuerte; barre de lado y empuja hacia el borde",
 	},
 
@@ -128,18 +134,21 @@ WeaponData.Data = {
 		hp = 317, speed = 12.5, guardMax = 110, -- etapa 8: +35 % (era 235)
 		combo = {
 			-- 0.2 (D3): 13·15·20 → 17·19·26, alcance 7 → 8, golpe 3 más ancho (5 → 6,5)
+			-- 10/11/2026: más rápida. Duración 1,00·1,00·1,12 → 0,84·0,84·0,95 e impacto 0,56·0,56·0,63 → 0,44·0,44·0,52
 			damage = { 17, 19, 26 }, stun = { 32, 32, 52 }, knockback = { 8, 8, 22 },
-			duration = { 1.0, 1.0, 1.12 }, hitTime = { 0.56, 0.56, 0.63 },
+			duration = { 0.84, 0.84, 0.95 }, hitTime = { 0.44, 0.44, 0.52 },
 			reach = 8, width = 5, widths = { 5, 5, 6.5 },
 			hyperArmor = { false, false, true }, guardDrainMult = 2.0, staggerMult = 1.3,
 		},
 		heavy = {
-			name = "Machaque Pesado", damage = 46, stun = 85, -- 0.2 (D3): 40 → 46 knockback = 36,
-			windup = 0.6, hitDelay = 0.1, recovery = 0.68, reach = 7.5, width = 5.5, -- 9/11: 7 → 7.5
+			-- 10/11: el knockback = 36 había quedado adentro del comentario (el fuerte no empujaba)
+			name = "Machaque Pesado", damage = 46, stun = 85, knockback = 36, -- 0.2 (D3): 40 → 46
+			windup = 0.52, hitDelay = 0.1, recovery = 0.62, reach = 7.5, width = 5.5, -- 9/11: 7 → 7.5 · 10/11: 0,60 / 0,68 → 0,52 / 0,62
 			feintable = true, hyperArmor = false, unblockable = true,
 			blockDamageMult = 1.0, guardBreakStunMult = 1,
 		},
 		mobility = { dodgeDistance = 0.9, dodgeCost = 1.25 },
+		riposte = { window = 0.8, damageMult = 1.5, speedMult = 0.6, recoil = 0.35 }, -- 10/11: contragolpe de peso
 		trait = "Gasta el doble de Guardia al bloquearla; Machaque imbloqueable",
 		blunt = true, -- martillo de guerra: sonido y efectos contundentes
 	},

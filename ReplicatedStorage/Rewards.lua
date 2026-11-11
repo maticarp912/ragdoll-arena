@@ -5,7 +5,7 @@ local R = {
  ExtraPrices = { 250, 500, 1000 }, DailySouls = { 50, 75, 100, 125, 150, 200 },
  StarterSkins = { "Charcoal", "Frost", "Gold" }, FirstMatch = 300, TutorialSouls = 100, TutorialSteps = 3,
  WeeklyGoals = { Win = 15, Parry = 40 }, FirstGoals = { Match = 3, Win = 1, Parry = 5, Equip = 1, Spin = 1, OpenBox = 1, Level = 5 },
- WeeklySkins = { "CrimsonEclipse", "BloodMoonCleaver", "CataclysmMaw" },
+ WeeklySkins = { "CrimsonEclipse", "BloodMoonCleaver", "CataclysmMaw", "EclipseFang", "EclipseNeedle" },
  Spin = {
   { kind = "Souls", amount = 75, weight = 30 }, { kind = "Souls", amount = 200, weight = 25 },
   { kind = "Souls", amount = 600, weight = 15 }, { kind = "XP", amount = 150, weight = 12 },
@@ -35,6 +35,9 @@ local R = {
 R.Schema = 2
 R.DaySeconds = 86400 R.DayOffset = 10800 R.Tick = 0.5 R.MaxIdLength = 64
 R.NotifyDelay = R.Interval + 0.05
+-- Reserved for a future version: no prompt, sales or receipt handler in 0.2.
+-- Activate only after configuring a real product and server receipt fulfilment.
+R.RobuxSpinPack = { enabled = false, productId = 0, spins = 3 }
 R.MaxAdminGrant = 100 R.MaxSequence = 1e12 R.GraceDays = 1 R.GoodRank = 3
 R.FirstMatchSouls = R.FirstMatch R.DuplicateFraction = R.DuplicateRate
 R.RoulettePity = R.SpinGuarantee R.RelicPity = R.RelicGuarantee

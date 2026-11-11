@@ -27,6 +27,36 @@ local Skins = require(RS:WaitForChild("Skins", 10))
 local Weapons = require(RS:WaitForChild("WeaponData", 10))
 local Builder = require(RS:WaitForChild("WeaponBuilder", 10))
 
+-- Presentation tuning only. Never selects, buys or grants a reward.
+local REVEAL = {
+	CarouselSeconds = 2.8, SettleSeconds = 0.22, RevealSeconds = 1.1,
+	FixedSeconds = 0.65, OpenSeconds = 0.22, BrakePower = 3,
+	WheelSeconds = 2.7, WheelPause = 0.24, WheelFinalSeconds = 0.38,
+	WheelTurns = 4, Circle = 360, FinalSectorFraction = 0.72,
+	JackpotSeconds = 2.5, FlashSeconds = 0.55, JackpotFlashSeconds = 1.2,
+	FlashTransparency = 0.35, JackpotFlashTransparency = 0.08,
+	StripCount = 32, StripTail = 3, CardWidth = 128, CardHeight = 154, CardGap = 10,
+	TickSound = "UI_Hover", WinSound = "UI_PurchaseOK", RequestPadding = 0.05,
+	Width = 520, JackpotWidth = 600, Height = 446, JackpotExtraHeight = 64, Margin = 16, MobileBreakpoint = 780,
+	TitleY = 16, TitleH = 52, StageY = 80, StageH = 190,
+	NameY = 276, NameH = 60, DetailY = 338, DetailH = 42, ButtonBottom = 12, ButtonH = 46,
+	NameSize = 28, JackpotNameSize = 34, DetailSize = 15, CardNameSize = 15,
+	CardNameY = 72, CardNameH = 58, CardRarityH = 24, CardIconSize = 44, CardIconY = 12,
+	CardPreviewLimit = 3, PointerWidth = 3, PointerAlpha = 0.25,
+	ChestSize = 138, LidHeight = 34, LidLift = 62, LidRotation = -22, ShakeDegrees = 5, ShakeCycles = 6,
+	ConfirmHeight = 250, ConfirmTextY = 28, ConfirmTextH = 130, ConfirmGap = 12,
+	MobileWheelHeight = 510, MobileBoxHeight = 490, MobileGap = 14, MobileTabHeight = 44,
+	CompactWidth = 375, CompactHeader = 112, CompactBodyY = 174,
+	CompactMaxHeight = 780, CompactRowHeight = 58, CompactStepHeight = 48,
+	CompactTitleHeight = 30, CompactTextSize = 13, WeeklyHeight = 114, DesktopWeeklyHeight = 82,
+	WheelTop = 62, WheelDiameter = 308, WheelControlsHeight = 130, PityBottom = 128,
+	RequestIntervalFallback = 0.35, WheelDescriptionHeight = 36,
+	OddsHeight = 520, OddsRowHeight = 64, OddsNameFraction = 0.72, PercentScale = 100,
+	OddsHeaderHeight = 32, HeaderTextX = 52,
+	SecondsPerMinute = 60,
+	Layer = { Veil = 70, Box = 71, Stage = 72, Content = 73, Preview = 74, Pointer = 75, Button = 76, Flash = 77 },
+}
+
 local RewardsConfig = nil
 do
 	local mod = RS:FindFirstChild("Rewards")
@@ -117,6 +147,13 @@ local setOpen
 local showPrizeCelebration
 local showOddsModal
 local checkWelcomeModal
+local showPaidConfirmation
+local revealQueue = {}
+local activeReveal = nil
+local revealRunning = false
+local serverStateReady = false
+local subModalSelection = nil
+local renderedViewport = nil
 
 local DEFAULT_SECTORS = {
 	{ kind = "Souls", amount = 75, probability = 0.30, rarity = "Common" },
@@ -203,6 +240,7 @@ local function buildFallbackState()
 		spins = 0,
 		paidSpins = 0,
 		paidSpinPrice = 250,
+		paidSpinsRemaining = 0,
 		relicPity = 0,
 		relicGuarantee = (RewardsConfig and (RewardsConfig.RelicPity or RewardsConfig.RelicGuarantee)) or 10,
 		boxes = {
@@ -238,60 +276,68 @@ local function getRewardsRemote()
 	return remotes and remotes:FindFirstChild("Rewards")
 end
 
+-- Serialize reads and mutations, including RewardsChanged refreshes, under C19's cooldown.
+local requests = {}
+local requesting = false
+local lastRequestAt = -math.huge
 local function invokeRewards(action, id, source, callback)
-	local rf = getRewardsRemote()
-	if not rf or not rf:IsA("RemoteFunction") then
-		if action == "GetState" then
-			state = state or buildFallbackState()
-			updateAlertsFromState()
-			if callback then callback(true, state) end
-		elseif callback then
-			callback(false, { key = "loading" })
-		end
-		return
-	end
-
+	local mutation = action ~= "GetState"
+	if mutation and (busy or spinning) then return end
+	if mutation then busy = true end
+	table.insert(requests, { action = action, id = id, source = source, callback = callback })
+	if requesting then return end
+	requesting = true
 	task.spawn(function()
-		local callOk, r1, r2 = pcall(function()
-			return rf:InvokeServer(action, id, source)
-		end)
-		if not callOk then
-			if action == "GetState" and not state then
-				state = buildFallbackState()
+		while #requests > 0 do
+			local req = table.remove(requests, 1)
+			local interval = (RewardsConfig and RewardsConfig.Interval or REVEAL.RequestIntervalFallback) + REVEAL.RequestPadding
+			local remaining = interval - (os.clock() - lastRequestAt)
+			if remaining > 0 then task.wait(remaining) end
+			local success, payload = false, { key = "loading" }
+			local rf = getRewardsRemote()
+			if rf and rf:IsA("RemoteFunction") then
+				lastRequestAt = os.clock()
+				local requestId = req.action ~= "GetState" and serverStateReady and state and state.nextRequest or nil
+				local callOk, ok, result = pcall(function()
+					return rf:InvokeServer(req.action, req.id, req.source, requestId)
+				end)
+				if callOk then success = ok == true payload = result
+				else payload = { key = "cx.reward.reveal.uncertain" } end
+				-- Do not repeat a mutation automatically after an uncertain response.
+				if success and type(payload) == "table" then
+					if req.action == "GetState" then
+						state = payload serverStateReady = true
+						updateAlertsFromState()
+						if not busy and not spinning then checkWelcomeModal() end
+					elseif state then state.nextRequest = payload.nextRequest end
+				end
+			elseif req.action == "GetState" then
+				state = state or buildFallbackState()
 				updateAlertsFromState()
 			end
-			if callback then callback(false, { key = "error" }) end
-			return
+			if req.action ~= "GetState" then busy = false end
+			if req.callback then
+				local callbackOk, message = pcall(req.callback, success, payload)
+				if not callbackOk then warn("[Rewards] Response: " .. tostring(message)) end
+			end
 		end
-
-		local success, payload
-		if type(r1) == "boolean" then
-			success = r1
-			payload = r2
-		elseif type(r1) == "table" then
-			success = true
-			payload = r1
-		else
-			success = r1 ~= nil
-			payload = r2 or r1
-		end
-
-		if action == "GetState" and success and type(payload) == "table" then
-			state = payload
-			updateAlertsFromState()
-			checkWelcomeModal()
-		end
-		if callback then
-			callback(success, payload)
-		end
+		requesting = false
 	end)
 end
 
+local refreshQueued, refreshAgain, refreshRenderWanted = false, false, false
 local function refreshState(andRender)
+	refreshRenderWanted = refreshRenderWanted or andRender == true
+	if refreshQueued then refreshAgain = true return end
+	refreshQueued = true
 	invokeRewards("GetState", nil, nil, function()
-		if andRender and opened and not spinning then
+		refreshQueued = false
+		local shouldRender = refreshRenderWanted
+		refreshRenderWanted = false
+		if shouldRender and opened and not spinning and not busy and not subModal then
 			render()
 		end
+		if refreshAgain then refreshAgain = false refreshState(shouldRender) end
 	end)
 end
 
@@ -310,6 +356,15 @@ local function setStatus(text, isError)
 	if not statusLabel or not statusLabel.Parent then return end
 	statusLabel.Text = text or ""
 	statusLabel.TextColor3 = isError and C.Danger or C.GoldBright
+end
+
+local function rewardError(result, fallbackKey)
+	local text = L.t((type(result) == "table" and result.key) or fallbackKey or "error")
+	UiTheme.playSound("UI_Error") setStatus(text, true)
+	-- A read reconciles an uncertain response; no purchase or claim is repeated.
+	invokeRewards("GetState", nil, nil, function()
+		if opened and not spinning and not busy and not subModal then render() setStatus(text, true) end
+	end)
 end
 
 local function makeWeaponPreview3D(parent, wid, sid, rect, large)
@@ -362,11 +417,9 @@ local function formatSectorLabel(sec)
 		return L.t("ui.rewards.sectorXp", { amount = sec.amount or 150 })
 	elseif k == "Boost" then
 		local st = sec.stat or sec.boost
-		if st == "XP" then
-			return L.t("ui.rewards.sectorBoostXp", { mult = sec.multiplier or 1.5 })
-		else
-			return L.t("ui.rewards.sectorBoostSouls", { mult = sec.multiplier or 2 })
-		end
+		return L.t(st == "XP" and "cx.reward.reveal.boostXp" or "cx.reward.reveal.boostSouls", {
+			mult = sec.multiplier, minutes = (sec.seconds or 0) / REVEAL.SecondsPerMinute,
+		})
 	elseif k == "Box" then
 		return L.t("ui.rewards.sectorBoxRelic")
 	elseif k == "WeeklySkin" or k == "Weekly" or k == "Skin" then
@@ -397,328 +450,362 @@ local function closeSubModal()
 		subModal:Destroy()
 		subModal = nil
 	end
+	if subModalSelection and subModalSelection.Parent then GuiService.SelectedObject = subModalSelection end
+	subModalSelection = nil
 end
 
-function showPrizeCelebration(reward, isBoxOpen)
-	closeSubModal()
-	if type(reward) ~= "table" then return end
+-- These helpers describe a server reward, including the original skin on conversion.
+local function rewardSkin(reward)
+	return reward.duplicate or ((reward.kind == "Skin" or reward.kind == "WeeklySkin") and reward.id)
+end
+local function rewardRarity(reward)
+	local skin = Skins.Data[rewardSkin(reward)]
+	return reward.rarity or (skin and skin.rarity) or "Common"
+end
+local function rewardColor(reward)
+	local spec = UiTheme.Rarities[rewardRarity(reward)] or UiTheme.Rarities.Common
+	return spec.color
+end
+local function rewardName(reward)
+	local skinId = rewardSkin(reward)
+	if skinId then return L.t("skin." .. skinId) end
+	if reward.kind == "Box" then return L.t("cx.reward.box." .. reward.id) end
+	return formatSectorLabel(reward)
+end
 
-	local modalVeil = Instance.new("TextButton")
-	modalVeil.Name = "PrizeModalVeil"
-	modalVeil.Size = UDim2.fromScale(1, 1)
-	modalVeil.BackgroundColor3 = C.BgAbyss
-	modalVeil.BackgroundTransparency = 0.2
-	modalVeil.Text = ""
-	modalVeil.AutoButtonColor = false
-	modalVeil.ZIndex = 30
-	modalVeil.Parent = panel
-	subModal = modalVeil
-
-	local rName = reward.rarity or (reward.kind == "Skin" and Skins.Data[reward.id] and Skins.Data[reward.id].rarity) or "Rare"
-	if reward.kind == "Souls" and (reward.amount or 0) >= 600 then rName = "Epic" end
-	local rSpec = UiTheme.Rarities[rName] or UiTheme.Rarities.Rare
-	local accentColor = rSpec and rSpec.color or C.GoldBright
-
-	-- Destello de pantalla completa en premios Épicos o Legendarios
-	if rName == "Legendary" or rName == "Epic" then
-		local burst = Instance.new("Frame")
-		burst.Size = UDim2.fromScale(1, 1)
-		burst.BackgroundColor3 = accentColor
-		burst.BackgroundTransparency = 0.15
-		burst.BorderSizePixel = 0
-		burst.ZIndex = 40
-		burst.Parent = modalVeil
-		TweenService:Create(burst, TweenInfo.new(0.65, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			BackgroundTransparency = 1,
-		}):Play()
-		task.delay(0.7, function()
-			if burst.Parent then burst:Destroy() end
-		end)
-	end
-
-	local box = UiTheme.panel({
-		name = "PrizeBox",
-		parent = modalVeil,
-		anchor = Vector2.new(0.5, 0.5),
-		position = UDim2.fromScale(0.5, 0.5),
-		size = UDim2.fromOffset(480, 390),
-		bg = C.BgPrimary,
-		borderColor = accentColor,
-		borderThickness = UiTheme.Stroke.Heavy,
-		ornaments = true,
-		ornamentSize = 16,
-		zIndex = 32,
-	})
-
-	local function populateRewardContent()
-		for _, ch in box:GetChildren() do
-			if not ch:IsA("UIStroke") and not ch:IsA("UICorner") and not ch:IsA("UIGradient") and ch.Name ~= "Ornaments" then
-				ch:Destroy()
-			end
-		end
-
-		UiTheme.playSound("UI_PurchaseOK")
-
-		UiTheme.label({
-			parent = box,
-			position = UDim2.fromOffset(20, 16),
-			size = UDim2.new(1, -40, 0, 30),
-			text = L.t("ui.rewards.prizeWon"),
-			font = "Title",
-			textSize = UiTheme.TextSizes.XXL,
-			color = accentColor,
-			alignX = Enum.TextXAlignment.Center,
-			zIndex = 34,
-		})
-
-		if rSpec then
-			local bdg = UiTheme.rarityBadge(box, rName, L.t(rName), UDim2.new(0.5, -52, 0, 50))
-			bdg.ZIndex = 34
-		end
-
-		local titleText = ""
-		local subText = ""
-		local skinId = (reward.kind == "Skin" and reward.id) or reward.duplicate
-		if skinId and Skins.Data[skinId] then
-			local sData = Skins.Data[skinId]
-			local vp = makeWeaponPreview3D(box, sData.weapon or "Sword", skinId, { 90, 82, 300, 165 }, true)
-			vp.ZIndex = 34
-			titleText = L.t("skin." .. skinId)
-			if reward.duplicate then
-				subText = L.t("ui.rewards.duplicateConverted", {
-					skin = L.t("skin." .. reward.duplicate),
-					amount = reward.amount or 0,
-				})
-			else
-				subText = L.t("skinDesc." .. skinId)
-			end
-		else
-			local emblem = Instance.new("Frame")
-			emblem.AnchorPoint = Vector2.new(0.5, 0)
-			emblem.Position = UDim2.new(0.5, 0, 0, 92)
-			emblem.Size = UDim2.fromOffset(124, 124)
-			emblem.BackgroundColor3 = C.BgPreview
-			emblem.BorderSizePixel = 0
-			emblem.ZIndex = 34
-			emblem.Parent = box
-			UiTheme.corner(emblem, 62)
-			UiTheme.stroke(emblem, accentColor, 2.2, 0.1)
-
-			local iconName = reward.kind == "Box" and "trophy" or (reward.kind == "XP" and "mission" or "coin")
-			local ic = UiAssets.icon(emblem, iconName, 64, accentColor)
-			ic.AnchorPoint = Vector2.new(0.5, 0.5)
-			ic.Position = UDim2.fromScale(0.5, 0.5)
-			ic.ZIndex = 35
-
-			titleText = formatSectorLabel(reward)
-			subText = L.t("acquired")
-		end
-
-		UiTheme.label({
-			parent = box,
-			position = UDim2.fromOffset(24, 256),
-			size = UDim2.new(1, -48, 0, 28),
-			text = titleText,
-			font = "Title",
-			textSize = UiTheme.TextSizes.XL,
-			color = C.GoldBright,
-			alignX = Enum.TextXAlignment.Center,
-			zIndex = 34,
-		})
-
-		UiTheme.label({
-			parent = box,
-			position = UDim2.fromOffset(28, 284),
-			size = UDim2.new(1, -56, 0, 38),
-			text = subText,
-			font = "Body",
-			textSize = UiTheme.TextSizes.xs or UiTheme.TextSizes.XS,
-			color = reward.duplicate and C.Coins or C.TextSecondary,
-			alignX = Enum.TextXAlignment.Center,
-			zIndex = 34,
-		})
-
-		local okBtn = UiTheme.button({
-			parent = box,
-			anchor = Vector2.new(0.5, 1),
-			position = UDim2.new(0.5, 0, 1, -16),
-			size = UDim2.fromOffset(190, 42),
-			text = L.t("ui.match.continue"),
-			variant = "gold",
-			zIndex = 35,
-			onClick = function()
-				closeSubModal()
-				refreshState(true)
-			end,
-		})
-		if UIS.GamepadEnabled then
-			GuiService.SelectedObject = okBtn
+-- No invented skins, zero-probability rarities or staged legendary near misses.
+local function boxCandidates(boxId)
+	local pool = {}
+	local box = state and state.boxes and state.boxes[boxId]
+	for _, row in box and box.probabilities or {} do
+		if (row.probability or 0) > 0 then
+			if row.skins then
+				for _, id in row.skins do
+					table.insert(pool, { kind = "Skin", id = id, rarity = row.rarity })
+				end
+			else table.insert(pool, table.clone(row)) end
 		end
 	end
+	return pool
+end
 
-	if isBoxOpen then
-		-- Animación de cofre temblando + estallido de luz antes de revelar el premio
-		local chestFrame = Instance.new("Frame")
-		chestFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-		chestFrame.Position = UDim2.fromScale(0.5, 0.46)
-		chestFrame.Size = UDim2.fromOffset(136, 136)
-		chestFrame.BackgroundColor3 = C.BgCard
-		chestFrame.BorderSizePixel = 0
-		chestFrame.ZIndex = 34
-		chestFrame.Parent = box
-		UiTheme.corner(chestFrame, 24)
-		UiTheme.stroke(chestFrame, accentColor, 2.6, 0.05)
+local function usableViewport()
+	local camera = workspace.CurrentCamera
+	local size = camera and camera.ViewportSize or Vector2.new(BASE_W, BASE_H)
+	local topLeft, bottomRight = GuiService:GetGuiInset()
+	return size - topLeft - bottomRight
+end
 
-		local chestIc = UiAssets.icon(chestFrame, "trophy", 72, accentColor)
-		chestIc.AnchorPoint = Vector2.new(0.5, 0.5)
-		chestIc.Position = UDim2.fromScale(0.5, 0.5)
-		chestIc.ZIndex = 35
+local function fitOverlay(box, width, height)
+	local size = Instance.new("UIScale") size.Parent = box
+	local function fit()
+		local view = usableViewport()
+		size.Scale = math.min(1, (view.X - REVEAL.Margin * 2) / width, (view.Y - REVEAL.Margin * 2) / height)
+	end
+	fit()
+	local connection = RunService.RenderStepped:Connect(fit)
+	box.Destroying:Once(function() connection:Disconnect() end)
+end
 
-		task.spawn(function()
-			for step = 1, 10 do
-				if not chestFrame.Parent then return end
-				UiTheme.playSound("UI_Hover")
-				chestFrame.Rotation = (step % 2 == 0 and 1 or -1) * (4 + step * 1.1)
-				chestFrame.Size = UDim2.fromOffset(136 + step * 2, 136 + step * 2)
-				task.wait(0.065)
+local function overlayBox(name, height, jackpot)
+	local veil = Instance.new("TextButton")
+	veil.Name = name veil.Size = UDim2.fromScale(1, 1)
+	veil.Text = "" veil.AutoButtonColor = false veil.Selectable = false veil.Modal = true
+	veil.BackgroundColor3 = C.BgAbyss veil.BackgroundTransparency = REVEAL.PointerAlpha
+	veil.ZIndex = REVEAL.Layer.Veil veil.Parent = gui
+	local view = usableViewport()
+	local width = math.min(jackpot and REVEAL.JackpotWidth or REVEAL.Width, view.X - REVEAL.Margin * 2)
+	local box = UiTheme.panel({ name = name .. "Card", parent = veil,
+		anchor = Vector2.new(0.5, 0.5), position = UDim2.fromScale(0.5, 0.5),
+		size = UDim2.fromOffset(width, height), bg = C.BgPrimary, borderColor = C.GoldBright,
+		borderThickness = UiTheme.Stroke.Heavy, zIndex = REVEAL.Layer.Box })
+	fitOverlay(box, width, height)
+	return veil, box
+end
+
+local function revealLabel(parent, text, y, height, size, color)
+	return UiTheme.label({ parent = parent, position = UDim2.fromOffset(REVEAL.Margin, y),
+		size = UDim2.new(1, -REVEAL.Margin * 2, 0, height), text = text, font = "Title",
+		textSize = size, color = color or C.TextPrimary, alignX = Enum.TextXAlignment.Center, zIndex = REVEAL.Layer.Content })
+end
+
+-- The same curve drives both motion and ticks; skipping never calls the server.
+local function animateReveal(job, seconds, update, power)
+	local started = os.clock()
+	while activeReveal == job and not job.skip do
+		local t = math.clamp((os.clock() - started) / seconds, 0, 1)
+		update(1 - (1 - t) ^ (power or REVEAL.BrakePower))
+		if t >= 1 then break end
+		RunService.RenderStepped:Wait()
+	end
+	if activeReveal == job then update(1) end
+end
+
+local function animateWheel(job, options)
+	local wheel, sector = options.wheel, options.sector
+	local count = #options.sectors
+	local step = REVEAL.Circle / count
+	local start = wheel.Rotation % REVEAL.Circle
+	local target = (REVEAL.Circle - (sector - 1) * step) % REVEAL.Circle
+	local finish = start + REVEAL.Circle * REVEAL.WheelTurns + (target - start) % REVEAL.Circle
+	local before = finish - step * REVEAL.FinalSectorFraction
+	local lastTick = math.floor((start + step / 2) / step)
+	local function rotate(angle)
+		wheel.Rotation = angle
+		local crossing = math.floor((angle + step / 2) / step)
+		if not job.skip then
+			for _ = lastTick + 1, crossing do UiTheme.playSound(REVEAL.TickSound) end
+		end
+		lastTick = crossing
+	end
+	animateReveal(job, REVEAL.WheelSeconds, function(t) rotate(start + (before - start) * t) end)
+	animateReveal(job, REVEAL.WheelPause, function() end)
+	animateReveal(job, REVEAL.WheelFinalSeconds, function(t) rotate(before + (finish - before) * t) end)
+	currentWheelAngle = target wheel.Rotation = target
+end
+
+local function animateCarousel(job, stage, pool, reward)
+	if #pool == 0 then pool = { reward } end
+	local stride = REVEAL.CardWidth + REVEAL.CardGap
+	local landing = REVEAL.StripCount - REVEAL.StripTail
+	local strip = Instance.new("Frame")
+	strip.Size = UDim2.fromOffset(REVEAL.StripCount * stride, REVEAL.CardHeight)
+	strip.BackgroundTransparency = 1 strip.ZIndex = REVEAL.Layer.Content strip.Parent = stage
+	local cards = {}
+	-- Shuffle presentation candidates only; the winning entry is the response already granted.
+	local visualRandom = Random.new()
+	local order = table.clone(pool)
+	for i = #order, 2, -1 do
+		local j = visualRandom:NextInteger(1, i) order[i], order[j] = order[j], order[i]
+	end
+	for i = 1, REVEAL.StripCount do
+		local item = i == landing and reward or order[(i - 1) % #order + 1]
+		local card = UiTheme.panel({ parent = strip, position = UDim2.fromOffset((i - 1) * stride, 0),
+			size = UDim2.fromOffset(REVEAL.CardWidth, REVEAL.CardHeight), bg = C.BgCard,
+			borderColor = rewardColor(item), zIndex = REVEAL.Layer.Content })
+		local label = revealLabel(card, rewardName(item), REVEAL.CardNameY, REVEAL.CardNameH, REVEAL.CardNameSize, rewardColor(item))
+		label.FontFace = UiTheme.FontFaces.Bold
+		revealLabel(card, L.t(rewardRarity(item)), REVEAL.CardHeight - REVEAL.CardRarityH, REVEAL.CardRarityH, UiTheme.TextSizes.XS, rewardColor(item))
+		cards[i] = { frame = card, reward = item }
+	end
+	local pointer = Instance.new("Frame")
+	pointer.AnchorPoint = Vector2.new(0.5, 0) pointer.Position = UDim2.fromScale(0.5, 0)
+	pointer.Size = UDim2.new(0, REVEAL.PointerWidth, 1, 0) pointer.BorderSizePixel = 0
+	pointer.BackgroundColor3 = C.GoldBright pointer.BackgroundTransparency = REVEAL.PointerAlpha
+	pointer.ZIndex = REVEAL.Layer.Pointer pointer.Parent = stage
+	local lastCenter = nil
+	animateReveal(job, REVEAL.CarouselSeconds, function(t)
+		local center = 1 + (landing - 1) * t
+		strip.Position = UDim2.new(0.5, -REVEAL.CardWidth / 2 - (center - 1) * stride, 0.5, -REVEAL.CardHeight / 2)
+		local nearest = math.floor(center + 0.5)
+		if nearest == lastCenter then return end
+		if lastCenter and not job.skip then UiTheme.playSound(REVEAL.TickSound) end
+		lastCenter = nearest
+		-- Only visible cards own 3D models, even for large relic catalogues.
+		for i, entry in cards do
+			local visible = math.abs(i - nearest) <= math.floor(REVEAL.CardPreviewLimit / 2)
+			if entry.preview and not visible then entry.preview:Destroy() entry.preview = nil end
+			if visible and not entry.preview then
+				local sid = rewardSkin(entry.reward)
+				local skin = sid and Skins.Data[sid]
+				if skin then
+					entry.preview = makeWeaponPreview3D(entry.frame, skin.weapon or "Sword", sid,
+						{ REVEAL.CardGap, REVEAL.CardIconY, REVEAL.CardWidth - REVEAL.CardGap * 2, REVEAL.CardNameY - REVEAL.CardIconY }, false)
+				else
+					entry.preview = UiAssets.icon(entry.frame, entry.reward.kind == "Box" and "trophy" or "coin", REVEAL.CardIconSize, rewardColor(entry.reward))
+					entry.preview.AnchorPoint = Vector2.new(0.5, 0) entry.preview.Position = UDim2.new(0.5, 0, 0, REVEAL.CardIconY)
+				end
+				entry.preview.ZIndex = REVEAL.Layer.Preview
 			end
-			if box.Parent then
-				populateRewardContent()
-			end
-		end)
+		end
+	end)
+	animateReveal(job, REVEAL.SettleSeconds, function() end)
+end
+
+local function animateCard(job, stage)
+	local chest = UiTheme.panel({ parent = stage, anchor = Vector2.new(0.5, 0.5), position = UDim2.fromScale(0.5, 0.5),
+		size = UDim2.fromOffset(REVEAL.ChestSize, REVEAL.ChestSize), borderColor = C.GoldBright, zIndex = REVEAL.Layer.Content })
+	local icon = UiAssets.icon(chest, "trophy", REVEAL.ChestSize / 2, C.GoldBright)
+	icon.AnchorPoint = Vector2.new(0.5, 0.5) icon.Position = UDim2.fromScale(0.5, 0.5) icon.ZIndex = REVEAL.Layer.Preview
+	local lid = UiTheme.panel({ parent = chest, size = UDim2.new(1, 0, 0, REVEAL.LidHeight), bg = C.GoldDim, zIndex = REVEAL.Layer.Pointer })
+	animateReveal(job, REVEAL.FixedSeconds, function(t)
+		chest.Rotation = math.sin(t * math.pi * REVEAL.ShakeCycles) * REVEAL.ShakeDegrees
+	end, 1)
+	animateReveal(job, REVEAL.OpenSeconds, function(t)
+		lid.Position = UDim2.fromOffset(0, -REVEAL.LidLift * t) lid.Rotation = REVEAL.LidRotation * t
+	end)
+end
+
+local function runCelebration(job)
+	local reward, options = job.reward, job.options
+	local jackpot = options.jackpot == true
+	local extraHeight = jackpot and REVEAL.JackpotExtraHeight or 0
+	local veil, box = overlayBox("RewardReveal", REVEAL.Height + extraHeight, jackpot)
+	job.veil = veil
+	local previousSelection = GuiService.SelectedObject
+	local heading = revealLabel(box, L.t("cx.reward.reveal.opening"), REVEAL.TitleY, REVEAL.TitleH, UiTheme.TextSizes.XXL, C.GoldBright)
+	local stage = Instance.new("CanvasGroup")
+	stage.Position = UDim2.new(0, REVEAL.Margin, 0, REVEAL.StageY)
+	stage.Size = UDim2.new(1, -REVEAL.Margin * 2, 0, REVEAL.StageH + extraHeight)
+	stage.BackgroundTransparency = 1 stage.ClipsDescendants = true stage.ZIndex = REVEAL.Layer.Stage stage.Parent = box
+	local function activate()
+		if job.ready then job.dismiss = true else job.skip = true end
+	end
+	local button = UiTheme.button({ parent = box, anchor = Vector2.new(0.5, 1), position = UDim2.new(0.5, 0, 1, -REVEAL.ButtonBottom),
+		size = UDim2.new(1, -REVEAL.Margin * 2, 0, REVEAL.ButtonH), text = L.t("cx.reward.reveal.skip"), variant = "gold", zIndex = REVEAL.Layer.Button, onClick = activate })
+	veil.Activated:Connect(activate)
+	local input = game:GetService("ContextActionService")
+	input:BindActionAtPriority("RewardRevealSkip", function(_, inputState)
+		if inputState == Enum.UserInputState.Begin then activate() end
+		return Enum.ContextActionResult.Sink
+	end, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.Return, Enum.KeyCode.KeypadEnter, Enum.KeyCode.ButtonA)
+	job.input = input
+	if UIS.GamepadEnabled then GuiService.SelectedObject = button end
+	if options.wheel and options.wheel.Parent then
+		box.Visible = false veil.BackgroundTransparency = 1
+		-- Keep a physical-size skip target while the original wheel is visible.
+		button.Parent = veil button.Size = UDim2.new(1, -REVEAL.Margin * 2, 0, REVEAL.ButtonH)
+		animateWheel(job, options)
+		button.Parent = box box.Visible = true veil.BackgroundTransparency = REVEAL.PointerAlpha
+	elseif options.pool then animateCarousel(job, stage, options.pool, reward)
+	else animateCard(job, stage) end
+	stage:ClearAllChildren()
+	local color = rewardColor(reward)
+	heading.Text = L.t(jackpot and "cx.reward.reveal.jackpot" or "ui.rewards.prizeWon") heading.TextColor3 = color
+	local sid = rewardSkin(reward)
+	local skin = sid and Skins.Data[sid]
+	if skin then
+		local vp = makeWeaponPreview3D(stage, skin.weapon or "Sword", sid, { 0, 0, 0, 0 }, true)
+		vp.Size = UDim2.fromScale(1, 1) vp.ZIndex = REVEAL.Layer.Preview
 	else
-		populateRewardContent()
+		local icon = UiAssets.icon(stage, reward.kind == "Box" and "trophy" or (reward.kind == "XP" and "mission" or "coin"), REVEAL.ChestSize, color)
+		icon.AnchorPoint = Vector2.new(0.5, 0.5) icon.Position = UDim2.fromScale(0.5, 0.5) icon.ZIndex = REVEAL.Layer.Preview
 	end
+	local name = revealLabel(box, rewardName(reward), REVEAL.NameY + extraHeight, REVEAL.NameH, jackpot and REVEAL.JackpotNameSize or REVEAL.NameSize, color)
+	name.TextScaled = true
+	local limit = Instance.new("UITextSizeConstraint") limit.MaxTextSize = name.TextSize limit.MinTextSize = REVEAL.DetailSize limit.Parent = name
+	local detail = L.t(rewardRarity(reward))
+	if reward.duplicate then detail = detail .. " · " .. L.t("ui.rewards.duplicateConverted", { skin = rewardName(reward), amount = reward.amount }) end
+	if reward.kind == "Boost" then detail = detail .. " · " .. L.t("cx.reward.reveal.boostTime", { seconds = reward.seconds }) end
+	if options.bonus then detail = detail .. " · " .. L.t("cx.reward.reveal.bonus", { reward = rewardName(options.bonus) }) end
+	revealLabel(box, detail, REVEAL.DetailY + extraHeight, REVEAL.DetailH, REVEAL.DetailSize, reward.duplicate and C.Coins or color)
+	local stroke = box:FindFirstChildOfClass("UIStroke") if stroke then stroke.Color = color end
+	local flash = Instance.new("Frame") flash.Size = UDim2.fromScale(1, 1) flash.BorderSizePixel = 0
+	flash.BackgroundColor3 = color flash.BackgroundTransparency = jackpot and REVEAL.JackpotFlashTransparency or REVEAL.FlashTransparency
+	flash.ZIndex = REVEAL.Layer.Flash flash.Parent = veil
+	TweenService:Create(flash, TweenInfo.new(jackpot and REVEAL.JackpotFlashSeconds or REVEAL.FlashSeconds), { BackgroundTransparency = 1 }):Play()
+	UiTheme.playSound(REVEAL.WinSound)
+	local duration = jackpot and REVEAL.JackpotSeconds or REVEAL.RevealSeconds
+	animateReveal(job, duration, function(t)
+		stage.GroupTransparency = 1 - t name.TextTransparency = 1 - t
+	end)
+	button.Text = L.t("ui.match.continue") job.ready = true
+	-- Result remains readable until Continue; this user-controlled hold is not animation time.
+	while not job.dismiss do RunService.RenderStepped:Wait() end
+	input:UnbindAction("RewardRevealSkip") job.input = nil
+	veil:Destroy()
+	if previousSelection and previousSelection.Parent then GuiService.SelectedObject = previousSelection else GuiService.SelectedObject = nil end
+end
+
+function showPrizeCelebration(reward, options)
+	if type(reward) ~= "table" then return end
+	closeSubModal()
+	table.insert(revealQueue, { reward = reward, options = type(options) == "table" and options or {} })
+	if revealRunning then return end
+	revealRunning = true spinning = true
+	task.spawn(function()
+		while #revealQueue > 0 do
+			local job = table.remove(revealQueue, 1) activeReveal = job
+			if player:GetAttribute("InMatch") then job.skip = true job.dismiss = true end
+			local ok, message = pcall(runCelebration, job)
+			if job.input then job.input:UnbindAction("RewardRevealSkip") end
+			if job.veil and job.veil.Parent then job.veil:Destroy() end
+			if not ok then warn("[Rewards] Reveal: " .. tostring(message)) end
+		end
+		activeReveal = nil revealRunning = false spinning = false
+		if player:GetAttribute("InMatch") or player:GetAttribute("ShopOpen") or player:GetAttribute("ArmoryOpen") or player:GetAttribute("SettingsOpen") then setOpen(false) end
+		refreshState(true)
+	end)
+end
+
+function showPaidConfirmation(onConfirm)
+	if busy or spinning or not serverStateReady or not state.paidSpinPrice then return end
+	closeSubModal()
+	local price, used, resetAt = state.paidSpinPrice, state.paidSpins, state.resetAt
+	local veil, box = overlayBox("ConfirmPaidSpin", REVEAL.ConfirmHeight)
+	subModalSelection = GuiService.SelectedObject
+	subModal = veil
+	revealLabel(box, L.t("cx.reward.spin.confirm", { price = price, remaining = state.paidSpinsRemaining, balance = state.souls }),
+		REVEAL.ConfirmTextY, REVEAL.ConfirmTextH, UiTheme.TextSizes.LG, C.GoldBright)
+	local accepted = false
+	local cancel = UiTheme.button({ parent = box, anchor = Vector2.new(0, 1), position = UDim2.new(0, REVEAL.Margin, 1, -REVEAL.Margin),
+		size = UDim2.new(0.5, -REVEAL.Margin - REVEAL.ConfirmGap / 2, 0, REVEAL.ButtonH), text = L.t("cx.reward.spin.cancel"), zIndex = REVEAL.Layer.Preview, onClick = closeSubModal })
+	UiTheme.button({ parent = box, anchor = Vector2.new(1, 1), position = UDim2.new(1, -REVEAL.Margin, 1, -REVEAL.Margin),
+		size = UDim2.new(0.5, -REVEAL.Margin - REVEAL.ConfirmGap / 2, 0, REVEAL.ButtonH), text = L.t("cx.reward.spin.accept", { price = price }), variant = "gold", zIndex = REVEAL.Layer.Preview,
+		onClick = function()
+			if accepted then return end accepted = true
+			invokeRewards("GetState", nil, nil, function(ok)
+				if subModal ~= veil then return end
+				closeSubModal()
+				if not ok or state.paidSpinPrice ~= price or state.paidSpins ~= used or state.resetAt ~= resetAt then
+					rewardError({ key = "cx.reward.spin.changed" }) return
+				end
+				onConfirm()
+			end)
+		end })
+	if UIS.GamepadEnabled then GuiService.SelectedObject = cancel end
 end
 
 ----------------------------------------------------------------------
 -- Modal "i Probabilidades" (transparencia total de Ruleta y Cajas)
 ----------------------------------------------------------------------
 function showOddsModal()
+	if spinning or busy then return end
 	closeSubModal()
-	local modalVeil = Instance.new("TextButton")
-	modalVeil.Name = "OddsModalVeil"
-	modalVeil.Size = UDim2.fromScale(1, 1)
-	modalVeil.BackgroundColor3 = C.BgAbyss
-	modalVeil.BackgroundTransparency = 0.24
-	modalVeil.Text = ""
-	modalVeil.AutoButtonColor = false
-	modalVeil.ZIndex = 30
-	modalVeil.Parent = panel
-	subModal = modalVeil
-
-	local box = UiTheme.panel({
-		name = "OddsBox",
-		parent = modalVeil,
-		anchor = Vector2.new(0.5, 0.5),
-		position = UDim2.fromScale(0.5, 0.5),
-		size = UDim2.fromOffset(620, 440),
-		bg = C.BgPrimary,
-		borderColor = C.Gold,
-		borderThickness = UiTheme.Stroke.Heavy,
-		ornaments = true,
-		zIndex = 32,
-	})
-
-	UiTheme.label({
-		parent = box,
-		position = UDim2.fromOffset(22, 14),
-		size = UDim2.new(1, -140, 0, 32),
-		text = L.t("ui.rewards.oddsTitle"),
-		font = "Title",
-		textSize = UiTheme.TextSizes.XL,
-		color = C.GoldBright,
-		zIndex = 33,
-	})
-
-	local closeBtn = UiTheme.button({
-		parent = box,
-		anchor = Vector2.new(1, 0),
-		position = UDim2.new(1, -16, 0, 12),
-		size = UDim2.fromOffset(100, 36),
-		text = L.t("close"),
-		zIndex = 34,
-		onClick = closeSubModal,
-	})
-
-	local sectors = (state and state.roulette) or DEFAULT_SECTORS
-	for i, sec in sectors do
-		local row = UiTheme.panel({
-			parent = box,
-			position = UDim2.fromOffset(22 + ((i - 1) % 2) * 292, 58 + math.floor((i - 1) / 2) * 44),
-			size = UDim2.fromOffset(284, 38),
-			bg = C.BgCard,
-			borderColor = C.BorderSubtle,
-			zIndex = 33,
-		})
-		UiTheme.label({
-			parent = row,
-			position = UDim2.fromOffset(12, 0),
-			size = UDim2.new(0.68, -12, 1, 0),
-			text = formatSectorLabel(sec),
-			font = "Bold",
-			textSize = UiTheme.TextSizes.SM,
-			color = C.TextPrimary,
-			zIndex = 34,
-		})
-		local pct = (tonumber(sec.probability) or 0) * 100
-		UiTheme.label({
-			parent = row,
-			anchor = Vector2.new(1, 0),
-			position = UDim2.new(1, -12, 0, 0),
-			size = UDim2.new(0.32, -12, 1, 0),
-			text = string.format("%.0f%%", pct),
-			font = "Number",
-			textSize = UiTheme.TextSizes.SM,
-			color = C.GoldBright,
-			alignX = Enum.TextXAlignment.Right,
-			zIndex = 34,
-		})
+	local veil, box = overlayBox("RewardOdds", REVEAL.OddsHeight)
+	subModal = veil subModalSelection = GuiService.SelectedObject
+	revealLabel(box, L.t("ui.rewards.oddsTitle"), REVEAL.TitleY, REVEAL.TitleH, UiTheme.TextSizes.XL, C.GoldBright)
+	local scroll = Instance.new("ScrollingFrame")
+	scroll.Position = UDim2.fromOffset(REVEAL.Margin, REVEAL.StageY)
+	scroll.Size = UDim2.new(1, -REVEAL.Margin * 2, 1, -REVEAL.StageY - REVEAL.ButtonH - REVEAL.Margin * 2)
+	scroll.BackgroundTransparency = 1 scroll.BorderSizePixel = 0 scroll.ZIndex = REVEAL.Layer.Content
+	scroll.ScrollBarThickness = UiTheme.Spacing.XXS scroll.CanvasSize = UDim2.new() scroll.Parent = box
+	local y = 0
+	local function section(text)
+		revealLabel(scroll, text, y, REVEAL.OddsHeaderHeight, UiTheme.TextSizes.SM, C.GoldBright)
+		y += REVEAL.OddsHeaderHeight
 	end
-
-	UiTheme.label({
-		parent = box,
-		position = UDim2.fromOffset(24, 246),
-		size = UDim2.new(1, -48, 0, 48),
-		text = L.t("ui.rewards.boxRelicDesc"),
-		font = "Body",
-		textSize = UiTheme.TextSizes.SM,
-		color = C.TextPrimary,
-		zIndex = 33,
-	})
-
-	UiTheme.label({
-		parent = box,
-		position = UDim2.fromOffset(24, 302),
-		size = UDim2.new(1, -48, 0, 48),
-		text = L.t("ui.rewards.duplicateRule"),
-		font = "Body",
-		textSize = UiTheme.TextSizes.SM,
-		color = C.Coins,
-		zIndex = 33,
-	})
-
-	UiTheme.label({
-		parent = box,
-		position = UDim2.fromOffset(24, 362),
-		size = UDim2.new(1, -48, 0, 28),
-		text = L.t("ui.rewards.pity", {
-			cur = (state and state.spinPity) or 0,
-			max = (state and state.spinGuarantee) or 30,
-		}) .. "  ·  " .. L.t("ui.rewards.relicPity", {
-			cur = (state and state.relicPity) or 0,
-			max = (state and state.relicGuarantee) or 10,
-		}),
-		font = "Bold",
-		textSize = UiTheme.TextSizes.SM,
-		color = C.GoldBright,
-		alignX = Enum.TextXAlignment.Center,
-		zIndex = 33,
-	})
-
-	if UIS.GamepadEnabled then
-		GuiService.SelectedObject = closeBtn
+	local function row(item, probability)
+		local card = UiTheme.panel({ parent = scroll, position = UDim2.fromOffset(0, y), size = UDim2.new(1, -REVEAL.CardGap, 0, REVEAL.OddsRowHeight),
+			borderColor = rewardColor(item), zIndex = REVEAL.Layer.Content })
+		UiTheme.label({ parent = card, position = UDim2.fromOffset(REVEAL.CardGap, 0),
+			size = UDim2.new(REVEAL.OddsNameFraction, -REVEAL.CardGap, 1, 0), text = rewardName(item) .. " · " .. L.t(rewardRarity(item)),
+			textSize = REVEAL.CompactTextSize, color = rewardColor(item), zIndex = REVEAL.Layer.Preview })
+		UiTheme.label({ parent = card, position = UDim2.fromScale(REVEAL.OddsNameFraction, 0),
+			size = UDim2.new(1 - REVEAL.OddsNameFraction, -REVEAL.CardGap, 1, 0), text = string.format("%.2f%%", (probability or 0) * REVEAL.PercentScale),
+			textSize = REVEAL.CompactTextSize, alignX = Enum.TextXAlignment.Right, zIndex = REVEAL.Layer.Preview })
+		y += REVEAL.OddsRowHeight + REVEAL.CardGap
 	end
+	section(L.t("ui.rewards.tab.Roulette"))
+	local tutorial = state and state.tutorial and state.tutorial.spinAvailable
+	for _, item in state and state.roulette or DEFAULT_SECTORS do
+		local probability = item.effectiveProbability or item.probability
+		if tutorial then probability = item.tutorialProbability or probability end
+		row(item, probability)
+	end
+	for _, id in { "Souls", "Relic" } do
+		section(L.t("cx.reward.box." .. id))
+		local spec = state and state.boxes and state.boxes[id]
+		for _, item in spec and spec.probabilities or {} do
+			if item.skins then
+				for _, sid in item.skins do row({ kind = "Skin", id = sid, rarity = item.rarity }, item.probabilityPerSkin) end
+			else row(item, item.probability) end
+		end
+	end
+	scroll.CanvasSize = UDim2.fromOffset(0, y)
+	local close = UiTheme.button({ parent = box, anchor = Vector2.new(0.5, 1), position = UDim2.new(0.5, 0, 1, -REVEAL.ButtonBottom),
+		size = UDim2.new(1, -REVEAL.Margin * 2, 0, REVEAL.ButtonH), text = L.t("close"), zIndex = REVEAL.Layer.Preview, onClick = closeSubModal })
+	if UIS.GamepadEnabled then GuiService.SelectedObject = close end
 end
 
 ----------------------------------------------------------------------
@@ -891,7 +978,7 @@ function checkWelcomeModal()
 					textSize = UiTheme.TextSizes.SM,
 					zIndex = 54,
 					onClick = function()
-						invokeRewards("ChooseStarter", skinId, nil, function(ok)
+						invokeRewards("ChooseStarter", skinId, nil, function(ok, res)
 							if ok then
 								local shopRF = remotes and remotes:FindFirstChild("Shop")
 								if shopRF and shopRF:IsA("RemoteFunction") then
@@ -901,6 +988,7 @@ function checkWelcomeModal()
 									welcomeVeil:Destroy()
 									welcomeVeil = nil
 								end
+								if type(res) == "table" and res.reward then showPrizeCelebration(res.reward) end
 								refreshState(true)
 							end
 						end)
@@ -919,7 +1007,72 @@ end
 ----------------------------------------------------------------------
 -- Renderizado de las 4 pestañas principales de Recompensas
 ----------------------------------------------------------------------
+local function claimFixed(action)
+	invokeRewards(action, nil, nil, function(ok, res)
+		if ok and type(res) == "table" and res.reward then showPrizeCelebration(res.reward)
+		else rewardError(res) end
+	end)
+end
+
+local function weeklyCard(parent, width, y, compact)
+	local weekly = state.weekly or {}
+	local height = compact and REVEAL.WeeklyHeight or REVEAL.DesktopWeeklyHeight
+	local card = UiTheme.panel({ name = "WeeklyClaim", parent = parent, position = UDim2.fromOffset(0, y), size = UDim2.fromOffset(width, height) })
+	local text = L.t(weekly.nameKey or "cx.weekly.Win", { goal = weekly.goal })
+	text = text .. " · " .. tostring(weekly.progress or 0) .. "/" .. tostring(weekly.goal or 0)
+	UiTheme.label({ parent = card, position = UDim2.fromOffset(REVEAL.Margin, 0),
+		size = compact and UDim2.new(1, -REVEAL.Margin * 2, 0, REVEAL.ButtonH) or UDim2.new(0.5, -REVEAL.Margin * 2, 1, 0), text = text,
+		textSize = REVEAL.CompactTextSize, color = C.GoldBright })
+	UiTheme.button({ parent = card, anchor = Vector2.new(1, 1), position = UDim2.new(1, -REVEAL.Margin, 1, -REVEAL.MobileGap),
+		size = compact and UDim2.new(1, -REVEAL.Margin * 2, 0, REVEAL.ButtonH) or UDim2.new(0.5, 0, 0, REVEAL.ButtonH),
+		text = L.t(weekly.claimed and "ui.missions.claimed" or "cx.reward.weekly.claim"), textSize = REVEAL.CompactTextSize,
+		disabled = weekly.claimed or (weekly.progress or 0) < (weekly.goal or math.huge),
+		onClick = function() claimFixed("ClaimWeekly") end })
+	return height + REVEAL.MobileGap
+end
+
+local function compactStreak(parent, width)
+	local y = weeklyCard(parent, width, 0, true)
+	if state.returnNotice then
+		UiTheme.label({ parent = parent, position = UDim2.fromOffset(0, y), size = UDim2.fromOffset(width, REVEAL.ButtonH),
+			text = L.t("cx.reward.return"), textSize = REVEAL.CompactTextSize, color = C.GoldBright })
+		y += REVEAL.ButtonH + REVEAL.MobileGap
+	end
+	local streak = state.streak or {}
+	local rewards = streak.rewards or {}
+	UiTheme.label({ parent = parent, position = UDim2.fromOffset(0, y), size = UDim2.fromOffset(width, REVEAL.CompactTitleHeight),
+		text = L.t("ui.rewards.streakTitle"), font = "Title", color = C.GoldBright })
+	y += REVEAL.CompactTitleHeight
+	UiTheme.button({ parent = parent, position = UDim2.fromOffset(0, y), size = UDim2.fromOffset(width, REVEAL.ButtonH),
+		text = L.t(streak.canClaim and "ui.rewards.claimStreak" or "ui.rewards.streakClaimed", { d = (streak.day or 0) % math.max(1, #rewards) + 1 }),
+		disabled = not streak.canClaim, onClick = function() claimFixed("ClaimStreak") end })
+	y += REVEAL.ButtonH + REVEAL.MobileGap
+	for day, value in rewards do
+		local text = L.t("ui.rewards.dayN", { d = day }) .. " · "
+		text = text .. (type(value) == "number" and L.t("cx.currency.souls", { amount = value }) or L.t("cx.reward.box." .. value))
+		UiTheme.label({ parent = parent, position = UDim2.fromOffset(0, y), size = UDim2.fromOffset(width, REVEAL.CompactRowHeight),
+			text = text, textSize = UiTheme.TextSizes.MD, color = day <= (streak.day or 0) and C.Success or C.TextPrimary })
+		y += REVEAL.CompactRowHeight
+	end
+	local first = state.firstSteps or {}
+	UiTheme.label({ parent = parent, position = UDim2.fromOffset(0, y), size = UDim2.fromOffset(width, REVEAL.CompactTitleHeight),
+		text = L.t("ui.rewards.firstStepsTitle"), font = "Title", color = C.GoldBright })
+	y += REVEAL.CompactTitleHeight
+	UiTheme.button({ parent = parent, position = UDim2.fromOffset(0, y), size = UDim2.fromOffset(width, REVEAL.ButtonH),
+		text = L.t(first.claimed and "ui.missions.claimed" or "ui.rewards.claimEpic"), disabled = not first.canClaim,
+		onClick = function() claimFixed("ClaimFirstSteps") end })
+	y += REVEAL.ButtonH + REVEAL.MobileGap
+	for _, step in first.list or {} do
+		UiTheme.label({ parent = parent, position = UDim2.fromOffset(0, y), size = UDim2.fromOffset(width, REVEAL.CompactStepHeight),
+			text = L.t(step.nameKey or ("ui.rewards.step." .. step.id), { p = step.progress, g = step.goal }) .. " · " .. tostring(step.progress) .. "/" .. tostring(step.goal),
+			textSize = REVEAL.CompactTextSize, color = step.progress >= step.goal and C.Success or C.TextPrimary })
+		y += REVEAL.CompactStepHeight
+	end
+	parent.CanvasSize = UDim2.fromOffset(0, y)
+end
+
 function render()
+	if spinning or busy then return end
 	table.clear(spins3D)
 	closeSubModal()
 	if not state then
@@ -932,18 +1085,19 @@ function render()
 		end
 	end
 
-	local cam = workspace.CurrentCamera
-	local viewport = cam and cam.ViewportSize or Vector2.new(BASE_W, BASE_H)
-	local mobile = viewport.X < 780
-	local width = mobile and 720 or BASE_W
-	local height = mobile and 620 or BASE_H
+	local viewport = usableViewport()
+	renderedViewport = viewport
+	local mobile = viewport.X < REVEAL.MobileBreakpoint
+	local compact = mobile and tab ~= "Collection"
+	local width = compact and math.min(REVEAL.CompactWidth, viewport.X - REVEAL.Margin * 2) or (mobile and 720 or BASE_W)
+	local height = compact and math.min(REVEAL.CompactMaxHeight, viewport.Y - REVEAL.Margin * 2) or (mobile and 620 or BASE_H)
 	panel.Size = UDim2.fromOffset(width, height)
-	scale.Scale = UiTheme.computeScale(viewport, width, height, player)
+	scale.Scale = compact and 1 or UiTheme.computeScale(viewport, width, height, player)
 
 	-- Cabecera
 	local header = Instance.new("Frame")
 	header.Name = "Header"
-	header.Size = UDim2.new(1, 0, 0, 58)
+	header.Size = UDim2.new(1, 0, 0, compact and REVEAL.CompactHeader or 58)
 	header.BackgroundColor3 = C.BgHeader
 	header.BorderSizePixel = 0
 	header.Parent = panel
@@ -951,12 +1105,12 @@ function render()
 
 	local crest = UiAssets.icon(header, "trophy", 26, C.GoldBright)
 	crest.AnchorPoint = Vector2.new(0, 0.5)
-	crest.Position = UDim2.new(0, 18, 0.5, 0)
+	crest.Position = compact and UDim2.new(0, 18, 0, REVEAL.CompactTitleHeight / 2) or UDim2.new(0, 18, 0.5, 0)
 
 	UiTheme.label({
 		parent = header,
 		position = UDim2.fromOffset(52, 6),
-		size = UDim2.fromOffset(420, 28),
+		size = compact and UDim2.new(1, -REVEAL.HeaderTextX - REVEAL.Margin, 0, REVEAL.CompactTitleHeight) or UDim2.fromOffset(420, 28),
 		text = L.t("ui.rewards.title"),
 		font = "Title",
 		textSize = UiTheme.TextSizes.XL,
@@ -965,8 +1119,8 @@ function render()
 	UiTheme.label({
 		parent = header,
 		position = UDim2.fromOffset(52, 32),
-		size = UDim2.fromOffset(460, 18),
-		text = L.t("ui.rewards.subtitle"),
+		size = compact and UDim2.new(1, -REVEAL.Margin * 2, 0, REVEAL.CompactTitleHeight) or UDim2.fromOffset(460, 18),
+		text = compact and "" or L.t("ui.rewards.subtitle"),
 		font = "Body",
 		textSize = UiTheme.TextSizes.XS,
 		color = C.TextSecondary,
@@ -978,9 +1132,9 @@ function render()
 	local soulsAmount = (coinsVal and coinsVal.Value) or state.souls or 0
 
 	local soulPill = Instance.new("Frame")
-	soulPill.AnchorPoint = Vector2.new(1, 0.5)
-	soulPill.Position = UDim2.new(1, -132, 0.5, 0)
-	soulPill.Size = UDim2.fromOffset(172, 36)
+	soulPill.AnchorPoint = compact and Vector2.new(1, 1) or Vector2.new(1, 0.5)
+	soulPill.Position = compact and UDim2.new(0.5, 0, 1, -REVEAL.MobileGap) or UDim2.new(1, -132, 0.5, 0)
+	soulPill.Size = compact and UDim2.fromOffset(width / 2 - REVEAL.Margin, REVEAL.ButtonH) or UDim2.fromOffset(172, 36)
 	soulPill.BackgroundColor3 = C.BgAbyss
 	soulPill.BorderSizePixel = 0
 	soulPill.Parent = header
@@ -1006,8 +1160,8 @@ function render()
 		name = "CloseButton",
 		parent = header,
 		anchor = Vector2.new(1, 0.5),
-		position = UDim2.new(1, -16, 0.5, 0),
-		size = UDim2.fromOffset(104, 38),
+		position = compact and UDim2.new(1, -REVEAL.Margin, 1, -REVEAL.MobileGap - REVEAL.ButtonH / 2) or UDim2.new(1, -16, 0.5, 0),
+		size = compact and UDim2.fromOffset(width / 2 - REVEAL.Margin * 2, REVEAL.ButtonH) or UDim2.fromOffset(104, 38),
 		text = L.t("close"),
 		variant = "secondary",
 		onClick = function()
@@ -1018,7 +1172,7 @@ function render()
 	-- Barra de 4 pestañas con avisos rojos ("!")
 	local tabsBar = Instance.new("Frame")
 	tabsBar.Name = "TabsBar"
-	tabsBar.Position = UDim2.fromOffset(20, 66)
+	tabsBar.Position = UDim2.fromOffset(20, compact and REVEAL.CompactHeader + REVEAL.MobileGap or 66)
 	tabsBar.Size = UDim2.new(1, -40, 0, 42)
 	tabsBar.BackgroundTransparency = 1
 	tabsBar.Parent = panel
@@ -1041,15 +1195,16 @@ function render()
 			name = "Tab_" .. def.id,
 			parent = tabsBar,
 			layoutOrder = i,
-			size = UDim2.fromOffset(mobile and 164 or 210, 42),
+			size = compact and UDim2.fromOffset((width - 40 - 8 * 3) / #tabDefs, REVEAL.MobileTabHeight) or UDim2.fromOffset(mobile and 164 or 210, 42),
 			text = def.label,
 			active = tab == def.id,
 			onClick = function()
-				if spinning then return end
+				if spinning or busy then return end
 				tab = def.id
 				render()
 			end,
 		})
+		if compact then b.TextSize = REVEAL.CompactTextSize b.TextWrapped = true end
 		if def.alert then
 			local dot = Instance.new("Frame")
 			dot.AnchorPoint = Vector2.new(1, 0)
@@ -1074,9 +1229,12 @@ function render()
 		if i == 1 then firstTabBtn = b end
 	end
 
-	local bodyY = 116
+	local bodyY = compact and REVEAL.CompactBodyY or 116
 	local bodyH = height - bodyY - 40
-	local body = Instance.new("Frame")
+	local body = Instance.new(compact and "ScrollingFrame" or "Frame")
+	if compact then
+		body.CanvasSize = UDim2.new() body.ScrollBarThickness = UiTheme.Spacing.XXS body.BorderSizePixel = 0
+	end
 	body.Name = "TabBody"
 	body.Position = UDim2.fromOffset(20, bodyY)
 	body.Size = UDim2.fromOffset(width - 40, bodyH)
@@ -1087,8 +1245,10 @@ function render()
 	-- PESTAÑA 1: RULETA DEL OCASO (8 sectores)
 	------------------------------------------------------------------
 	if tab == "Roulette" then
-		local leftW = math.floor((width - 54) * 0.56)
-		local rightW = (width - 40) - leftW - 14
+		local bodyH = compact and REVEAL.MobileWheelHeight or bodyH
+		local leftW = compact and width - 40 or math.floor((width - 54) * 0.56)
+		local rightW = compact and leftW or (width - 40) - leftW - 14
+		if compact then body.CanvasSize = UDim2.fromOffset(0, bodyH * 2 + REVEAL.MobileGap) end
 
 		local wheelPanel = UiTheme.panel({
 			name = "WheelPanel",
@@ -1105,7 +1265,7 @@ function render()
 			parent = wheelPanel,
 			anchor = Vector2.new(1, 0),
 			position = UDim2.new(1, -14, 0, 12),
-			size = UDim2.fromOffset(154, 32),
+			size = UDim2.fromOffset(154, REVEAL.ButtonH),
 			text = L.t("ui.rewards.oddsBtn"),
 			variant = "secondary",
 			textSize = UiTheme.TextSizes.XS,
@@ -1113,11 +1273,11 @@ function render()
 		})
 
 		-- Rueda circular de 8 sectores
-		local wheelDia = math.min(308, bodyH - 150)
+		local wheelDia = math.min(REVEAL.WheelDiameter, leftW - REVEAL.Margin * 2, bodyH - REVEAL.WheelTop - REVEAL.WheelControlsHeight)
 		local wheelOuter = Instance.new("Frame")
 		wheelOuter.Name = "WheelOuter"
 		wheelOuter.AnchorPoint = Vector2.new(0.5, 0)
-		wheelOuter.Position = UDim2.new(0.5, 0, 0, 22)
+		wheelOuter.Position = UDim2.new(0.5, 0, 0, REVEAL.WheelTop)
 		wheelOuter.Size = UDim2.fromOffset(wheelDia, wheelDia)
 		wheelOuter.BackgroundColor3 = C.BgAbyss
 		wheelOuter.BorderSizePixel = 0
@@ -1202,7 +1362,7 @@ function render()
 		local pointer = Instance.new("Frame")
 		pointer.Name = "TopPointer"
 		pointer.AnchorPoint = Vector2.new(0.5, 0)
-		pointer.Position = UDim2.new(0.5, 0, 0, 10)
+		pointer.Position = UDim2.new(0.5, 0, 0, REVEAL.WheelTop - REVEAL.MobileGap)
 		pointer.Size = UDim2.fromOffset(22, 22)
 		pointer.Rotation = 45
 		pointer.BackgroundColor3 = C.GoldBright
@@ -1216,7 +1376,7 @@ function render()
 		local pityMax = math.max(1, tonumber(state.spinGuarantee) or 30)
 		UiTheme.progressBar({
 			parent = wheelPanel,
-			position = UDim2.new(0.08, 0, 1, -104),
+			position = UDim2.new(0.08, 0, 1, -REVEAL.PityBottom),
 			size = UDim2.new(0.84, 0, 0, 20),
 			fraction = math.clamp(pityCur / pityMax, 0, 1),
 			fillColor = C.Gold,
@@ -1239,61 +1399,33 @@ function render()
 			spinBtnText = L.t("ui.rewards.spinTicket", { count = state.spins })
 		elseif state.paidSpinPrice then
 			spinMode = "Paid"
-			spinBtnText = L.t("ui.rewards.spinPaid", { price = state.paidSpinPrice })
+			spinBtnText = L.t("cx.reward.spin.paid", { price = state.paidSpinPrice })
 		else
 			canSpin = false
 			spinBtnText = L.t("ui.rewards.spinWait", { time = formatTimeLeft(state.resetAt) })
 		end
 
+		local function beginSpin(mode)
+			if busy or spinning or not canSpin or not wheelInner.Parent then return end
+			if compact then body.CanvasPosition = Vector2.zero end
+			setStatus(L.t("ui.rewards.spinning"), false)
+			invokeRewards("Spin", mode, nil, function(ok, res)
+				if not ok or type(res) ~= "table" or not res.reward then
+					rewardError(res) return
+				end
+				local sector = math.clamp(tonumber(res.sector) or 1, 1, #sectors)
+				local weekly = sectors[sector] and sectors[sector].kind == "WeeklySkin"
+				showPrizeCelebration(res.reward, { wheel = wheelInner, sector = sector, sectors = sectors, jackpot = weekly, bonus = res.bonus })
+			end)
+		end
 		UiTheme.button({
-			name = "SpinButton",
-			parent = wheelPanel,
-			anchor = Vector2.new(0.5, 1),
-			position = UDim2.new(0.5, 0, 1, -46),
-			size = UDim2.fromOffset(290, 46),
-			text = spinBtnText,
-			font = "Title",
-			textSize = UiTheme.TextSizes.LG,
-			variant = canSpin and "gold" or "secondary",
-			disabled = not canSpin or spinning,
+			name = "SpinButton", parent = wheelPanel, anchor = Vector2.new(0.5, 1),
+			position = UDim2.new(0.5, 0, 1, -REVEAL.ButtonH), size = UDim2.new(1, -REVEAL.Margin * 2, 0, REVEAL.ButtonH),
+			text = spinBtnText, font = "Title", textSize = UiTheme.TextSizes.SM,
+			variant = canSpin and "gold" or "secondary", disabled = not canSpin or not serverStateReady,
 			onClick = function()
-				if spinning or not canSpin then return end
-				spinning = true
-				setStatus(L.t("ui.rewards.spinning"), false)
-				invokeRewards("Spin", spinMode, nil, function(ok, res)
-					if not ok or type(res) ~= "table" then
-						spinning = false
-						UiTheme.playSound("UI_Error")
-						setStatus(L.t((type(res) == "table" and res.key) or "error"), true)
-						return
-					end
-					local sectorIdx = math.clamp(tonumber(res.sector) or 1, 1, 8)
-					local targetMod = (360 - (sectorIdx - 1) * 45) % 360
-					local startRot = wheelInner.Rotation
-					local baseTurns = math.floor(startRot / 360) * 360 + 360 * 5
-					local targetRot = baseTurns + targetMod
-
-					-- Sonidos de clic que se desaceleran junto con la rueda
-					task.spawn(function()
-						local delays = { 0.06, 0.06, 0.07, 0.08, 0.09, 0.11, 0.13, 0.16, 0.20, 0.25, 0.32, 0.42 }
-						for _, d in delays do
-							if not spinning then break end
-							UiTheme.playSound("UI_Hover")
-							task.wait(d)
-						end
-					end)
-
-					local tw = TweenService:Create(
-						wheelInner,
-						TweenInfo.new(3.1, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out),
-						{ Rotation = targetRot }
-					)
-					tw:Play()
-					tw.Completed:Wait()
-					currentWheelAngle = targetRot % 360
-					spinning = false
-					showPrizeCelebration(res.reward, false)
-				end)
+				if spinMode == "Paid" then showPaidConfirmation(function() beginSpin("Paid") end)
+				else beginSpin(spinMode) end
 			end,
 		})
 
@@ -1302,7 +1434,7 @@ function render()
 			anchor = Vector2.new(0.5, 1),
 			position = UDim2.new(0.5, 0, 1, -14),
 			size = UDim2.new(0.9, 0, 0, 22),
-			text = state.freeSpin and "" or L.t("ui.rewards.spinWait", { time = formatTimeLeft(state.resetAt) }),
+			text = not state.freeSpin and L.t("cx.reward.spin.remaining", { count = state.paidSpinsRemaining or 0 }) or "",
 			font = "Body",
 			textSize = UiTheme.TextSizes.XS,
 			color = C.TextSecondary,
@@ -1313,7 +1445,7 @@ function render()
 		local prizePanel = UiTheme.panel({
 			name = "WeeklyPrizePanel",
 			parent = body,
-			position = UDim2.fromOffset(leftW + 14, 0),
+			position = compact and UDim2.fromOffset(0, bodyH + REVEAL.MobileGap) or UDim2.fromOffset(leftW + 14, 0),
 			size = UDim2.fromOffset(rightW, bodyH),
 			bg = C.BgPanel,
 			borderColor = C.GoldBright,
@@ -1353,7 +1485,7 @@ function render()
 		UiTheme.label({
 			parent = prizePanel,
 			position = UDim2.new(0, 18, 1, -112),
-			size = UDim2.new(1, -36, 0, 92),
+			size = UDim2.new(1, -36, 0, not state.freeSpin and state.paidSpinPrice and REVEAL.WheelDescriptionHeight or 92),
 			text = L.t("skinDesc." .. wSkinId),
 			font = "Body",
 			textSize = UiTheme.TextSizes.XS,
@@ -1362,11 +1494,22 @@ function render()
 			alignY = Enum.TextYAlignment.Top,
 		})
 
+		-- Soul spins stay available after the daily free spin, also when tickets remain.
+		if not state.freeSpin and spinMode ~= "Paid" and state.paidSpinPrice then
+			UiTheme.button({ name = "ExtraPaidSpin", parent = prizePanel,
+				anchor = Vector2.new(0.5, 1), position = UDim2.new(0.5, 0, 1, -REVEAL.Margin),
+				size = UDim2.new(1, -REVEAL.Margin * 2, 0, REVEAL.ButtonH), textSize = UiTheme.TextSizes.SM,
+				text = L.t("cx.reward.spin.paid", { price = state.paidSpinPrice }), disabled = not serverStateReady,
+				onClick = function() showPaidConfirmation(function() beginSpin("Paid") end) end })
+		end
+
 	------------------------------------------------------------------
 	-- PESTAÑA 2: CAJAS DE SUERTE (Caja de Almas 500 y Caja de Reliquias 1500)
 	------------------------------------------------------------------
 	elseif tab == "Boxes" then
-		local cardW = math.floor((width - 40 - 18) / 2)
+		local bodyH = compact and REVEAL.MobileBoxHeight or bodyH
+		local cardW = compact and width - 40 or math.floor((width - 40 - 18) / 2)
+		if compact then body.CanvasSize = UDim2.fromOffset(0, bodyH * 2 + REVEAL.MobileGap) end
 		local boxSpecs = {
 			{
 				id = "Souls",
@@ -1394,7 +1537,7 @@ function render()
 			local bCard = UiTheme.panel({
 				name = "BoxCard_" .. bSpec.id,
 				parent = body,
-				position = UDim2.fromOffset((idx - 1) * (cardW + 18), 0),
+				position = compact and UDim2.fromOffset(0, (idx - 1) * (bodyH + REVEAL.MobileGap)) or UDim2.fromOffset((idx - 1) * (cardW + 18), 0),
 				size = UDim2.fromOffset(cardW, bodyH),
 				bg = C.BgPanel,
 				borderColor = bSpec.color,
@@ -1493,16 +1636,14 @@ function render()
 				textSize = UiTheme.TextSizes.LG,
 				variant = "gold",
 				onClick = function()
-					if busy then return end
-					busy = true
+					if busy or spinning then return end
+					local candidates = boxCandidates(bSpec.id)
 					local src = hasOwned and "Owned" or "Buy"
 					invokeRewards("OpenBox", bSpec.id, src, function(ok, res)
-						busy = false
 						if ok and type(res) == "table" and res.reward then
-							showPrizeCelebration(res.reward, true)
+							showPrizeCelebration(res.reward, { pool = candidates })
 						else
-							UiTheme.playSound("UI_Error")
-							setStatus(L.t((type(res) == "table" and res.key) or "noCoins"), true)
+							rewardError(res, "noCoins")
 						end
 					end)
 				end,
@@ -1512,12 +1653,14 @@ function render()
 	------------------------------------------------------------------
 	-- PESTAÑA 3: RACHA DIARIA (7 DÍAS), BIENVENIDO DE VUELTA Y PRIMEROS PASOS
 	------------------------------------------------------------------
+	elseif tab == "Streak" and compact then
+		compactStreak(body, width - 40)
 	elseif tab == "Streak" then
-		local topOffset = 0
+		local topOffset = weeklyCard(body, width - 40, 0, false)
 		if state.returnNotice then
 			local retBar = UiTheme.panel({
 				parent = body,
-				position = UDim2.fromOffset(0, 0),
+				position = UDim2.fromOffset(0, topOffset),
 				size = UDim2.new(1, 0, 0, 44),
 				bg = C.BgCardSelected,
 				borderColor = C.GoldBright,
@@ -1545,7 +1688,7 @@ function render()
 					end)
 				end,
 			})
-			topOffset = 52
+			topOffset += 52
 		end
 
 		-- Sección superior: Racha diaria de 7 días
@@ -1593,9 +1736,9 @@ function render()
 			disabled = not canClaimStreak,
 			textSize = UiTheme.TextSizes.SM,
 			onClick = function()
-				invokeRewards("ClaimStreak", nil, nil, function(ok)
-					if ok then UiTheme.playSound("UI_PurchaseOK") end
-					refreshState(true)
+				invokeRewards("ClaimStreak", nil, nil, function(ok, res)
+					if ok and type(res) == "table" and res.reward then showPrizeCelebration(res.reward)
+					else setStatus(L.t((type(res) == "table" and res.key) or "error"), true) refreshState(false) end
 				end)
 			end,
 		})
@@ -1695,7 +1838,7 @@ function render()
 			onClick = function()
 				invokeRewards("ClaimFirstSteps", nil, nil, function(ok, res)
 					if ok and type(res) == "table" and res.reward then
-						showPrizeCelebration(res.reward, false)
+						showPrizeCelebration(res.reward)
 					else
 						refreshState(true)
 					end
@@ -1946,7 +2089,7 @@ function render()
 		name = "StatusMessage",
 		parent = panel,
 		position = UDim2.fromOffset(22, height - 34),
-		size = UDim2.fromOffset(width - 260, 24),
+		size = UDim2.fromOffset(compact and width - 44 or width - 260, 24),
 		text = "",
 		font = "Bold",
 		textSize = UiTheme.TextSizes.SM,
@@ -1957,7 +2100,7 @@ function render()
 		parent = panel,
 		position = UDim2.fromOffset(width - 240, height - 34),
 		size = UDim2.fromOffset(220, 24),
-		text = L.t("ui.gamepadHint"),
+		text = compact and "" or L.t("ui.gamepadHint"),
 		font = "Body",
 		textSize = UiTheme.TextSizes.XS,
 		color = C.TextMuted,
@@ -1973,7 +2116,7 @@ end
 -- Apertura / cierre y sincronización con otros menús
 ----------------------------------------------------------------------
 function setOpen(value)
-	if opened == value or spinning then return end
+	if opened == value or spinning or busy then return end
 	if value and player:GetAttribute("InMatch") then return end
 	opened = value
 	player:SetAttribute("RewardsOpen", value)
@@ -2025,8 +2168,9 @@ end)
 
 for _, otherAttr in { "ShopOpen", "ArmoryOpen", "SettingsOpen", "InMatch" } do
 	player:GetAttributeChangedSignal(otherAttr):Connect(function()
-		if player:GetAttribute(otherAttr) == true and opened then
-			setOpen(false)
+		if player:GetAttribute(otherAttr) == true then
+			if activeReveal then activeReveal.skip = true activeReveal.dismiss = true end
+			if opened then setOpen(false) end
 		end
 	end)
 end
@@ -2042,7 +2186,7 @@ ProximityPromptService.PromptTriggered:Connect(function(prompt, triggerPlayer)
 end)
 
 UIS.InputBegan:Connect(function(input, processed)
-	if not opened or spinning then return end
+	if not opened or spinning or busy then return end
 	if input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB then
 		if subModal then
 			closeSubModal()
@@ -2053,7 +2197,8 @@ UIS.InputBegan:Connect(function(input, processed)
 end)
 
 RunService.RenderStepped:Connect(function(dt)
-	if not opened and not welcomeVeil then return end
+	if opened and not spinning and not busy and not subModal and usableViewport() ~= renderedViewport then render() end
+	if not opened and not welcomeVeil and not activeReveal then return end
 	for i = #spins3D, 1, -1 do
 		local v = spins3D[i]
 		if not v.vp.Parent then
@@ -2078,7 +2223,10 @@ task.spawn(function()
 
 	local changedEv = remotes:WaitForChild("RewardsChanged", 15)
 	if changedEv and changedEv:IsA("RemoteEvent") then
-		changedEv.OnClientEvent:Connect(function()
+		changedEv.OnClientEvent:Connect(function(payload)
+			if type(payload) == "table" and payload.source == "Tutorial" and type(payload.reward) == "table" then
+				showPrizeCelebration(payload.reward)
+			end
 			refreshState(true)
 		end)
 	end
@@ -2122,5 +2270,5 @@ task.spawn(function()
 end)
 
 L.Changed:Connect(function()
-	if opened and not spinning then render() end
+	if opened and not spinning and not busy and not subModal then render() end
 end)

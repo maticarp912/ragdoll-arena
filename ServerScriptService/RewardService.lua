@@ -192,6 +192,7 @@ function Service.getState(player)
   souls = data.Coins, nextRequest = tostring(d.sequence + 1), resetAt = R.nextDay(day), weekResetAt = R.nextWeek(day),
   weeklySkin = weeklySkin, roulette = roulette, spinPity = d.spinPity, spinGuarantee = R.RoulettePity,
   freeSpin = d.freeDay ~= day, spins = d.spins, paidSpins = d.paidSpins,
+  paidSpinsRemaining = math.max(0, #R.ExtraSpinPrices - d.paidSpins),
   paidSpinPrice = R.ExtraSpinPrices[d.paidSpins + 1], relicPity = d.relicPity, relicGuarantee = R.RelicPity,
   boxes = boxes, boosts = data.Boosts,
   streak = { day = d.streak, canClaim = d.streakDay ~= day, rewards = R.Streak, graceAvailable = d.graceWeek ~= R.week(day), paused = d.streakDay >= 0 and day - d.streakDay > 1 },
@@ -223,6 +224,8 @@ function Service.tutorial(player, step)
  Telemetry.emit(player, "RewardClaim", 1, nil, nil, "TutorialStep")
  local complete = true for i = 1, R.TutorialSteps do complete = complete and d.tutorial[tostring(i)] == true end
  if complete then d.tutorialReady = true Telemetry.emit(player, "TutorialComplete") end
+ -- Presentation only; the souls above have already been granted once by the server.
+ Changed:FireClient(player, { reward = { kind = "Souls", amount = R.TutorialSouls }, source = "Tutorial" })
  notify(player) return true
 end
 function Service.match(player, won, weapon, kills)
@@ -261,6 +264,7 @@ local function act(player, action, id, source)
   if d.starter or not table.find(R.StarterSkins, id) then return fail() end
   if not Skins.Data[id] or Skins.Data[id].comingSoon then return fail("cx.reward.unavailable") end
   d.starter = true data.OwnedSkins[id] = true
+  notify(player) return true, { key = "cx.reward.claimed", reward = { kind = "Skin", id = id, rarity = Skins.Data[id].rarity } }
  elseif action == "SkipTutorial" then
   if d.tutorialReady then return fail() end
   d.tutorialSkipped = true d.tutorialReady = true
@@ -271,11 +275,14 @@ local function act(player, action, id, source)
   if d.streakDay >= 0 and day - d.streakDay == R.GraceDays + 1 and d.graceWeek ~= R.week(day) then d.graceWeek = R.week(day) end
   d.streak = d.streak % #R.Streak + 1 d.streakDay = day
   local reward = R.Streak[d.streak]
-  if type(reward) == "number" then souls(player, reward) else data.Boxes[reward] = math.min(R.MaxCount, data.Boxes[reward] + 1) end
+  local spec = type(reward) == "number" and { kind = "Souls", amount = reward } or { kind = "Box", id = reward, amount = 1, rarity = "Epic" }
+  local granted = award(player, spec)
+  notify(player) return true, { key = "cx.reward.claimed", reward = granted }
  elseif action == "ClaimWeekly" then
   local weekly = R.Weekly[d.weekly.week % #R.Weekly + 1]
   if d.weekly.claimed or d.weekly.progress < weekly.goal then return fail() end
   d.weekly.claimed = true data.Boxes.Relic = math.min(R.MaxCount, data.Boxes.Relic + 1)
+  notify(player) return true, { key = "cx.reward.claimed", reward = { kind = "Box", id = "Relic", amount = 1, rarity = "Epic" } }
  elseif action == "ClaimFirstSteps" then
   Service.progress(player, "Level", 0)
   if d.firstStepsClaimed then return fail() end

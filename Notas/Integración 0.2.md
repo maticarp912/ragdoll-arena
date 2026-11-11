@@ -46,3 +46,18 @@ Prompt: [[0.2 Integración - pruebas en Studio]].
 
 ## Combate direccional activado
 **10/11/2026 20:40:** el usuario pidió activarlo. `CombatConfig.Directional.Enabled = true` (antes la regla era dejarlo en false). Place regenerado. Falta probar en partida: stick del mando, fijado permanente (T / R3), margen de ping del parry, Maza (arriba imbloqueable), Estoque y 2v2.
+
+## Pedidos del 10/11 a la noche (Claude, 22:50)
+
+Implementado, **sin probar en Studio**:
+- **Skins de la 0.1 de vuelta.** `SkinDesigns.lua` vuelve a ser el de la 0.1 (commit 1e3a189). La versión «con rayos» de Gemini quedó entera en `SkinDesignsStorm.lua`; de ahí se toman solo los cinco del Eclipse Carmesí: Filo (espada), Mandoble (espadón), Quebrantahuesos (maza) y dos nuevos con el mismo concepto, **Colmillos del Eclipse Carmesí** (dagas) y **Aguja del Eclipse Carmesí** (estoque), los cinco de la ruleta y en `Rewards.WeeklySkins`. `Skins.WeeklyPool` lista las 36 versiones con rayos como candidatas a semanal (sin activar). El bisel `Edge` por defecto volvió al metal de la 0.1.
+- **Ojo con las mallas de Blender:** la tanda 1 se hizo con los diseños con rayos. Solo siguen valiendo las de los tres Eclipse y las armas base; las demás ahora corresponden a las candidatas semanales. No conviene subirlas para las skins de la tienda.
+- **Vista previa de auras:** la tienda llamaba a `AuraFx.preview` y `AuraFx.clearPreview`, que no existen, y el pedestal estaba a 450 studs bajo tierra. Ahora hay un botón «Probar en mi personaje»: se esconde la tienda, la aura aparece sobre tu personaje (o sobre un arma de muestra si no tenés una en la mano) con la cámara de frente 4 s y la tienda vuelve.
+- **Ceniza que «duplicaba»:** la pestaña Almas no es una compra, es la herramienta de prueba `DebugCoins` (suma almas gratis) y además los montos no coincidían (decía +500 y daba 1000; +2000 no existía; +5000 daba 10000). Ahora dice «Prueba: +N almas gratis», los montos coinciden (`Economy.DebugAmounts`) y la pestaña solo aparece si el servidor dice que podés depurar.
+- **Patada al derribado:** `DownedPushSpeed` 16 → 32 y `DownedPushUp` 4 → 7 (objetivo ~5 studs). Calibrar.
+- **Dash:** ya no suena `swing_pesado_2`; ahora es un whoosh corto de la librería, más grave y suave (`Assets` Dodge).
+- **Golpe según la dirección:** con el direccional, el básico usa el clip cuyo recorrido coincide con la dirección (`AnimClips.DirMap`, claves `Weapons.<arma>.DirUp/DirLeft/DirRight`). El sentido de las capturas se midió por el giro de cintura entre la carga y el impacto; si alguna se ve al revés, se cambia en `DirMap`. El estoque son estocadas: inclina con la capa direccional. El fuerte sigue con su clip y la capa.
+- **Espadón y maza:** más rápidos (espadón 0,92 → 0,78 s, impacto 0,50 → 0,40; maza 1,00 → 0,84, impacto 0,56 → 0,44; fuertes con menos preparación) y **contragolpe de peso** (`WeaponData.riposte`): bloquear un básico traba 0,35 s al atacante (se le corta el combo) y tu próximo básico en 0,8 s sale 40 % más rápido, con hiperarmadura y ×1,5 de daño. Arreglado de paso: el `knockback = 36` del fuerte de la maza había quedado dentro de un comentario.
+- **Suspenso de recompensas y tiros pagos:** lo está haciendo Codex (gpt-6.1-sol, high) con [[0.2 Suspenso de recompensas - Codex]].
+
+Para probar: los tres sentidos con cada arma (que el tajo vaya hacia donde apunta el triángulo), el contragolpe contra alguien que spamea dagas o espada, la patada al derribado, «Probar» en una aura de cuerpo y en una de arma, la pestaña Almas con y sin rol de depuración, y las cinco skins del Eclipse.

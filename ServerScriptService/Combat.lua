@@ -608,6 +608,18 @@ local function doBlocked(victim, attacker, hit, damage)
 	Fx.hitstop({ attacker, victim }, CFG.Hitstop.Light * 0.8)
 	Fx.shake(victim, CFG.CameraShake.Light * 0.7, bdir)
 	push(victim, flatDir(attacker, victim) * (hit.knockback or 0) * 0.35)
+	-- 10/11/2026 Contragolpe de peso (WeaponData.riposte): bloquear un básico con Espadón o Maza traba al
+	-- atacante (no puede seguir spameando) y deja listo un contraataque rápido, fuerte y con hiperarmadura.
+	local riposte = Combat.weaponOf(victim).riposte
+	if riposte and hit.kind == "Light" then
+		victim:SetAttribute("RiposteUntil", t + riposte.window)
+		local ast = Combat.state(attacker)
+		ast.comboStep = 0
+		ast.queuedM1 = false
+		attacker:SetAttribute("ComboStep", 0)
+		Combat.stagger(attacker, riposte.recoil)
+		Fx.flash(victim, C.Riposte, 0.25)
+	end
 	if Combat.hooks.onBlocked then Combat.hooks.onBlocked(attacker, victim, hit, damage) end
 	Fx.feel(victim, "Block", { dir = bdir, kind = hit.kind, guard = guard / math.max(1, victim:GetAttribute("GuardMax") or 100) })
 	Fx.feel(attacker, "Blocked", { dir = bdir, kind = hit.kind })

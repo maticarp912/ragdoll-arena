@@ -121,3 +121,46 @@ El resumen ahora incluye también las almas concedidas al subir de nivel en `coi
 
 **Verificación final — 10/11/2026 18:29 (Argentina, UTC-3):** LihFolk terminó sobre los 87 archivos con **0 errores, 0 avisos**. Sin más cambios de código después de los chequeos finales. Entrega local lista para integrar; continúan pendientes las conexiones ajenas y las pruebas de ejecución enumeradas arriba.
 
+
+## Suspenso de recompensas (10/11)
+
+Registro: 10/11/2026 23:08 (Argentina, UTC-3). Pedido y autorización excepcional para la UI: [[0.2 Suspenso de recompensas - Codex]]. Entrega local para integrar con Claude. No se abrió Studio, no se regeneró el place ni se publicó o hizo commit. Se conservaron los cambios concurrentes de las otras IA, incluidas las cinco `WeeklySkins`.
+
+### Implementado — 🟡
+
+- `Rewards.client.lua`: carrusel horizontal para Almas y Reliquia **después de recibir el premio del servidor**. Sus opciones salen de `GetState.boxes[id].probabilities`, con skins reales, nombres, rarezas y colores; excluye las rarezas con probabilidad cero por garantía. Mezcla solamente la presentación, sin elegir el premio ni preparar falsos casi-premios legendarios. La tarjeta final es la respuesta del servidor, también al convertir una skin repetida. Mantiene hasta tres vistas 3D activas en la tira, en lugar de cargar un modelo por tarjeta.
+- Revelación compartida: destello de rareza, nombre grande, ViewportFrame con WeaponBuilder para skins y duplicados, aviso de conversión a almas, multiplicador y duración reales. Racha, Primeros pasos, semanal, bienvenida y pasos certificados del tutorial usan una carta/cofre que tiembla y abre la tapa. El bono del giro de tutorial se muestra también si coincide con la garantía semanal. Reclamar la caja semanal no la abre ni la cobra otra vez.
+- Ruleta: desaceleración cúbica, tic al cruzar cada sector, pausa de 0,24 s antes de entrar al sector final y revelación compartida. El gran premio semanal, incluso duplicado, tiene panel y visor más grandes, nombre mayor, destello más intenso y revelación más larga.
+- Ajustes concentrados en `REVEAL`, al principio del cliente: cajas 4,12 s (2,8 + 0,22 + 1,1), giro normal 4,42 s, gran premio semanal 5,82 s; premio fijo 1,97 s. Son duraciones objetivo de animación, **sin contar red ni el tiempo que el jugador deja el resultado abierto hasta Continuar**. Saltear con botón, Enter, Enter numérico, A del mando o toque muestra el premio ya concedido; nunca vuelve a invocar una compra. Los premios recibidos juntos se encolan. Se liberan input, modal y selección al cerrar; al entrar en partida se interrumpe la presentación sin alterar el premio.
+- Tiros pagos: «Tirar otra vez · {precio} almas», saldo y tiros pagos restantes hoy; disponible después del gratuito, también si quedan tickets. Confirmación explícita antes de `Spin/Paid`; Cancelar no compra. Reconsulta `GetState` y exige confirmar otra vez si cambió precio, contador o día. Precios y límite siguen en servidor: 250 / 500 / 1000 y un máximo de tres pagos por día.
+- Pedidos C19 serializados y espaciados según `Rewards.Interval`; refrescos agrupados, exclusión de dobles clics y `nextRequest` enviado en mutaciones. Una respuesta incierta provoca una lectura del estado, sin repetir la mutación automáticamente.
+- Celular: ruleta, cajas y reclamos en una columna desplazable, con controles de 44–46 px; revelación, confirmación y probabilidades independientes del escalado del panel principal. Se descuenta el inset de Roblox y se adapta al ancho/orientación. La pestaña de colección conserva su diseño anterior. El modal de probabilidades usa las efectivas/tutorial y desglosa las skins reales de las cajas, incluidas garantías.
+- `LocaleCodex.lua`: 15 claves nuevas en ES / EN / PT-BR, con los mismos parámetros. Sin editar LocaleGemini.
+- `Rewards.lua`: `RobuxSpinPack={enabled=false,productId=0,spins=3}` reservado y documentado. Tres tiros es un valor técnico provisional para un futuro paquete; la 0.2 no lo vende ni tiene botón de Robux. No se modificó `ProcessReceipt` ni se agregó un prompt de compra.
+
+**C19: ampliaciones aditivas para integrar (documentadas acá por el límite de archivos autorizado):**
+
+- `GetState.paidSpinsRemaining`: entero 0..3. `paidSpins` sigue siendo el contador usado; `paidSpinPrice` sigue siendo nil al agotar el cupo.
+- `ChooseStarter`, `ClaimStreak` y `ClaimWeekly` agregan `result.reward` con el premio realmente concedido. Conservan `key` y el `nextRequest` del manejador; los reclamos repetidos siguen rechazados por el servidor.
+- `RewardsChanged` conserva sus avisos sin argumentos y puede llevar `{source="Tutorial",reward={kind="Souls",amount=Rewards.TutorialSouls}}` inmediatamente después de certificar y pagar un paso. Los consumidores viejos que ignoran argumentos siguen funcionando. El refresco posterior sigue pasando por el cooldown. La notificación no concede nada en el cliente.
+
+### Probado fuera de Studio
+
+- `node tools/check_lua.js .`: **OK, 89 archivos sin problemas detectados**. Es el chequeo estático del proyecto, no compilación/ejecución del motor.
+- `git diff --check`: limpio.
+- Evaluación adicional con Node, usando la configuración actual: 2.880 combinaciones de ángulo inicial y sector de ruleta; destino exacto, una entrada al sector final después de la pausa e intervalos crecientes entre tics. Centrado del resultado del carrusel para anchos 375, 390, 768 y 1920; duraciones normales entre 3 y 5 s y extensión semanal. Comprobación aritmética del encuadre y controles de 46 px en 375×667 descontando el inset.
+- Revisión estática y aritmética de precios/cupo (250/500/1000, luego nil/0), revalidación previa a confirmar, cinco skins semanales conservadas y reserva Robux deshabilitada. No fue una compra ejecutada en un servidor Roblox.
+- Idiomas: 143 claves por idioma, sin claves duplicadas, mismos parámetros en los tres y referencias nuevas del cliente presentes. Se verificó el UTF-8 de los textos nuevos.
+- Referencia consultada: LihFolk **Server Authority and Validation**, apartados Common mistakes y Checklist, sin copiar su contenido. Resultado del escáner final registrado al cierre de esta sección.
+
+### Pendiente de probar en Studio — ⬜
+
+- Abrir ambas cajas, sin y con garantía, recibir cada clase de premio y duplicados; comprobar que la tarjeta final, la skin 3D, rareza, sonido y conversión coincidan con inventario/saldo. Medir el tiempo y rendimiento real en celular con los modelos actuales.
+- Ruleta en los ocho sectores, gratuito/Tutorial/Ticket/Paid, garantía y rotación semanal; gran premio nuevo y repetido; caso de garantía + bono de tutorial. Escuchar tics y pausa, y revisar brillo y legibilidad.
+- Pagar 250, 500 y 1000; rechazar cuarto pago y saldo insuficiente. Cancelar, pulsar dos veces, confirmar durante reset diario, latencia, respuesta incierta, reconexión y persistencia. Comprobar que refrescar/saltear/cerrar nunca cobra ni concede otra vez.
+- Racha de almas y del día 7, Primeros pasos, semanal, bienvenida y cada paso de `TutorialService.server.lua`; avisos simultáneos y tutorial con la ventana de recompensas cerrada.
+- Mouse/Enter, mando A/B y navegación, toque en 375 px, ES/EN/PT-BR, orientación y cambio de escala. Revisar selección al volver, avisos, modal de probabilidades, transición a partida y cierre de menús.
+
+**Comprobado en Studio:** nada en esta entrega. Claude integra y ejecuta estas pruebas antes de marcar ✅.
+
+**Cierre de verificación — 10/11/2026 23:09 (Argentina, UTC-3):** LihFolk revisó los 89 archivos de la copia final con **0 errores, 0 avisos y 0 info**. `node tools/check_lua.js .` también pasó sobre 89 archivos. Sin cambios de Lua posteriores a esos controles.

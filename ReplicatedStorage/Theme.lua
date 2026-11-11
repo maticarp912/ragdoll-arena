@@ -36,6 +36,7 @@ Theme.Colors = {
 	TelegraphUnblockable = rgb(235, 30, 40),  -- destello rojo: imbloqueable
 	ParryFlash = rgb(190, 225, 255),          -- destello azul/metálico
 	BlockGlow = rgb(140, 170, 200),           -- arma en guardia
+	Riposte = rgb(255, 200, 90),             -- 10/11: contragolpe de peso listo (Espadón y Maza)
 	GuardBreak = rgb(255, 200, 120),
 	Damage = rgb(232, 226, 208),
 	Dodge = rgb(170, 170, 190),

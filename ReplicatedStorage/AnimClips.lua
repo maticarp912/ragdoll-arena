@@ -65,6 +65,9 @@ AnimClips.Directional = {
 	WindupPeak = 0.7, -- fracción de la carga en que la capa llega a su máximo (después cruza en el impacto)
 	FollowPeak = 0.3, -- fracción de la recuperación en que el seguimiento llega a su máximo
 	FinisherMult = 1.35, -- el remate (D4) exagera más
+	-- 10/11/2026: con el direccional, el golpe básico usa el clip cuyo recorrido coincide con la dirección
+	-- (AnimClips.DirMap). Como el clip ya va hacia ese lado, la capa de arriba se suma más suave.
+	MatchedLayerWeight = 0.35,
 }
 AnimClips.Lower = { "R", "RH", "RK", "RA", "LH", "LK", "LA" }
 
@@ -625,6 +628,39 @@ AnimClips.MocapGeneric = {
 	HitReactHeavy = { "Impact2", "Impact3" },
 }
 
+-- 10/11/2026: clip del golpe básico según la dirección (en el marco del atacante).
+--   Right = carga a su derecha y cruza hacia la izquierda · Left = al revés · Up = de arriba hacia abajo.
+-- mocap = nombre en MocapClips (sentido medido por el giro de cintura entre la carga y el impacto);
+-- clip = clave del arquetipo procedural. Si la captura no existe se usa el clip procedural.
+AnimClips.DirMap = {
+	OneHand = {
+		Right = { mocap = "Melee_Backhand", clip = "M1_1" },
+		Left = { mocap = "SwordShield", clip = "M1_2" },
+		Up = { mocap = "Melee_Downward", clip = "M1_3" },
+	},
+	TwoHand = {
+		Right = { mocap = "GS_Slash1", clip = "M1_1" },
+		Left = { mocap = "GS_Slash2", clip = "M1_2" },
+		Up = { clip = "M1_3" },
+	},
+	Hammer = {
+		Right = { mocap = "GS_Slash4", clip = "M1_1" },
+		Left = { clip = "M1_2" },
+		Up = { clip = "M1_3" },
+	},
+	Dual = {
+		Right = { clip = "M1_1" },
+		Left = { clip = "M1_2" },
+		Up = { clip = "M1_3" },
+	},
+	-- Estoque: todo son estocadas; la capa direccional (a peso completo) inclina hacia el lado
+	Rapier = {
+		Right = { clip = "M1_1", layer = 1 },
+		Left = { clip = "M1_1", layer = 1 },
+		Up = { clip = "M1_2", layer = 1 },
+	},
+}
+
 local mocapCache = {}
 local function mocapCached(name)
 	if mocapCache[name] == nil then mocapCache[name] = mocap(name) or false end
@@ -637,6 +673,20 @@ end
 function AnimClips.resolve(key, archetype)
 	if not key or key == "" then return nil end
 	local w, k = string.match(key, "^Weapons%.(%w+)%.([%w_]+)$")
+	local dirName = k and string.match(k, "^Dir(%a+)$")
+	if dirName then
+		local dm = AnimClips.DirMap[archetype or "OneHand"] or AnimClips.DirMap.OneHand
+		local entry = dm[dirName]
+		if not entry then return nil end
+		local mclip = entry.mocap and mocapCached(entry.mocap)
+		local set = A[archetype or "OneHand"] or A.OneHand
+		local base = mclip or set[entry.clip]
+		if not base then return nil end
+		-- copia con el peso de la capa direccional (no se modifica el clip compartido)
+		local out = table.clone(base)
+		out.dirLayer = entry.layer or AnimClips.Directional.MatchedLayerWeight
+		return out
+	end
 	if k then
 		local mm = AnimClips.MocapMap[archetype or "OneHand"]
 		local mclip = mm and mm[k] and mocapCached(mm[k])

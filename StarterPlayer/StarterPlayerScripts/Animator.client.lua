@@ -318,6 +318,7 @@ local function update(char, dt, now)
 			st.clip = clip
 			-- la captura de movimiento ya trae su recorrido real: no se exagera
 			local isAttack = string.match(key, "^Weapons%.%w+%.M1_%d$") or string.match(key, "^Weapons%.%w+%.Heavy$")
+				or string.match(key, "^Weapons%.%w+%.Dir%a+$") -- 10/11: golpe básico por dirección
 			st.exag = not clip.mocap and isAttack and AnimClips.Playback.Exaggerate or nil
 			-- 0.2 (C23): recibir un golpe se exagera más
 			if not clip.mocap and string.match(key, "^Generic%.HitReact") then
@@ -494,7 +495,7 @@ local function update(char, dt, now)
 		local dur = st.dur or clip.dur or 1
 		local hitU = math.clamp(clip.hit or (dur > 0 and (st.hit or 0) / dur) or 0.5, 0.05, 0.95)
 		if dirLayer then
-			local mult = char:GetAttribute("Finisher") and DIRCLIPS.FinisherMult or 1
+			local mult = (char:GetAttribute("Finisher") and DIRCLIPS.FinisherMult or 1) * (clip.dirLayer or 1)
 			if u < hitU then
 				local pre = u / hitU
 				local pk = DIRCLIPS.WindupPeak
