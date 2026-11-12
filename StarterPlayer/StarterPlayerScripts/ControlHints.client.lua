@@ -59,7 +59,7 @@ local function chip(parent, text, order)
 	box.BackgroundColor3 = P.ChipColor
 	box.BackgroundTransparency = 0.05
 	box.TextColor3 = P.ChipText
-	box.FontFace = UiTheme.Fonts.Bold
+	box.FontFace = UiTheme.FontFaces.Bold
 	box.TextSize = P.ChipTextSize
 	box.Text = text
 	box.Parent = parent
@@ -108,7 +108,7 @@ local function row(parent, actions, key, order, right)
 	lbl.Size = UDim2.fromOffset(0, P.RowHeight)
 	lbl.Text = L.t(key)
 	lbl.TextColor3 = C.TextPrimary
-	lbl.FontFace = UiTheme.Fonts.Body
+	lbl.FontFace = UiTheme.FontFaces.Body
 	lbl.TextSize = P.TextSize
 	lbl.Parent = r
 end

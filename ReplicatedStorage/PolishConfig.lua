@@ -20,13 +20,13 @@ return {
   InfusionIcon = { Size = 28, ActiveAmp = 0.14, ActiveSpeed = 9, FullAmp = 0.06, FullSpeed = 4, ActiveWobble = 40, ExhaustTilt = 14 } },
  -- 12/11/2026: menú inicial (MainMenu.client): escena del caballero, opciones y despertar
  MainMenu = {
-  Seed = 77, Origin = Vector3.new(0, 1400, -7000), HillRadius = 220, Rocks = 14, RockSpread = 160, RockDistance = 110,
-  RockHeight = { Min = 14, Max = 40 }, Flowers = 260, FlowerSpread = 60, OrangeShare = 0.55,
+  Seed = 77, Origin = Vector3.new(0, 1400, -7000), HillRadius = 220, Rocks = 7, RockSpread = 170, RockDistance = 150,
+  RockHeight = { Min = 8, Max = 22 }, Flowers = 260, FlowerSpread = 60, OrangeShare = 0.55,
   Stars = 420, SkyYaw = 75, SkyPitch = { Min = 8, Max = 70 }, SkyRadius = 260, StarSize = { Min = 0.5, Max = 1.6 }, TwinklePerFrame = 4,
   MoonYaw = -8, MoonPitch = 34, MoonSize = 9,
-  Grass = Color3.fromRGB(28, 70, 46), FarGrass = Color3.fromRGB(12, 26, 22), Rock = Color3.fromRGB(14, 16, 22),
-  Orange = Color3.fromRGB(255, 140, 50), Blue = Color3.fromRGB(110, 180, 255), Star = Color3.fromRGB(255, 186, 74),
-  Moon = Color3.fromRGB(205, 225, 255), WarmLight = Color3.fromRGB(255, 170, 110), WarmRange = 40, WarmBrightness = 1.2,
+  Grass = Color3.fromRGB(46, 112, 66), FarGrass = Color3.fromRGB(12, 26, 22), Rock = Color3.fromRGB(20, 26, 40),
+  Orange = Color3.fromRGB(255, 96, 24), Blue = Color3.fromRGB(110, 180, 255), Star = Color3.fromRGB(255, 186, 74),
+  Moon = Color3.fromRGB(205, 225, 255), WarmLight = Color3.fromRGB(255, 170, 110), WarmRange = 70, WarmBrightness = 2.2,
   LightOffset = Vector3.new(4, 14, 6),
   SwordSkin = "CrimsonEclipse", SwordScale = 2.6, SwordOffset = Vector3.new(4, 2, -2), SwordTilt = -12, SwordLean = 6, SwordBuried = 0.22,
   CameraOffset = Vector3.new(-2, 7, 24), CameraLook = Vector3.new(2, 13, -12), CameraDrift = 0.8, FieldOfView = 60,

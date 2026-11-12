@@ -1155,6 +1155,9 @@ end
 ----------------------------------------------------------------------
 local welcomeVeil = nil
 local welcomeStep = 1
+for _, attr in { "InTutorial", "MainMenuOpen" } do
+	player:GetAttributeChangedSignal(attr):Connect(function() task.defer(function() if checkWelcomeModal then checkWelcomeModal() end end) end)
+end
 
 function checkWelcomeModal()
 	if not state or type(state.starter) ~= "table" then return end
@@ -1165,7 +1168,9 @@ function checkWelcomeModal()
 		end
 		return
 	end
-	if player:GetAttribute("InMatch") == true or welcomeVeil then return end
+	-- 12/11/2026: espera a que termine el menú inicial y el tutorial guiado
+	if player:GetAttribute("InMatch") == true or welcomeVeil or player:GetAttribute("InTutorial") == true
+		or player:GetAttribute("MainMenuOpen") == true then return end
 
 	welcomeVeil = Instance.new("Frame")
 	welcomeVeil.Name = "WelcomeStarterVeil"

@@ -92,7 +92,7 @@ for i = 1, M.Stars do
 	local yaw = rng:NextNumber(-M.SkyYaw, M.SkyYaw)
 	local pitch = rng:NextNumber(M.SkyPitch.Min, M.SkyPitch.Max)
 	local dir = (CFrame.Angles(0, math.rad(yaw), 0) * CFrame.Angles(math.rad(pitch), 0, 0)).LookVector
-	local size = rng:NextNumber(M.StarSize.Min, M.StarSize.Max) * (rng:NextNumber() < 0.08 and 2.2 or 1)
+	local size = rng:NextNumber(M.StarSize.Min, M.StarSize.Max)
 	local s = part("Star", Enum.PartType.Ball, Vector3.one * size, CFrame.new(O + dir * M.SkyRadius), M.Star, Enum.Material.Neon,
 		rng:NextNumber(0, 0.35))
 	table.insert(stars, s)
@@ -112,6 +112,11 @@ warm.Color = M.WarmLight
 warm.Range = M.WarmRange
 warm.Brightness = M.WarmBrightness
 warm.Parent = glow
+local fill = Instance.new("PointLight") -- luz fría de luna desde la cámara
+fill.Color = M.Moon
+fill.Range = M.WarmRange
+fill.Brightness = 0.8
+fill.Parent = part("Fill", Enum.PartType.Ball, Vector3.one, CFrame.new(O + M.CameraOffset + Vector3.new(0, 6, -6)), M.Moon, Enum.Material.SmoothPlastic, 1)
 
 -- la espada exclusiva, clavada y un poco inclinada
 local swordPos = O + M.SwordOffset
@@ -220,13 +225,13 @@ UiTheme.label({ parent = column, position = UDim2.fromOffset(6, 118), size = UDi
 local buttons = {}
 local function option(i, key, onClick)
 	local b = Instance.new("TextButton")
-	b.Name = key
+	b.Name = key:sub(4) -- "play", "news", "settings"
 	b.AutoButtonColor = false
 	b.BackgroundTransparency = 1
 	b.Position = UDim2.fromOffset(6, 200 + (i - 1) * M.OptionStep)
 	b.Size = UDim2.fromOffset(300, M.OptionHeight)
 	b.Text = L.t(key)
-	b.FontFace = UiTheme.Fonts.Title
+	b.FontFace = UiTheme.FontFaces.Title
 	b.TextSize = M.OptionSize
 	b.TextXAlignment = Enum.TextXAlignment.Left
 	b.TextColor3 = M.OptionColor
