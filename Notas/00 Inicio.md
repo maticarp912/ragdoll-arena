@@ -2,7 +2,7 @@
 
 Bóveda de Obsidian del proyecto. Juego de Roblox PvP 1v1/2v2 con ragdoll, estilo dark fantasy. Beta 0.1 publicada el 9/11/2026; ahora se diseña la 0.2.
 
-**Cualquier IA empieza por [[Indicaciones para las IA]].**
+**Desde el 11/11/2026 Codex integra: empezar por [[Traspaso a Codex]] y después [[Indicaciones para las IA]].**
 
 ## Notas vigentes
 | Nota | Para qué |
@@ -32,4 +32,4 @@ Imágenes de referencia: `Referencias/`.
 `Archivo 0.1/` guarda la etapa 8 y la beta: tareas y reportes de cada ronda, estado y pendientes viejos, registro de cambios, precios con Robux y el registro de pedidos de la 0.1 ([[Peticiones 0.1]]). Es solo historia: lo que seguía abierto pasó a [[Versión 0.2]].
 
 ## Fuera de la bóveda
-En la carpeta del juego: `RESUMEN_PROYECTO.md`, `ASSETS_LISTA.md` y los `TAREAS_CODEX_*.md` / `REVISION_*.md` de etapas anteriores (también históricos).
+`AGENTS.md` (instrucciones para Codex) en la raíz. Los documentos viejos de la raíz (`RESUMEN_PROYECTO`, `TAREAS_CODEX_*`, `REVISION_*`) pasaron a `Archivo 0.1/Documentos viejos/`. Backups y logs: `_archivo/` (fuera de Git).

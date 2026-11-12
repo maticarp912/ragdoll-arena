@@ -20,3 +20,6 @@ node_modules/
 Thumbs.db
 desktop.ini
 Paquete juego.rbxmx
+
+# Cosas viejas fuera de Git (backups, logs, snapshots)
+_archivo/
