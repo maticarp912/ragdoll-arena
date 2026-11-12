@@ -1,6 +1,7 @@
 -- Deterministic daily rotation; midnight Argentina (UTC-3), manually claimed rewards.
 return {
- GemReward = 50, -- 11/11: respaldo; cada misión trae su gems (50 las fáciles, 100 las difíciles) DailyCount = 3, RotationStep = 3, SpinReward = 1,
+ GemReward = 50, -- 11/11: respaldo; cada misión trae su gems (50 las fáciles, 100 las difíciles)
+ DailyCount = 3, RotationStep = 3, SpinReward = 1,
  Order = { "wins", "knockdowns", "parries", "guards", "throws", "greatsword", "matches", "kills", "damage", "daggers", "kicks", "ringouts" },
  Data = {
  wins = { event = "Win", goal = 2, reward = 130, gems = 100 },
