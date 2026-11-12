@@ -260,8 +260,9 @@ local function band(parent, key)
 	local f = Instance.new("Frame")
 	f.Name = "Caption"
 	f.BackgroundTransparency = 1
-	f.Position = UDim2.fromScale(spec.x0, spec.y0 - spec.captionHeight)
-	f.Size = UDim2.fromScale(spec.x1 - spec.x0, spec.captionHeight)
+	local cx = spec.captionX0 or spec.x0 -- algunas barras tienen arte encima del comienzo del canal
+	f.Position = UDim2.fromScale(cx, spec.y0 - spec.captionHeight)
+	f.Size = UDim2.fromScale(spec.x1 - cx, spec.captionHeight)
 	f.ZIndex = 6
 	f.Parent = parent
 	return f

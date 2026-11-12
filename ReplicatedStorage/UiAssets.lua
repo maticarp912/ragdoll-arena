@@ -108,7 +108,7 @@ UiAssets.UseArt = true
 UiAssets.BarArt = {
 	hud_bar_red = { x0 = 0.2, x1 = 0.96, y0 = 0.48, y1 = 0.65, captionHeight = 0.3 },
 	hud_bar_05 = { x0 = 0.19, x1 = 0.96, y0 = 0.44, y1 = 0.62, captionHeight = 0.32 },
-	hud_bar_cyan = { x0 = 0.2, x1 = 0.96, y0 = 0.55, y1 = 0.72, captionHeight = 0.32 },
+	hud_bar_cyan = { x0 = 0.2, x1 = 0.96, y0 = 0.55, y1 = 0.72, captionHeight = 0.32, captionX0 = 0.4 },
 	hud_bar_blue = { x0 = 0.33, x1 = 0.9, y0 = 0.4, y1 = 0.58, captionHeight = 0.3, tint = false },
 }
 -- Las esquinas de plata de las ventanas las dibuja UiTheme (no puede leer este módulo): se apagan con el mismo interruptor
