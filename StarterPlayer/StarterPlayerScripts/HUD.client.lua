@@ -28,7 +28,10 @@ local C = UiTheme.Colors
 local H = Polish.HUD
 local Mobile = Polish.MobileHUD
 -- 12/11/2026: cada barra usa su arte completo (barra_hud_04 roja, 05 dorada, 08 cian, 14 azul)
-local barArt = { health = "hud_bar_red", stamina = "hud_bar_05", guard = "hud_bar_cyan", infusion = "hud_bar_blue" }
+-- 12/11/2026 (pedido del usuario): las barras de color son de la INFUSIÓN, una por elemento
+-- (fuego = 04 roja, hielo = 08 cian, rayo = 14 azul, sombra = 05 teñida del color de sombra).
+local barArt = { infusion = "hud_bar_red" }
+local INFUSION_ART = { Fire = "hud_bar_red", Ice = "hud_bar_cyan", Lightning = "hud_bar_blue", Shadow = "hud_bar_05" }
 local ART = H.ArtBars
 
 local gui = Instance.new("ScreenGui")
@@ -100,15 +103,15 @@ local holder = UiTheme.panel({
 	position = UDim2.new(0.5, 0, 1, -14),
 	size = UDim2.fromOffset(Mobile.BarsWidth, Mobile.BarsHeight),
 	bg = C.BgPanel,
-	transparency = 0.12,
+	transparency = 1,
 	borderColor = C.Gold,
-	ornaments = true,
-	ornamentSize = 10,
+	frameArt = false,
 	canvasGroup = true,
 })
 local holderScale = Instance.new("UIScale")
 holderScale.Parent = holder
 local holderStroke = holder:FindFirstChildOfClass("UIStroke")
+if holderStroke then holderStroke.Transparency = 1 end
 
 local icons = {}
 local rowLabels = {}
@@ -247,163 +250,191 @@ local function createHorizBar(parent, name, pos, anchor, size, fillColor, border
 	return bg, fill, trail, flash, st
 end
 
--- 12/11/2026 (Claude): panel reordenado con el arte de plata.
---   [arma]                         [aturdimiento]
---   ════ VIDA (barra roja grande) ════
---   ═ RESISTENCIA (dorada) ═  ═ GUARDIA (cian) ═
---        [elemento] ═ INFUSIÓN (azul) ═
--- Los textos van arriba del canal de cada barra (en el canal no entran). Medidas en PolishConfig.HUD.ArtBars.
-local A = ART.Layout
-local function band(parent, key)
-	-- franja libre arriba del canal de la barra, para el nombre y el número
-	local spec = UiAssets.BarArt[key]
-	local f = Instance.new("Frame")
-	f.Name = "Caption"
-	f.BackgroundTransparency = 1
-	local cx = spec.captionX0 or spec.x0 -- algunas barras tienen arte encima del comienzo del canal
-	f.Position = UDim2.fromScale(cx, spec.y0 - spec.captionHeight)
-	f.Size = UDim2.fromScale(spec.x1 - cx, spec.captionHeight)
-	f.ZIndex = 6
-	f.Parent = parent
-	return f
-end
+-- 12/11/2026 (Claude, segunda versión, según la referencia del usuario):
+--   Arriba a la izquierda, junto al retrato: VIDA (larga) y debajo RESISTENCIA (fina) y ULTI/INFUSIÓN (arte del elemento).
+--   Abajo al centro: DERRIBO (fina) y debajo GUARDIA con el escudo en el medio, que se vacía hacia el centro.
+--   Rivales arriba a la derecha, con la vida espejada. Medidas en PolishConfig.HUD.Bars.
+local B = H.Bars
+
+-- Grupo de arriba (dentro del retrato propio; se arma más abajo, cuando existe ownFrame)
+local topHolder = Instance.new("CanvasGroup")
+topHolder.Name = "TopBars"
+topHolder.BackgroundTransparency = 1
+topHolder.Size = UDim2.fromOffset(B.TopWidth, B.TopHeight)
+topHolder.GroupTransparency = 1
 
 local weaponHolder = Instance.new("Frame")
 weaponHolder.Name = "WeaponHeader"
-weaponHolder.Position = UDim2.fromOffset(A.Pad, A.HeaderY)
-weaponHolder.Size = UDim2.fromOffset(A.HeaderWidth, A.HeaderHeight)
+weaponHolder.AnchorPoint = Vector2.new(1, 0)
+weaponHolder.Position = UDim2.new(1, 0, 0, B.StaminaY - 6)
+weaponHolder.Size = UDim2.fromOffset(B.WeaponWidth, 18)
 weaponHolder.BackgroundTransparency = 1
-weaponHolder.Parent = holder
+weaponHolder.Parent = topHolder
 
-local weaponIcon = UiAssets.icon(weaponHolder, "attack", 16, C.GoldBright)
-weaponIcon.AnchorPoint = Vector2.new(0, 0.5)
-weaponIcon.Position = UDim2.new(0, 0, 0.5, 0)
+local weaponIcon = UiAssets.icon(weaponHolder, "attack", 14, C.GoldBright)
+weaponIcon.AnchorPoint = Vector2.new(1, 0.5)
+weaponIcon.Position = UDim2.new(1, 0, 0.5, 0)
 
 local weaponLabel = UiTheme.label({
-	name = "WeaponName",
-	parent = weaponHolder,
-	position = UDim2.fromOffset(22, 0),
-	size = UDim2.new(1, -22, 1, 0),
-	text = "",
-	font = "Title",
-	textSize = UiTheme.TextSizes.MD,
-	color = C.GoldBright,
-	alignX = Enum.TextXAlignment.Left,
-	truncate = Enum.TextTruncate.AtEnd,
+	name = "WeaponName", parent = weaponHolder, size = UDim2.new(1, -18, 1, 0), text = "", font = "Title",
+	textSize = UiTheme.TextSizes.SM, color = C.GoldBright, alignX = Enum.TextXAlignment.Right, truncate = Enum.TextTruncate.AtEnd,
 })
 
--- Barra compacta de Aturdimiento (Stun) arriba a la derecha
-local stunHolder = Instance.new("Frame")
-stunHolder.Name = "StunHolder"
-stunHolder.AnchorPoint = Vector2.new(1, 0)
-stunHolder.Position = UDim2.new(1, -A.Pad, 0, A.HeaderY + 2)
-stunHolder.Size = UDim2.fromOffset(108, 20)
-stunHolder.BackgroundTransparency = 1
-stunHolder.Parent = holder
-
-local stunIconRoot, stunIconUpdate = UiAssets.icon(stunHolder, "stun", 15, C.Stun)
-stunIconRoot.AnchorPoint = Vector2.new(0, 0.5)
-stunIconRoot.Position = UDim2.new(0, 0, 0.5, 0)
-icons.stun = { root = stunIconRoot, update = stunIconUpdate, row = stunHolder, size = 15 }
-
-local stunBg, stunFill = createHorizBar(stunHolder, "stun", UDim2.fromOffset(20, 4), Vector2.new(0, 0),
-	UDim2.fromOffset(88, 12), C.Stun, C.BorderSubtle, false)
-
 -- Vida
-local hpBasePos = UDim2.new(0.5, 0, 0, A.HealthY)
-local hpBg, hpFill, hpTrail, hpFlash, hpStroke = createHorizBar(holder, "health", hpBasePos, Vector2.new(0.5, 0),
-	UDim2.fromOffset(A.HealthWidth, A.HealthWidth / 4), C.Health, C.Gold, true)
-local hpCap = band(hpBg, "hud_bar_red")
+local hpBasePos = UDim2.fromOffset(0, B.HealthY)
+local hpBg, hpFill, hpTrail, hpFlash, hpStroke = createHorizBar(topHolder, "health", hpBasePos, Vector2.zero,
+	UDim2.fromOffset(B.HealthWidth, B.HealthHeight), C.Health, C.Gold, true)
 
-local hpIconRoot, hpIconUpdate = UiAssets.icon(hpCap, "health", 16, C.TextPrimary)
+local hpIconRoot, hpIconUpdate = UiAssets.icon(hpBg, "health", 14, C.TextPrimary)
 hpIconRoot.AnchorPoint = Vector2.new(0, 0.5)
-hpIconRoot.Position = UDim2.new(0, 0, 0.5, 0)
+hpIconRoot.Position = UDim2.new(0, 6, 0.5, 0)
 hpIconRoot.ZIndex = 6
-icons.health = { root = hpIconRoot, update = hpIconUpdate, row = hpCap, size = 16 }
+icons.health = { root = hpIconRoot, update = hpIconUpdate, row = hpBg, size = 14 }
 
 local hpTitleLbl = UiTheme.label({
-	name = "HpCaption", parent = hpCap, position = UDim2.fromOffset(20, 0), size = UDim2.new(0.5, -20, 1, 0),
-	text = L.t("health"), font = "Header", textSize = UiTheme.TextSizes.SM, scaled = true, minTextSize = 9,
-	maxTextSize = 18, color = C.TextPrimary, alignX = Enum.TextXAlignment.Left, zIndex = 6,
+	name = "HpCaption", parent = hpBg, position = UDim2.fromOffset(24, 0), size = UDim2.new(0.5, -24, 1, 0),
+	text = L.t("health"), font = "Header", textSize = UiTheme.TextSizes.XS, color = C.TextPrimary,
+	alignX = Enum.TextXAlignment.Left, zIndex = 6,
 })
 rowLabels.health = hpTitleLbl
 
 local hpNumber = UiTheme.label({
-	name = "HpNumbers", parent = hpCap, anchor = Vector2.new(1, 0), position = UDim2.fromScale(1, 0),
-	size = UDim2.fromScale(0.5, 1), text = "100 / 100", font = "Number", textSize = UiTheme.TextSizes.SM,
-	scaled = true, minTextSize = 9, maxTextSize = 18, color = C.TextPrimary, alignX = Enum.TextXAlignment.Right, zIndex = 6,
+	name = "HpNumbers", parent = hpBg, anchor = Vector2.new(1, 0), position = UDim2.new(1, -8, 0, 0),
+	size = UDim2.new(0.5, 0, 1, 0), text = "100 / 100", font = "Number", textSize = UiTheme.TextSizes.XS,
+	color = C.TextPrimary, alignX = Enum.TextXAlignment.Right, zIndex = 6,
 })
 
 local damageTween = nil
 local damageVersion = 0
 
--- Resistencia (izquierda) y Guardia (derecha)
-local function sideCaption(bg, key, iconKey, color, text)
-	local cap = band(bg, key)
-	local iconRoot, iconUpdate = UiAssets.icon(cap, iconKey, 14, color)
-	iconRoot.AnchorPoint = Vector2.new(0, 0.5)
-	iconRoot.Position = UDim2.new(0, 0, 0.5, 0)
-	local caption = UiTheme.label({ parent = cap, position = UDim2.fromOffset(17, 0), size = UDim2.new(1, -52, 1, 0),
-		text = text, font = "Bold", textSize = UiTheme.TextSizes.XS, scaled = true, minTextSize = 8, maxTextSize = 14,
-		color = C.TextSecondary, truncate = Enum.TextTruncate.AtEnd, zIndex = 6 })
-	local number = UiTheme.label({ parent = cap, anchor = Vector2.new(1, 0), position = UDim2.fromScale(1, 0),
-		size = UDim2.new(0, 34, 1, 0), text = "100", font = "Number", textSize = UiTheme.TextSizes.XS, scaled = true,
-		minTextSize = 8, maxTextSize = 14, color = C.TextPrimary, alignX = Enum.TextXAlignment.Right, zIndex = 6 })
-	return cap, iconRoot, iconUpdate, caption, number
-end
-
-local stamBg, stamFill, _, stamFlash = createHorizBar(holder, "stamina", UDim2.fromOffset(A.Pad, A.SideY),
-	Vector2.new(0, 0), UDim2.fromOffset(A.SideWidth, A.SideWidth / 4), C.Stamina, C.BorderDefault, false)
-local stamHeader, stamIconRoot, stamIconUpdate, stamCaption, stamNumber =
-	sideCaption(stamBg, "hud_bar_05", "stamina", C.Stamina, L.t("stamina"))
-icons.stamina = { root = stamIconRoot, update = stamIconUpdate, row = stamHeader, size = 14 }
+-- Resistencia: fina, debajo de la vida
+local stamBg, stamFill, _, stamFlash = createHorizBar(topHolder, "stamina", UDim2.fromOffset(0, B.StaminaY),
+	Vector2.zero, UDim2.fromOffset(B.StaminaWidth, B.StaminaHeight), C.Stamina, C.BorderDefault, false)
+local stamHeader = Instance.new("Frame")
+stamHeader.Name = "StaminaCaption"
+stamHeader.BackgroundTransparency = 1
+stamHeader.Position = UDim2.fromOffset(B.StaminaWidth + 6, B.StaminaY - 4)
+stamHeader.Size = UDim2.fromOffset(B.StaminaCaption, 16)
+stamHeader.Parent = topHolder
+local stamIconRoot, stamIconUpdate = UiAssets.icon(stamHeader, "stamina", 12, C.Stamina)
+stamIconRoot.AnchorPoint = Vector2.new(0, 0.5)
+stamIconRoot.Position = UDim2.new(0, 0, 0.5, 0)
+icons.stamina = { root = stamIconRoot, update = stamIconUpdate, row = stamHeader, size = 12 }
+local stamCaption = UiTheme.label({ parent = stamHeader, position = UDim2.fromOffset(15, 0), size = UDim2.new(1, -45, 1, 0),
+	text = L.t("stamina"), font = "Bold", textSize = UiTheme.TextSizes.XS, color = C.TextSecondary, truncate = Enum.TextTruncate.AtEnd })
 rowLabels.stamina = stamCaption
+local stamNumber = UiTheme.label({ parent = stamHeader, anchor = Vector2.new(1, 0), position = UDim2.fromScale(1, 0),
+	size = UDim2.new(0, 30, 1, 0), text = "100", font = "Number", textSize = UiTheme.TextSizes.XS, color = C.TextPrimary,
+	alignX = Enum.TextXAlignment.Right })
 
-local guardBasePos = UDim2.new(1, -A.Pad, 0, A.SideY)
-local guardBg, guardFill, _, guardFlash, guardStroke = createHorizBar(holder, "guard", guardBasePos,
-	Vector2.new(1, 0), UDim2.fromOffset(A.SideWidth, A.SideWidth / 4), C.Guard, C.BorderDefault, false)
-local guardHeader, guardIconRoot, guardIconUpdate, guardCaption, guardNumber =
-	sideCaption(guardBg, "hud_bar_cyan", "guard", C.Guard, L.t("guard"))
-icons.guard = { root = guardIconRoot, update = guardIconUpdate, row = guardHeader, size = 14 }
-rowLabels.guard = guardCaption
-
--- Infusión: ícono del elemento (arte del usuario) y barra azul
+-- Ulti / infusión: ícono del elemento y la barra de arte de ese elemento
 local infRow = Instance.new("Frame")
 infRow.Name = "InfusionRow"
-infRow.AnchorPoint = Vector2.new(0.5, 0)
-infRow.Position = UDim2.new(0.5, 0, 0, A.InfusionY)
-infRow.Size = UDim2.fromOffset(A.InfusionIcon + 4 + A.InfusionWidth, A.InfusionWidth / 4)
+infRow.Position = UDim2.fromOffset(0, B.InfusionY)
+infRow.Size = UDim2.fromOffset(B.InfusionIcon + 4 + B.InfusionWidth, B.InfusionWidth / 4)
 infRow.BackgroundTransparency = 1
-infRow.Parent = holder
+infRow.Parent = topHolder
 
 local infIconHolder = Instance.new("Frame")
 infIconHolder.Name = "InfIconHolder"
 infIconHolder.AnchorPoint = Vector2.new(0, 0.5)
 infIconHolder.Position = UDim2.fromScale(0, 0.5)
-infIconHolder.Size = UDim2.fromOffset(A.InfusionIcon, A.InfusionIcon)
+infIconHolder.Size = UDim2.fromOffset(B.InfusionIcon, B.InfusionIcon)
 infIconHolder.BackgroundTransparency = 1
 infIconHolder.Parent = infRow
 
-local infIconRoot, infIconUpdate = UiAssets.icon(infIconHolder, "Fire", A.InfusionIcon - 2, C.InfusionCharge)
-icons.infusion = { root = infIconRoot, update = infIconUpdate, row = infIconHolder, size = A.InfusionIcon - 2, id = "Fire" }
+local infIconRoot, infIconUpdate = UiAssets.icon(infIconHolder, "Fire", B.InfusionIcon - 2, C.InfusionCharge)
+icons.infusion = { root = infIconRoot, update = infIconUpdate, row = infIconHolder, size = B.InfusionIcon - 2, id = "Fire" }
 
-local infBg, infFill, _, infFlash, infStroke = createHorizBar(infRow, "infusion",
-	UDim2.fromOffset(A.InfusionIcon + 4, 0), Vector2.new(0, 0), UDim2.fromOffset(A.InfusionWidth, A.InfusionWidth / 4),
+local infBg, infFill, _, infFlash, infStroke, infChannel = createHorizBar(infRow, "infusion",
+	UDim2.fromOffset(B.InfusionIcon + 4, 0), Vector2.new(0, 0), UDim2.fromOffset(B.InfusionWidth, B.InfusionWidth / 4),
 	C.InfusionCharge, C.GoldDim, false)
-local infCap = band(infBg, "hud_bar_blue")
+local infCap = Instance.new("Frame")
+infCap.Name = "Caption"
+infCap.BackgroundTransparency = 1
+infCap.ZIndex = 6
+infCap.Parent = infBg
 
 local infText = UiTheme.label({
 	name = "InfusionName", parent = infCap, size = UDim2.fromScale(0.6, 1), text = "", font = "Bold",
 	textSize = UiTheme.TextSizes.XS, scaled = true, minTextSize = 8, maxTextSize = 14, color = C.TextPrimary,
 	alignX = Enum.TextXAlignment.Left, zIndex = 6,
 })
-
 local infState = UiTheme.label({
 	name = "InfusionState", parent = infCap, anchor = Vector2.new(1, 0), position = UDim2.fromScale(1, 0),
 	size = UDim2.fromScale(0.4, 1), text = "", font = "Number", textSize = UiTheme.TextSizes.XS, scaled = true,
 	minTextSize = 8, maxTextSize = 14, color = C.GoldBright, alignX = Enum.TextXAlignment.Right, zIndex = 6,
 })
 rowLabels.infusion = infState
+
+local infArtId
+local function applyInfusionArt(infusionId, color)
+	if infArtId == infusionId then return end
+	infArtId = infusionId
+	local key = INFUSION_ART[infusionId] or "hud_bar_red"
+	local spec = UiAssets.BarArt[key]
+	local art = infBg:FindFirstChild("BarArt")
+	local uri = UiAssets.imageUri(key)
+	if not (spec and art and uri and infChannel) then return end
+	art.Image = uri
+	-- la de sombra es la dorada teñida del tono de la infusión
+	art.ImageColor3 = infusionId == "Shadow" and (color or C.InfusionCharge):Lerp(Color3.new(1, 1, 1), B.ShadowTintLift)
+		or Color3.new(1, 1, 1)
+	infChannel.Position = UDim2.fromScale(spec.x0, spec.y0)
+	infChannel.Size = UDim2.fromScale(spec.x1 - spec.x0, spec.y1 - spec.y0)
+	local cx = spec.captionX0 or spec.x0
+	infCap.Position = UDim2.fromScale(cx, spec.y0 - spec.captionHeight)
+	infCap.Size = UDim2.fromScale(spec.x1 - cx, spec.captionHeight)
+end
+applyInfusionArt("Fire")
+
+-- Abajo al centro: derribo (fina) y guardia con escudo
+local stunHolder = Instance.new("Frame")
+stunHolder.Name = "StunHolder"
+stunHolder.AnchorPoint = Vector2.new(0.5, 0)
+stunHolder.Position = UDim2.new(0.5, 0, 0, 0)
+stunHolder.Size = UDim2.fromOffset(B.StunWidth + 22, 16)
+stunHolder.BackgroundTransparency = 1
+stunHolder.Parent = holder
+
+local stunIconRoot, stunIconUpdate = UiAssets.icon(stunHolder, "knockdown", 14, C.Stun)
+stunIconRoot.AnchorPoint = Vector2.new(0, 0.5)
+stunIconRoot.Position = UDim2.new(0, 0, 0.5, 0)
+icons.stun = { root = stunIconRoot, update = stunIconUpdate, row = stunHolder, size = 14 }
+
+local stunBg, stunFill = createHorizBar(stunHolder, "stun", UDim2.fromOffset(20, 3), Vector2.new(0, 0),
+	UDim2.fromOffset(B.StunWidth, B.StunHeight), C.Stun, C.BorderSubtle, false)
+
+local guardBasePos = UDim2.new(0.5, 0, 0, B.GuardY)
+local guardBg, guardFill, _, guardFlash, guardStroke = createHorizBar(holder, "guard", guardBasePos,
+	Vector2.new(0.5, 0), UDim2.fromOffset(B.GuardWidth, B.GuardHeight), C.Guard, C.BorderDefault, false)
+-- se vacía desde los dos extremos hacia el escudo
+guardFill.AnchorPoint = Vector2.new(0.5, 0)
+guardFill.Position = UDim2.fromScale(0.5, 0)
+
+local guardHeader = Instance.new("Frame")
+guardHeader.Name = "GuardShield"
+guardHeader.AnchorPoint = Vector2.new(0.5, 0.5)
+guardHeader.Position = UDim2.new(0.5, 0, 0, B.GuardY + B.GuardHeight / 2)
+guardHeader.Size = UDim2.fromOffset(B.Shield, B.Shield)
+guardHeader.BackgroundColor3 = C.BgAbyss
+guardHeader.BackgroundTransparency = 0.15
+guardHeader.Rotation = 45
+guardHeader.ZIndex = 8
+guardHeader.Parent = holder
+UiTheme.stroke(guardHeader, C.Gold, 2, 0)
+local guardIconRoot, guardIconUpdate = UiAssets.icon(guardHeader, "guard", B.Shield - 8, C.Guard)
+guardIconRoot.AnchorPoint = Vector2.new(0.5, 0.5)
+guardIconRoot.Position = UDim2.fromScale(0.5, 0.5)
+guardIconRoot.Rotation = -45
+guardIconRoot.ZIndex = 9
+icons.guard = { root = guardIconRoot, update = guardIconUpdate, row = guardHeader, size = B.Shield - 8 }
+local guardCaption = UiTheme.label({ parent = guardBg, position = UDim2.fromOffset(8, 0), size = UDim2.new(0.4, -8, 1, 0),
+	text = L.t("guard"), font = "Bold", textSize = UiTheme.TextSizes.XS, color = C.TextPrimary, zIndex = 6 })
+rowLabels.guard = guardCaption
+local guardNumber = UiTheme.label({ parent = guardBg, anchor = Vector2.new(1, 0), position = UDim2.new(1, -8, 0, 0),
+	size = UDim2.new(0.4, -8, 1, 0), text = "100", font = "Number", textSize = UiTheme.TextSizes.XS, color = C.TextPrimary,
+	alignX = Enum.TextXAlignment.Right, zIndex = 6 })
 
 ----------------------------------------------------------------------
 -- 2E. Contrato C23: Destellos de barra al recibir Remotes.Effect ("Feel")
@@ -571,6 +602,9 @@ local xpBarBg, xpBarFill = UiTheme.progressBar({
 })
 xpBarBg.Name = "XPBar"
 
+topHolder.Position = UDim2.fromOffset(H.Portrait + H.NameHeight, H.NameHeight + 2)
+topHolder.Parent = ownFrame
+
 local friendBadge = UiTheme.label({ parent = progBarHolder, position = UDim2.fromOffset(0, 27),
 	size = UDim2.fromOffset(148, 17), text = L.t("mz.friendBadge", { percent = 20 }), font = "Bold",
 	textSize = UiTheme.TextSizes.XS, color = C.Accent })
@@ -616,9 +650,13 @@ local rivals = {}
 for slot = 1, H.Opponents do
 	local frame, image, name = portraitPanel(true, slot)
 	-- 12/11/2026: la misma barra roja de arte que la vida propia, recta y pegada al retrato
-	local _, fill, trail = createHorizBar(frame, "health",
-		UDim2.new(1, -(H.Portrait + H.NameHeight / 2), 0, ART.Layout.RivalY), Vector2.new(1, 0),
-		UDim2.fromOffset(ART.Layout.RivalWidth, ART.Layout.RivalWidth / 4), C.Health, C.Gold, true)
+	local _, fill, trail = createHorizBar(frame, "rivalHealth",
+		UDim2.new(1, -(H.Portrait + H.NameHeight), 0, H.NameHeight + 4), Vector2.new(1, 0),
+		UDim2.fromOffset(B.RivalWidth, B.HealthHeight), C.Health, C.Gold, true)
+	for _, f in { fill, trail } do
+		f.AnchorPoint = Vector2.new(1, 0)
+		f.Position = UDim2.fromScale(1, 0)
+	end
 	rivals[slot] = { frame = frame, image = image, name = name, fill = fill, trail = trail, hp = 1, hitAt = 0 }
 end
 
@@ -741,11 +779,7 @@ local function updateLayout()
 	local inMatch = player:GetAttribute("InMatch") == true
 	ownFrame.Visible = not (player:GetAttribute("MenuOpen") == true)
 	statusBanner.Position = UDim2.new(0.5, 0, 0, Mobile.Margin)
-	if inMatch and not compact then
-		holder.AnchorPoint = Vector2.zero
-		local portraitBottom = math.floor(vp.Y * H.Top + (H.Height + 26) * baseScale)
-		holder.Position = UDim2.new(H.Side, 0, 0, portraitBottom + Mobile.Gap)
-	else
+	do
 		holder.AnchorPoint = Vector2.new(0.5, 1)
 		local bottom = inMatch and Mobile.Margin or (Mobile.QueueBottom + Mobile.QueueHeight + Mobile.Gap)
 		holder.Position = UDim2.new(Device.isTouch() and Mobile.TouchBarsCenter or 0.5, 0, 1, -bottom)
@@ -786,6 +820,9 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 	end
 	holder.Visible = holder.GroupTransparency < 0.99 and not player:GetAttribute("MenuOpen")
+	topHolder.GroupTransparency = holder.GroupTransparency
+	topHolder.Visible = holder.Visible
+	progBarHolder.Visible = not topHolder.Visible or holder.GroupTransparency > 0.5
 
 	local enemies = {}
 	if player:GetAttribute("InMatch") and player.Team then
@@ -832,11 +869,12 @@ RunService.Heartbeat:Connect(function(dt)
 
 	local now = workspace:GetServerTimeNow()
 	infFill.BackgroundColor3 = def.color
+	applyInfusionArt(infusionId, def.color)
 	infText.Text = L.t("infusion." .. infusionId)
 
 	if icons.infusion.id ~= infusionId then
 		icons.infusion.root:Destroy()
-		icons.infusion.root, icons.infusion.update = UiAssets.icon(icons.infusion.row, infusionId, 20, def.color)
+		icons.infusion.root, icons.infusion.update = UiAssets.icon(icons.infusion.row, infusionId, B.InfusionIcon - 2, def.color)
 		icons.infusion.id = infusionId
 	end
 
@@ -866,7 +904,7 @@ RunService.Heartbeat:Connect(function(dt)
 	local IA = H.InfusionIcon
 	icons.infusion.update(1, exhausted)
 	local root = icons.infusion.root
-	local basePx = 20
+	local basePx = B.InfusionIcon - 2
 	local pulse = (active and IA.ActiveAmp or (full and IA.FullAmp or 0)) * math.sin(os.clock() * (active and IA.ActiveSpeed or IA.FullSpeed))
 	local px = math.floor(basePx * (1 + pulse))
 	root.Size = UDim2.fromOffset(px, px)

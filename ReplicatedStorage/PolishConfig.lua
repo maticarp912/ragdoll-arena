@@ -11,14 +11,18 @@ return {
  Textures = { Fire = "rbxasset://textures/particles/fire_main.dds", Lightning = "rbxasset://textures/particles/sparkles_main.dds", Ice = "rbxasset://textures/particles/smoke_main.dds", Shadow = "rbxasset://textures/particles/smoke_main.dds" }, Crystal = "rbxasset://textures/particles/sparkles_main.dds" },
  HUD = { DamageDelay = 0.4, DamageTime = 0.65, Top = 0.06, Side = 0.025, Width = 0.34, Height = 80, Portrait = 54, PortraitAngle = 45, BarAngle = -2, NameHeight = 24, BarTop = 35, BarHeight = 16, EnemyStep = 92, Opponents = 2, Max = 100, ScaleWidth = 1100, ScaleMin = 0.5, BottomWidth = 440, StatusWidth = 0.24, StatusHeight = 0.045, NameSize = 16,
   -- icono de infusión: latido activa / carga llena, ladeo agotada
-  -- 12/11/2026: barras de arte (UiAssets.BarArt) y su disposición en el panel propio (px, sin escalar)
-  ArtBars = { EmptyTransparency = 0.18, LostTransparency = 0.45,
-   Layout = { Pad = 10, HeaderY = 8, HeaderHeight = 24, HeaderWidth = 170, HealthY = 22, HealthWidth = 340,
-    SideY = 98, SideWidth = 172, InfusionY = 134, InfusionWidth = 220, InfusionIcon = 30, RivalY = 10, RivalWidth = 250 } },
+  -- 12/11/2026: barras de arte (UiAssets.BarArt, solo la infusión) y disposición del HUD propio (px, sin escalar)
+  ArtBars = { EmptyTransparency = 0.18, LostTransparency = 0.45 },
+  Bars = { TopWidth = 330, TopHeight = 96, HealthY = 2, HealthWidth = 320, HealthHeight = 20, WeaponWidth = 120,
+   StaminaY = 28, StaminaWidth = 190, StaminaHeight = 7, StaminaCaption = 120,
+   InfusionY = 38, InfusionWidth = 220, InfusionIcon = 26, ShadowTintLift = 0.35, RivalWidth = 300,
+   StunWidth = 260, StunHeight = 8, GuardY = 26, GuardWidth = 440, GuardHeight = 14, Shield = 34 },
   InfusionIcon = { Size = 28, ActiveAmp = 0.14, ActiveSpeed = 9, FullAmp = 0.06, FullSpeed = 4, ActiveWobble = 40, ExhaustTilt = 14 } },
+ -- 12/11/2026: contorno de equipo en partida (TeamOutline.client)
+ TeamOutline = { Ally = Color3.fromRGB(70, 150, 255), Enemy = Color3.fromRGB(235, 50, 50), Transparency = 0.1, Interval = 0.25 },
  MobileHUD = {
   Margin = 8, QueueHeight = 54, QueueBottom = 12, Gap = 10,
-  BarsWidth = 364, BarsHeight = 196, BarsWidthShare = 0.55, BarsMinHeightShare = 0.26, TouchBarsCenter = 0.38,
+  BarsWidth = 460, BarsHeight = 60, BarsWidthShare = 0.55, BarsMinHeightShare = 0.26, TouchBarsCenter = 0.38,
   PadWidthShare = 0.43, PadHeightShare = 0.78, PadMaxScale = 1.18, PadEdge = 16,
  },
  Camera = { Frequency = 24, SeedX = 11, SeedY = 37, SeedRoll = 71, BounceStart = 0.35, BounceTime = 0.22 },

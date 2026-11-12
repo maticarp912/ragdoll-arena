@@ -355,6 +355,8 @@ local function runRound(roundNumber: number, modeName: string, teamsMap)
 	task.spawn(runCrumble, modeName, arena.token)
 
 	local endTime = os.clock() + CONFIG.RoundTime
+	local overtime = false
+	workspace:SetAttribute("Overtime", false)
 	local winner = nil
 	local lastText = ""
 
@@ -395,13 +397,21 @@ local function runRound(roundNumber: number, modeName: string, teamsMap)
 		end
 
 		local remaining = math.ceil(endTime - os.clock())
+		if remaining <= 0 and not overtime and (CONFIG.Overtime or 0) > 0 then
+			-- 12/11/2026: tiempo extra. Se sigue peleando; si nadie cae, decide la vida que queda.
+			overtime = true
+			endTime = os.clock() + CONFIG.Overtime
+			remaining = CONFIG.Overtime
+			workspace:SetAttribute("Overtime", true)
+			for _, f in fighters do f.player:SetAttribute("PhaseEnds", workspace:GetServerTimeNow() + CONFIG.Overtime) end
+		end
 		if remaining <= 0 then
 			if health.Red > health.Blue then winner = "Red"
 			elseif health.Blue > health.Red then winner = "Blue" end
 			break
 		end
 
-		local key = arena.crumbling and "cx.match.crumbling" or "cx.match.round"
+		local key = overtime and "cx.match.overtime" or (arena.crumbling and "cx.match.crumbling" or "cx.match.round")
   local stamp = HttpService:JSONEncode({ roundNumber, alive.Red, alive.Blue, remaining, key })
   if stamp ~= lastText then
    lastText = stamp
@@ -411,6 +421,7 @@ local function runRound(roundNumber: number, modeName: string, teamsMap)
 	end
 
 	for _, connection in connections do connection:Disconnect() end
+ workspace:SetAttribute("Overtime", false)
  phase("RoundEnd", E.RoundEndTime)
  arena.token += 1 -- detiene el derrumbe
 	for _, f in fighters do

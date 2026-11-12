@@ -11,7 +11,8 @@ local D = {
  RuneCount=24, RuneRadius=6, RuneWidth=0.09, RuneLength=0.7, RuneLift=0.13,
  TreeSides={-1,1}, TreeX=10, TreeSegments=5, TreeRise=2.5, TreeLean=0.6,
  Mushrooms={Vector3.new(-31,0,-31),Vector3.new(31,0,-31),Vector3.new(-31,0,-48),Vector3.new(31,0,-48),Vector3.new(-10,0,-105),Vector3.new(10,0,-105)}, ClusterCount=4,
- Lamps={Vector3.new(-34,7,-24),Vector3.new(-10,7,-90),Vector3.new(10,7,-90),Vector3.new(31,7,-40),Vector3.new(-31,7,-40)}, LampSize=Vector3.new(0.8,1.4,0.8), LightRange=12, Brightness=0.8,
+ Lamps={Vector3.new(-10,7,-90),Vector3.new(10,7,-90)}, -- 12/11/2026: sacados los 3 que colgaban en el aire (-34,-24 / 31,-40 / -31,-40)
+ LampSize=Vector3.new(0.8,1.4,0.8), LightRange=12, Brightness=0.8,
  Paths={{Vector3.new(-32,0,-18),Vector3.new(-35,0,-18)},{Vector3.new(35,0,-40),Vector3.new(59,0,-40)},{Vector3.new(0,0,-72),Vector3.new(0,0,-91)}}, StoneStep=3, PathLanes={-1,1}, LaneWidth=2, StoneSize=Vector3.new(2.2,0.12,2.4), StoneLift=0.14,
  Fountain=Vector3.new(20,0,-16), FountainRadius=3, FountainSegments=16,
  BarrelPositions={Vector3.new(-34,0,-8),Vector3.new(-34,0,-27)}, StoolPositions={Vector3.new(-33,0,-13),Vector3.new(-33,0,-19)},

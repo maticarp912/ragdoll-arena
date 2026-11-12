@@ -110,6 +110,7 @@ return {
 		RoundsToWin = 2,
 		MaxRounds = 5,
 		RoundTime = 180,
+		Overtime = 60, -- 12/11/2026: si se acaba el tiempo con gente viva, 60 s más; después gana el equipo con más vida
 		Countdown = 3,
 		WinCoins = 50,
 		LoseCoins = 15,
