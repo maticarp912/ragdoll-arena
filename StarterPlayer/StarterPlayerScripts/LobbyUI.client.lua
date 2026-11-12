@@ -243,6 +243,32 @@ qLayout.Parent = queueBar
 
 local requestedMode = nil
 
+-- 12/11/2026 (pedido del usuario): JUGAR grande arriba de 1v1 y 2v2. Entra en las dos colas y arranca
+-- la primera partida que se complete (2v2 si hay 4, si no 1v1).
+local playHolder = Instance.new("Frame")
+playHolder.Name = "QuickPlay"
+playHolder.AnchorPoint = Vector2.new(0.5, 1)
+playHolder.Position = UDim2.new(0.5, 0, 1, -(Mobile.QueueBottom + Mobile.QueueHeight + Mobile.Gap))
+playHolder.Size = UDim2.fromOffset(352, 62)
+playHolder.BackgroundTransparency = 1
+playHolder.Parent = gui
+local playScale = Instance.new("UIScale")
+playScale.Parent = playHolder
+local playBtn = UiTheme.button({
+	name = "PlayAny",
+	parent = playHolder,
+	size = UDim2.fromScale(1, 1),
+	text = L.t("ui.queue.play"),
+	font = "Title",
+	textSize = UiTheme.TextSizes.XXL or 30,
+	variant = "gold",
+	onClick = function()
+		requestedMode = "Any"
+		if QueueRemote then QueueRemote:FireServer("Join", "Any") end
+	end,
+})
+UiTheme.stroke(playBtn, C.GoldBright, 2.5, 0)
+
 local join1Btn = UiTheme.button({
 	name = "Join1v1",
 	parent = queueBar,
@@ -756,9 +782,15 @@ local function refreshBar()
 
 	join1Btn.Visible = mode == nil
 	join2Btn.Visible = mode == nil
+	playHolder.Visible = mode == nil and queueBar.Visible
+	playBtn.Text = L.t("ui.queue.play")
 	leaveBtn.Visible = mode ~= nil
 	queueStatusLbl.Visible = mode ~= nil
-	if mode then
+	if mode == "Any" then
+		queueStatusLbl.Text = L.t("ui.queue.searchingAny", {
+			a = workspace:GetAttribute("QueueCount1v1") or 0, b = workspace:GetAttribute("QueueCount2v2") or 0,
+		})
+	elseif mode then
 		queueStatusLbl.Text = L.t("ui.queue.searching", {
 			mode = mode,
 			n = workspace:GetAttribute("QueueCount" .. mode) or 0,
@@ -770,6 +802,8 @@ local function refreshBar()
 	if cam then
 		local sc = UiTheme.computeScale(gui.AbsoluteSize, 1060, 640, player)
 		queueScale.Scale = math.min(sc, 1)
+		playScale.Scale = math.min(sc, 1)
+		playHolder.Position = UDim2.new(0.5, 0, 1, -(Mobile.QueueBottom + (Mobile.QueueHeight + Mobile.Gap) * playScale.Scale))
 		dockScale.Scale = sc
 		modalScale.Scale = sc
 		leftDock.AnchorPoint = Vector2.new(0, 0.5)

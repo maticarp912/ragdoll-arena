@@ -565,7 +565,7 @@ end
 local QUEUE_NEED = { ["1v1"] = 2, ["2v2"] = 4 }
 
 -- Botones de cola (Lobby.client): entrar o salir de la cola sin ir a los círculos
-local queueRequests = {} -- [jugador] = "1v1" | "2v2"
+local queueRequests = {} -- [jugador] = "1v1" | "2v2" | "Any" (12/11/2026: botón JUGAR, entra en las dos colas)
 local QueueRemote = require(ServerScriptService:WaitForChild("Remotes")).get("Queue")
 local queueAt = {}
 Players.PlayerRemoving:Connect(function(p) queueAt[p] = nil end)
@@ -577,7 +577,7 @@ QueueRemote.OnServerEvent:Connect(function(player, action, mode)
 	-- 11/11: en party solo el líder busca partida; el otro entra con él
 	if Party.inParty(player) and not Party.isLeader(player) then return end
 	local partner = Party.partner(player)
-	if action == "Join" and type(mode) == "string" and QUEUE_NEED[mode] and not player:GetAttribute("InMatch") then
+	if action == "Join" and type(mode) == "string" and (QUEUE_NEED[mode] or mode == "Any") and not player:GetAttribute("InMatch") then
 		queueRequests[player] = mode
 	elseif action == "Leave" then
 		queueRequests[player] = nil
@@ -677,8 +677,14 @@ task.spawn(function()
    for p, mode in queueRequests do
     local char = p.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if not physical[p] and queued[mode] and p.Parent and hum and hum.Health > 0 and not p:GetAttribute("InMatch") and PlayerData.get(p) then
-     table.insert(queued[mode], p)
+    if not physical[p] and p.Parent and hum and hum.Health > 0 and not p:GetAttribute("InMatch") and PlayerData.get(p) then
+     if mode == "Any" then
+      -- JUGAR: en las dos colas. Una party solo va a 2v2 (si no, se armaría un duelo entre ellos).
+      table.insert(queued["2v2"], p)
+      if not Party.inParty(p) then table.insert(queued["1v1"], p) end
+     elseif queued[mode] then
+      table.insert(queued[mode], p)
+     end
     end
    end
    -- 11/11 (party): el líder en cola mete a su compañero en la misma cola
@@ -693,14 +699,15 @@ task.spawn(function()
     end
    end
    for mode, list in queued do
-    for _, p in list do p:SetAttribute("QueueMode", mode) end
+    for _, p in list do p:SetAttribute("QueueMode", queueRequests[p] == "Any" and "Any" or mode) end
     local zone = zones[mode]
     if zone and zone.label then zone.label.Text = ("%d / %d"):format(#list, QUEUE_NEED[mode]) end
     workspace:SetAttribute("QueueCount" .. mode, #list)
    end
 			for _, p in Players:GetPlayers() do
 				local mode = p:GetAttribute("QueueMode")
-				if mode and not (queued[mode] and table.find(queued[mode], p)) then p:SetAttribute("QueueMode", nil) end
+				local inAny = mode == "Any" and (table.find(queued["1v1"], p) or table.find(queued["2v2"], p))
+				if mode and not inAny and not (queued[mode] and table.find(queued[mode], p)) then p:SetAttribute("QueueMode", nil) end
 			end
 			local g2, keep2 = pickGroup(queued["2v2"], "2v2")
 			local g1, keep1 = nil, false
