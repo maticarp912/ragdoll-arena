@@ -207,6 +207,9 @@ function Combat.beginAction(char, action, duration, phase)
 	st.busyUntil = st.actionStart + duration
 	char:SetAttribute("Action", action)
 	char:SetAttribute("ActionPhase", phase or "Active")
+	-- 12/11/2026: el cliente dibuja el ritmo (cuándo termina la acción) en el triángulo direccional
+	char:SetAttribute("ActionStartAt", st.actionStart)
+	char:SetAttribute("ActionEndsAt", st.busyUntil)
 	char:SetAttribute("HitAt", 0)
 	Combat.refreshSpeed(char)
 	return st.token

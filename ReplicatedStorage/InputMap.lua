@@ -42,8 +42,10 @@ InputMap.Defaults = {
 -- cada tabla de dispositivo lleva la marca __layout y, si no coincide, se usan las de fábrica de este esquema.
 InputMap.DirectionalDefaults = {
 	Keyboard = {
-		Attack = "MouseButton1", Heavy = "MouseButton2", Block = "Q", Dodge = "Space", Interact = "E",
-		Kick = "F", Infuse = "R", LockOn = "T", SwitchTarget = "G", Menu = "B", Armory = "V",
+		-- 12/11/2026 (pedido del usuario): Shift guardia, Q fijar, E levantar/interactuar, R infusión, F patada,
+		-- T cambiar de objetivo y Espacio esquivar
+		Attack = "MouseButton1", Heavy = "MouseButton2", Block = "LeftShift", Dodge = "Space", Interact = "E",
+		Kick = "F", Infuse = "R", LockOn = "Q", SwitchTarget = "T", Menu = "B", Armory = "V",
 	},
 	Gamepad = {
 		Attack = "ButtonR1", Heavy = "ButtonR2", Block = "ButtonL2", Dodge = "ButtonL1", Interact = "ButtonX",
@@ -52,7 +54,8 @@ InputMap.DirectionalDefaults = {
 }
 
 function InputMap.layout()
-	return directionalOn() and "Directional" or "Classic"
+	-- «Directional2» (12/11/2026): las asignaciones guardadas con las teclas viejas vuelven a las nuevas de fábrica
+	return directionalOn() and "Directional2" or "Classic"
 end
 
 function InputMap.defaults()

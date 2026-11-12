@@ -89,7 +89,8 @@ WeaponData.Data = {
 			-- 0.2 (D3): 7·8·12 → 6·7·11; los golpes 2 y 3 impactan más tarde para dejar lugar al parry
 			-- 11/11: el combo derriba menos (aturdimiento 11·11·20 → 6·6·11)
 			damage = { 6, 7, 11 }, stun = { 6, 6, 11 }, knockback = { 3, 3, 8 },
-			duration = { 0.32, 0.40, 0.48 }, hitTime = { 0.15, 0.19, 0.25 },
+			-- 12/11/2026: reacción humana ~200 ms; el golpe se anuncia en el triángulo al menos 0,24 s antes de pegar
+			duration = { 0.4, 0.46, 0.52 }, hitTime = { 0.24, 0.25, 0.28 },
 			reach = 5, width = 4,
 			hyperArmor = { false, false, false }, guardDrainMult = 0.9, staggerMult = 0.85,
 		},
@@ -112,7 +113,7 @@ WeaponData.Data = {
 		combo = {
 			-- 0.2 (D3): 9·11·15 → 8·10·14, duración 0,40·0,40·0,50 → 0,40·0,45·0,55, punta +25 % → +15 %
 			damage = { 8, 10, 14 }, stun = { 12, 12, 24 }, knockback = { 5, 5, 12 },
-			duration = { 0.4, 0.45, 0.55 }, hitTime = { 0.2, 0.2, 0.26 }, -- impacto igual: la recuperación se alarga
+			duration = { 0.44, 0.48, 0.57 }, hitTime = { 0.24, 0.24, 0.28 }, -- 12/11/2026: mínimo 0,24 s para reaccionar
 			reach = 10, width = 2.5,
 			hyperArmor = { false, false, false }, guardDrainMult = 0.9, staggerMult = 1.0,
 			sweetSpot = { from = 0.65, mult = 1.15 },

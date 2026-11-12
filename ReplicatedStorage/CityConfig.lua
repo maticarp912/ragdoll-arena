@@ -112,6 +112,9 @@ CityConfig.PlazaFinish = {
 
 CityConfig.Seed = 1888
 
+-- 12/11/2026 (pedido del usuario): el centro del lobby iluminado y el resto de las luces de la ciudad 40 % más tenues
+CityConfig.LobbyLight = { OthersScale = 0.6, Height = 14, Range = 60, Brightness = 2.6, Color = Color3.fromRGB(255, 214, 160) }
+
 -- 12/11/2026: patio del tutorial guiado (TutorialService + GuidedTutorial.client). Lejos de la ciudad, flotando.
 CityConfig.GuidedTutorial = {
 	Origin = Vector3.new(-450, 300, 900), YardSpacing = 2048, YardColumns = 6,

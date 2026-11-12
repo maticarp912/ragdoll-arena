@@ -1,0 +1,32 @@
+{
+  "SwordHeavyUp": {
+    "frames": 56,
+    "insertedKeys": 0,
+    "originalIntersections": 0,
+    "correctedFrames": 0,
+    "intersections": [],
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 3e-07,
+    "maxHandCorrectionStuds": 0
+  },
+  "SwordHeavyLeft": {
+    "frames": 56,
+    "insertedKeys": 1,
+    "originalIntersections": 4,
+    "correctedFrames": 9,
+    "intersections": [],
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 3e-07,
+    "maxHandCorrectionStuds": 0.05291
+  },
+  "SwordHeavyRight": {
+    "frames": 62,
+    "insertedKeys": 0,
+    "originalIntersections": 3,
+    "correctedFrames": 5,
+    "intersections": [],
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 3e-07,
+    "maxHandCorrectionStuds": 0.0278
+  }
+}

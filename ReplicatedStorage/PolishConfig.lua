@@ -25,11 +25,12 @@ return {
   RockHeight = { Min = 8, Max = 22 }, Flowers = 260, FlowerSpread = 60, OrangeShare = 0.55,
   Stars = 420, SkyYaw = 75, SkyPitch = { Min = 8, Max = 70 }, SkyRadius = 260, StarSize = { Min = 0.5, Max = 1.6 }, TwinklePerFrame = 4,
   MoonYaw = -8, MoonPitch = 34, MoonSize = 9,
-  Grass = Color3.fromRGB(46, 112, 66), FarGrass = Color3.fromRGB(12, 26, 22), Rock = Color3.fromRGB(20, 26, 40),
+  Grass = Color3.fromRGB(46, 112, 66), FarGrass = Color3.fromRGB(28, 46, 62), Rock = Color3.fromRGB(20, 26, 40), -- 12/11/2026: loma del fondo azulada (antes negra: tapaba el horizonte)
   Orange = Color3.fromRGB(255, 96, 24), Blue = Color3.fromRGB(110, 180, 255), Star = Color3.fromRGB(255, 186, 74),
   Moon = Color3.fromRGB(205, 225, 255), WarmLight = Color3.fromRGB(255, 170, 110), WarmRange = 70, WarmBrightness = 2.2,
   LightOffset = Vector3.new(4, 14, 6),
   SwordSkin = "CrimsonEclipse", SwordScale = 2.6, SwordOffset = Vector3.new(4, 2, -2), SwordTilt = -12, SwordLean = 6, SwordBuried = 0.22,
+  FireflyRate = 14, FireflySize = 0.5, -- 12/11/2026: luciérnagas del piso
   CameraOffset = Vector3.new(-2, 7, 24), CameraLook = Vector3.new(2, 13, -12), CameraDrift = 0.8, FieldOfView = 60,
   TitleColor = Color3.fromRGB(242, 230, 190), OptionColor = Color3.fromRGB(226, 218, 196), OptionHover = Color3.fromRGB(255, 196, 92),
   OptionSize = 34, OptionHeight = 48, OptionStep = 62,
@@ -71,6 +72,9 @@ return {
   SilverSheen = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
    ColorSequenceKeypoint.new(0.45, Color3.fromRGB(170, 175, 188)), ColorSequenceKeypoint.new(0.6, Color3.fromRGB(225, 229, 238)),
    ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 124, 138)) }),
+  -- 12/11/2026: timing en el triángulo. Anillo del golpe rival (px) y barra de tu ritmo (fracción del lado)
+  Rhythm = { RingMax = 120, RingMin = 22, RingThickness = 3, Window = 0.5, BarWidth = 0.8, BarHeight = 7, BarGap = 18,
+   Windup = Color3.fromRGB(255, 196, 92), Recovery = Color3.fromRGB(150, 160, 178), Ready = Color3.fromRGB(150, 230, 170), ReadyFlash = 0.35 },
   Rim = Color3.fromRGB(16, 18, 24), RimWidth = 2, RimTransparency = 0.35, Vertex = 13, VertexColor = Color3.fromRGB(214, 219, 230), Guard = Color3.fromRGB(150, 205, 255),
   Committed = Color3.fromRGB(155, 201, 224), Attack = Color3.fromRGB(255, 40, 32), Unblockable = Color3.fromRGB(255, 196, 64), Kick = Color3.fromRGB(255, 140, 30),
   Parry = Color3.fromRGB(255, 226, 120), ParryTime = 0.35, ParryScale = 1.35,

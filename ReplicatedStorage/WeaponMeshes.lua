@@ -11,6 +11,13 @@
 --      de `SkinDesigns.lua` / `WeaponBuilder.lua` sin errores ni dependencias externas.
 
 local WeaponMeshes = {
+	-- Piloto Vigilia Violeta (Relic10). Completar IDs después de importar y verificar el pivote.
+	Violet = {
+		MeshId = 0, TextureId = 0, Scale = Vector3.new(1, 1, 1), Offset = CFrame.identity,
+		BladeBase = Vector3.new(0, 0, 0.7714), BladeTip = Vector3.new(0, 0, 5.3), TipZ = 5.3,
+		SourceFile = "modelos_armas/v0.3/Vigilia Violeta/VigiliaVioleta.fbx",
+		TextureFile = "modelos_armas/v0.3/Vigilia Violeta/VigiliaVioleta_tex.jpg",
+	},
 	-- 0.3: Corte de Plata. Activar después de importar y verificar el agarre en Studio.
 	SilverCut = {
 		MeshId = 0, TextureId = 0, Scale = Vector3.new(1, 1, 1), Offset = CFrame.identity,

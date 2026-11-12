@@ -198,7 +198,28 @@ local function reverseBinds(map)
 	return out
 end
 
-local function drawKeyboard(parent, w, h, map, caption)
+-- botón invisible sobre una tecla dibujada: tocarla abre el selector de acción
+local function makePickable(cap, name, text, caption, onPick, bound)
+	local hit = Instance.new("TextButton")
+	hit.Name = "Pick_" .. name
+	hit.BackgroundTransparency = 1
+	hit.Text = ""
+	hit.Size = UDim2.fromScale(1, 1)
+	hit.ZIndex = cap.ZIndex + 5
+	hit.Parent = cap
+	local st = cap:FindFirstChildOfClass("UIStroke")
+	hit.MouseEnter:Connect(function()
+		if st then st.Color = C.GoldBright st.Transparency = 0 end
+		if caption then caption(text, bound) end
+	end)
+	hit.MouseLeave:Connect(function()
+		if st then st.Color = bound and C.GoldBright or C.BorderDefault st.Transparency = bound and 0 or 0.4 end
+	end)
+	hit.Activated:Connect(function() if onPick then onPick(name, text) end end)
+	return hit
+end
+
+local function drawKeyboard(parent, w, h, map, caption, onPick)
 	local bound = reverseBinds(map)
 	local mouseW = 96
 	local unit = math.floor((w - mouseW - 40) / 15)
@@ -212,9 +233,7 @@ local function drawKeyboard(parent, w, h, map, caption)
 			if name ~= "" then
 				local state = bound[name] and "bound" or (MOVE_KEYS[name] and "move" or nil)
 				local cap = keyCap(parent, x, y0 + (r - 1) * (keyH + 3), kw, keyH, text, state)
-				if bound[name] then
-					cap.MouseEnter:Connect(function() caption(text, bound[name]) end)
-				end
+				makePickable(cap, name, text, caption, onPick, bound[name])
 			end
 			x += math.floor(units * unit)
 		end
@@ -231,9 +250,11 @@ local function drawKeyboard(parent, w, h, map, caption)
 	UiTheme.stroke(body, C.BorderDefault, 1, 0.3)
 	local bw = math.floor((mouseW - 12) / 2) - 2
 	for i, btn in { { "MouseButton1", "M1" }, { "MouseButton2", "M2" } } do
-		keyCap(body, (i - 1) * (bw + 4), 0, bw, 46, btn[2], bound[btn[1]] and "bound" or nil, 5)
+		local cap = keyCap(body, (i - 1) * (bw + 4), 0, bw, 46, btn[2], bound[btn[1]] and "bound" or nil, 5)
+		makePickable(cap, btn[1], btn[2], caption, onPick, bound[btn[1]])
 	end
-	keyCap(body, bw - 6, 10, 16, 24, "", bound.MouseButton3 and "bound" or nil, 7)
+	local wheel = keyCap(body, bw - 6, 10, 16, 24, "", bound.MouseButton3 and "bound" or nil, 7)
+	makePickable(wheel, "MouseButton3", "M3", caption, onPick, bound.MouseButton3)
 end
 
 local PAD_BUTTONS = {
@@ -248,7 +269,7 @@ local PAD_BUTTONS = {
 	{ "ButtonSelect", 0.455, 0.36, 0.035, 0.08, "⧉", "L" }, { "ButtonStart", 0.51, 0.36, 0.035, 0.08, "≡", "R" },
 }
 
-local function drawGamepad(parent, w, h, map, actionName)
+local function drawGamepad(parent, w, h, map, actionName, onPick)
 	local bound = reverseBinds(map)
 	-- cuerpo del mando
 	local body = Instance.new("Frame")
@@ -276,6 +297,7 @@ local function drawGamepad(parent, w, h, map, actionName)
 		local cap = keyCap(parent, math.floor(b[2] * w), math.floor(b[3] * h), math.max(14, math.floor(b[4] * w)),
 			math.max(12, math.floor(b[5] * h)), b[6], state, 6)
 		if round then UiTheme.corner(cap, 99) end
+		makePickable(cap, b[1], b[6], nil, onPick, bound[b[1]])
 		if state then
 			local names = {}
 			for _, a in bound[b[1]] do table.insert(names, actionName(a)) end
@@ -304,6 +326,7 @@ local function drawGamepad(parent, w, h, map, actionName)
 end
 
 local render, setOpen
+local assignBinding -- se define después de invoke
 
 local function syncOptionsFromAttributes()
 	options.MusicVolume = tonumber(player:GetAttribute("OptMusic")) or options.MusicVolume or 1
@@ -321,6 +344,24 @@ local function notifyBinds(value)
 	binds = value
 	local event = player:FindFirstChild("BindsChanged")
 	if event then event:Fire(value) end
+end
+
+-- Asigna una tecla a una acción. Si otra acción la usaba, se queda con la tecla vieja (se intercambian).
+function assignBinding(device, action, name)
+	local value = {
+		Keyboard = table.clone(binds.Keyboard),
+		Gamepad = table.clone(binds.Gamepad),
+	}
+	for other, key in value[device] do
+		if key == name and other ~= action then
+			value[device][other] = value[device][action]
+		end
+	end
+	value[device][action] = name
+	invoke("SetBinds", value, function(result)
+		notifyBinds(result)
+		render("ui.settings.saved")
+	end)
 end
 
 local function invoke(action, payload, callback)
@@ -436,6 +477,7 @@ function render(messageKey)
 	})
 
 	UiTheme.tabButton({
+		name = "Tab_Controls",
 		parent = tabBar,
 		position = UDim2.fromOffset(230, 0),
 		size = UDim2.fromOffset(220, 42),
@@ -593,14 +635,60 @@ function render(messageKey)
 			size = UDim2.fromOffset(BASE_W - 44, 18), text = L.t("ctl.hint"), font = "Body",
 			textSize = UiTheme.TextSizes.XS, color = C.TextSecondary })
 		local function actionName(a) return L.t("action." .. a) end
-		if bindingDevice == "Gamepad" then
-			drawGamepad(diagram, BASE_W - 44, DIAGRAM_H, binds.Gamepad, actionName)
+		local device = bindingDevice
+		-- 12/11/2026 (pedido del usuario): el diagrama es interactivo. Tocás una tecla o botón y elegís qué hace.
+		local picker
+		local function closePicker() if picker then picker:Destroy() picker = nil end end
+		local function onPick(keyName, keyText)
+			closePicker()
+			if busy then return end
+			if InputMap.Reserved[keyName] then
+				hint.Text = L.t("ctl.reserved", { key = keyText })
+				UiTheme.playSound("UI_Error")
+				return
+			end
+			UiTheme.playSound("UI_Click")
+			picker = UiTheme.panel({ name = "ActionPicker", parent = diagram, anchor = Vector2.new(0.5, 0.5),
+				position = UDim2.fromScale(0.5, 0.5), size = UDim2.fromOffset(560, 196), bg = C.BgPrimary,
+				borderColor = C.GoldBright, zIndex = 30 })
+			UiTheme.label({ parent = picker, position = UDim2.fromOffset(16, 8), size = UDim2.new(1, -120, 0, 28),
+				text = L.t("ctl.pickTitle", { key = keyText }), font = "Title", textSize = UiTheme.TextSizes.LG,
+				color = C.GoldBright, richText = true, zIndex = 31 })
+			UiTheme.button({ parent = picker, anchor = Vector2.new(1, 0), position = UDim2.new(1, -10, 0, 8),
+				size = UDim2.fromOffset(96, 30), text = L.t("close"), textSize = UiTheme.TextSizes.XS, variant = "secondary",
+				zIndex = 31, onClick = closePicker })
+			local grid = Instance.new("Frame")
+			grid.BackgroundTransparency = 1
+			grid.Position = UDim2.fromOffset(12, 44)
+			grid.Size = UDim2.new(1, -24, 1, -52)
+			grid.Parent = picker
+			local layout = Instance.new("UIGridLayout")
+			layout.CellSize = UDim2.fromOffset(130, 32)
+			layout.CellPadding = UDim2.fromOffset(4, 4)
+			layout.Parent = grid
+			local current = binds[device]
+			local first
+			for _, action in InputMap.Actions do
+				local isThis = current[action.id] == keyName
+				local btn = UiTheme.button({ parent = grid, text = actionName(action.id), textSize = UiTheme.TextSizes.XS,
+					selected = isThis, zIndex = 32, onClick = function()
+						closePicker()
+						if not isThis then assignBinding(device, action.id, keyName) end
+					end })
+				btn.TextScaled = true
+				first = first or btn
+			end
+			if Device.isGamepad() then GuiService.SelectedObject = first end
+		end
+		if device == "Gamepad" then
+			drawGamepad(diagram, BASE_W - 44, DIAGRAM_H, binds.Gamepad, actionName, onPick)
 		else
 			drawKeyboard(diagram, BASE_W - 44, DIAGRAM_H, binds.Keyboard, function(key, actions)
+				if not actions then hint.Text = L.t("ctl.free", { key = key }) return end
 				local names = {}
 				for _, a in actions do table.insert(names, actionName(a)) end
-				hint.Text = key .. "  ·  " .. table.concat(names, " / ")
-			end)
+				hint.Text = key .. ": " .. table.concat(names, " / ")
+			end, onPick)
 		end
 
 		local bindsScroll = Instance.new("ScrollingFrame")
@@ -790,20 +878,7 @@ UIS.InputBegan:Connect(function(input, processed)
 	end
 	local cap = capturing
 	capturing = nil
-	local value = {
-		Keyboard = table.clone(binds.Keyboard),
-		Gamepad = table.clone(binds.Gamepad),
-	}
-	for action, key in value[cap.device] do
-		if key == name and action ~= cap.action then
-			value[cap.device][action] = value[cap.device][cap.action]
-		end
-	end
-	value[cap.device][cap.action] = name
-	invoke("SetBinds", value, function(result)
-		notifyBinds(result)
-		render("ui.settings.saved")
-	end)
+	assignBinding(cap.device, cap.action, name)
 end)
 
 L.Changed:Connect(function()

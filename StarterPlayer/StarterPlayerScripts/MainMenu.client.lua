@@ -61,7 +61,7 @@ part("Hill", Enum.PartType.Ball, Vector3.one * M.HillRadius * 2, CFrame.new(hill
 -- loma de atrás, más oscura, y siluetas de rocas contra el cielo
 part("FarHill", Enum.PartType.Ball, Vector3.one * M.HillRadius * 2.4,
 	CFrame.new(hillCenter + Vector3.new(0, -12, -M.HillRadius * 1.1)), M.FarGrass, Enum.Material.Grass)
-for i = 1, M.Rocks do
+for i = 1, 0 do -- 12/11/2026: los bloques negros del fondo se veían como cajas flotando; ahora no hay siluetas sueltas
 	local x = rng:NextNumber(-1, 1) * M.RockSpread
 	local h = rng:NextNumber(M.RockHeight.Min, M.RockHeight.Max)
 	part("Ridge", Enum.PartType.Block, Vector3.new(rng:NextNumber(8, 20), h, rng:NextNumber(8, 16)),
@@ -129,14 +129,19 @@ if okSword and sword then
 	pcall(function() sword:ScaleTo(M.SwordScale) end)
 	local cf, size = sword:GetBoundingBox()
 	local handle = sword.PrimaryPart
-	-- eje largo de la espada, apuntando del centro hacia el mango
-	local axis = handle and (handle.Position - cf.Position) or Vector3.yAxis
-	if axis.Magnitude < 0.05 then axis = cf.LookVector end
-	axis = axis.Unit
+	-- 12/11/2026 (pedido del usuario): de frente. Eje largo = el más largo de la caja (apuntando al mango);
+	-- eje fino = el grosor de la hoja, que tiene que mirar a la cámara para que se vea la cara ancha.
+	local axes = { { cf.RightVector, size.X }, { cf.UpVector, size.Y }, { cf.LookVector, size.Z } }
+	table.sort(axes, function(a, b) return a[2] < b[2] end)
+	local thin, long = axes[1][1], axes[3][1]
+	if handle and (handle.Position - cf.Position):Dot(long) < 0 then long = -long end
 	local target = (CFrame.Angles(0, 0, math.rad(M.SwordTilt)) * CFrame.Angles(math.rad(M.SwordLean), 0, 0)).UpVector
-	local cross = axis:Cross(target)
-	local rot = cross.Magnitude > 1e-4 and CFrame.fromAxisAngle(cross.Unit, math.acos(math.clamp(axis:Dot(target), -1, 1)))
-		or (axis:Dot(target) < 0 and CFrame.Angles(math.pi, 0, 0) or CFrame.identity)
+	local toCamera = ((O + M.CameraOffset) - swordPos) * Vector3.new(1, 0, 1)
+	toCamera = toCamera.Magnitude > 0.01 and toCamera.Unit or Vector3.zAxis
+	local face = (toCamera - target * toCamera:Dot(target)).Unit
+	local source = CFrame.fromMatrix(Vector3.zero, long:Cross(thin).Unit, long)
+	local goal = CFrame.fromMatrix(Vector3.zero, target:Cross(face).Unit, target)
+	local rot = goal * source:Inverse()
 	local length = math.max(size.X, size.Y, size.Z)
 	local pivot = sword:GetPivot()
 	-- llevar el centro de la caja al punto y rotar; después hundir la punta en la tierra
@@ -146,10 +151,45 @@ end
 
 scene.Parent = workspace
 
+-- 12/11/2026: partículas del piso en movimiento (luciérnagas naranjas y azules que suben despacio)
+local glowAttach = Instance.new("Attachment")
+glowAttach.Parent = part("FireflyArea", Enum.PartType.Block, Vector3.new(M.FlowerSpread * 2, 1, M.FlowerSpread * 1.6),
+	CFrame.new(O + Vector3.new(0, 4, -M.FlowerSpread * 0.2)), M.Orange, Enum.Material.SmoothPlastic, 1)
+for _, spec in { { M.Orange, M.FireflyRate }, { M.Blue, M.FireflyRate * 0.6 } } do
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	e.Color = ColorSequence.new(spec[1])
+	e.LightEmission = 1
+	e.Brightness = 3
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.2, M.FireflySize),
+		NumberSequenceKeypoint.new(0.8, M.FireflySize * 0.8), NumberSequenceKeypoint.new(1, 0) })
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.2, 0.1),
+		NumberSequenceKeypoint.new(0.8, 0.3), NumberSequenceKeypoint.new(1, 1) })
+	e.Lifetime = NumberRange.new(4, 8)
+	e.Rate = spec[2]
+	e.Speed = NumberRange.new(0.6, 1.6)
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.Acceleration = Vector3.new(0, 0.35, 0)
+	e.Drag = 0.4
+	e.RotSpeed = NumberRange.new(-30, 30)
+	e.Shape = Enum.ParticleEmitterShape.Box
+	e.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward
+	e.Parent = glowAttach.Parent
+end
+glowAttach:Destroy()
+
+local flowerParts = {}
+for _, d in scene:GetChildren() do if d.Name == "Flower" then table.insert(flowerParts, { part = d, base = d.CFrame, phase = rng:NextNumber(0, 6.28) }) end end
 local twinkleConn = RunService.Heartbeat:Connect(function()
 	for _ = 1, M.TwinklePerFrame do
 		local s = stars[rng:NextInteger(1, #stars)]
 		s.Transparency = rng:NextNumber(0, 0.6)
+	end
+	-- las flores se mecen con el viento
+	local t = os.clock()
+	for i = 1, #flowerParts, 3 do
+		local f = flowerParts[i]
+		f.part.CFrame = f.base + Vector3.new(math.sin(t * 1.3 + f.phase) * 0.15, math.sin(t * 2 + f.phase) * 0.06, 0)
 	end
 end)
 

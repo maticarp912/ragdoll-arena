@@ -83,12 +83,6 @@ AnimClips.Rest = {
 	Stances = { TwoHand = "TwoHandRest", Hammer = "HammerRest" },
 }
 
--- Agarre a dos manos (etapa 8): estas posturas llevan la mano izquierda al mango por IK aunque
--- el clip anime el brazo izquierdo (las capturas de espada eran a una mano).
-AnimClips.TwoHandIK = { TwoHand = true, Hammer = true, OneHand = true }
--- Si WeaponBuilder.Info todavía no marca el arma como de dos manos, se usa este agarre.
-AnimClips.OffhandFallback = { Sword = -0.42 }
-
 AnimClips.Stances = {
 	-- Espada a una mano: hoja adelantada en diagonal, mano izquierda suelta
 	OneHand = {
@@ -722,7 +716,10 @@ function AnimClips.resolve(key, archetype)
 	if not key or key == "" then return nil end
 	local w, k = string.match(key, "^Weapons%.(%w+)%.([%w_]+)$")
 	local heavySide = k and string.match(k, "^Heavy(%a+)$")
-	if heavySide then return directionalHeavy(archetype or "OneHand", heavySide) end
+	if heavySide then
+		local pilot = w == "Sword" and mocapCached("SwordHeavy" .. heavySide)
+		return pilot or directionalHeavy(archetype or "OneHand", heavySide)
+	end
 	local dirName = k and string.match(k, "^Dir(%a+)$")
 	if dirName then
 		local dm = AnimClips.DirMap[archetype or "OneHand"] or AnimClips.DirMap.OneHand

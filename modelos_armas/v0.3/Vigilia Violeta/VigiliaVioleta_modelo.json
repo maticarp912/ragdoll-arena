@@ -1,0 +1,16 @@
+{
+  "triangles": 1484,
+  "gripSides": 24,
+  "bladeDepth": 0.055,
+  "bladeBase": [
+    0,
+    0,
+    0.7714
+  ],
+  "bladeTip": [
+    0,
+    0,
+    5.3
+  ],
+  "texture": "VigiliaVioleta_tex.jpg"
+}

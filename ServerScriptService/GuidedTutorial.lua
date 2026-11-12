@@ -82,7 +82,8 @@ local function createSession(player)
 	for _, offset in G.DummyOffsets do addDummy(offset, "Idle") end
 	addDummy(G.BotOffset, function()
 		local lesson = G.Steps[state.step]
-		return (lesson == "block" or lesson == "parry") and "Attack" or "Idle"
+		-- 12/11/2026: cada golpe del bot sale por un lado al azar (antes siempre el mismo), y lo anuncia antes
+		return (lesson == "block" or lesson == "parry") and "DirRandom" or "Idle"
 	end)
 	return state
 end

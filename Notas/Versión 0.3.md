@@ -135,3 +135,25 @@ La prueba local fue integrada a `Ragdoll Arena.rbxlx` en la raíz del proyecto d
 
 - Inicio de la Fase 1 sujeto al OK del usuario. Luego se acuerda la lista exacta de FBX y se prueba una exportación. Fases 2 a 6 quedan para sus respectivas revisiones.
 
+
+## Piloto de fuertes de Espada y Vigilia Violeta · 12/11/2026 15:20 (Argentina)
+
+### Implementado
+
+- Guardé el estado previo en main en el commit 1ad5dda. Incluye la interfaz de Claude, los arreglos de tutorial y los recursos del proyecto. El único enlace de instalación local que quedó afuera es el de frontend-design en .claude/skills.
+- Fuertes de Espada a partir de los FBX existentes en F:/RobloxJuegos/assets animaciones. Arriba usa Standing Melee Attack Downward.fbx, izquierda usa Sword And Shield Attack.fbx y derecha usa Standing Melee Attack Backhand.fbx.
+- Blender exporta todos los huesos cuadro por cuadro con posición y cuaternión. El piloto usa las articulaciones, el torso y el agarre del R15 medido en Studio. La Espada y el Estoque dejaron de fijar la mano izquierda por la regla del arma. Los tres clips pasan por MocapClips y Animator.client con tiempos del servidor.
+- Vigilia Violeta (Relic10) quedó editable y exportada a FBX con textura original proyectada, mango de 24 lados y hoja de 0,055 studs de grosor. La malla exportada tiene 1484 triángulos. La ficha Violet está preparada en WeaponMeshes.lua.
+
+### Comprobado
+
+- Los tres fuertes ejecutaron los clips nuevos y cada uno quitó 28 de vida al muñeco. El impacto del servidor fue a los 0,539 s. Las capturas muestran las poses de preparación de esos clips en el mismo patio de la prueba.
+- Retarget de arriba, izquierda y derecha con 56, 56 y 62 claves. Corregí 0, 9 y 5 cuadros fuente respectivamente y agregué una clave de transición a izquierda. La comprobación de los cuadros y tres muestras por intervalo dio cero cruces con el torso. Error máximo del agarre derecho de 0,0000003 studs en el cálculo con el rig medido.
+- El place local quedó con los 109 scripts del repo y las correcciones de interfaz. Chequeo Lua y LihFolk sin errores ni avisos.
+- Los artefactos y el reporte de retarget están en modelos_armas/v0.3/Piloto Espada. Los de Vigilia están en modelos_armas/v0.3/Vigilia Violeta.
+
+### Pendiente
+
+- Studio MCP rechazó subir el FBX porque la carpeta de F: no está autorizada para cargas. Importar el FBX desde Studio y pasar MeshId y TextureID o ColorMap. Después probar escala, orientación y textura de Vigilia equipada y en la vista previa.
+- Revisar el piloto antes de preparar las otras 21 variantes o modelar otra skin. La publicación queda pendiente.
+

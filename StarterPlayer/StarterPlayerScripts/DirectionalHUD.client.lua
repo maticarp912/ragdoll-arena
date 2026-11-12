@@ -141,6 +141,65 @@ kickDot.Rotation = 45
 kickDot.Visible = false
 kickDot.Parent = root
 
+-- 12/11/2026 (pedido del usuario): timing a la vista.
+--   · Anillo en el centro: cuando el rival ataca, se cierra hasta el instante del golpe. Bloqueá cuando está chico.
+--   · Barra debajo: tu propio golpe. Mientras corre no podés cambiar de lado; cuando se vacía, ya podés.
+local R = P.Rhythm
+local ring = Instance.new("Frame")
+ring.Name = "IncomingRing"
+ring.AnchorPoint = Vector2.new(0.5, 0.5)
+ring.Position = UDim2.fromOffset(center.X, center.Y)
+ring.BackgroundTransparency = 1
+ring.Visible = false
+ring.ZIndex = 4
+ring.Parent = root
+local ringCorner = Instance.new("UICorner")
+ringCorner.CornerRadius = UDim.new(0.5, 0)
+ringCorner.Parent = ring
+local ringStroke = Instance.new("UIStroke")
+ringStroke.Thickness = R.RingThickness
+ringStroke.Color = P.Attack
+ringStroke.Parent = ring
+local ringTarget = Instance.new("Frame") -- el tamaño "ahora": cuando el anillo llega acá, pega
+ringTarget.Name = "Now"
+ringTarget.AnchorPoint = Vector2.new(0.5, 0.5)
+ringTarget.Position = ring.Position
+ringTarget.Size = UDim2.fromOffset(R.RingMin, R.RingMin)
+ringTarget.BackgroundColor3 = P.Attack
+ringTarget.BackgroundTransparency = 0.35
+ringTarget.Visible = false
+ringTarget.ZIndex = 4
+ringTarget.Parent = root
+local ntCorner = Instance.new("UICorner")
+ntCorner.CornerRadius = UDim.new(0.5, 0)
+ntCorner.Parent = ringTarget
+
+local rhythm = Instance.new("Frame")
+rhythm.Name = "Rhythm"
+rhythm.AnchorPoint = Vector2.new(0.5, 0)
+rhythm.Position = UDim2.fromOffset(center.X, center.Y + H * 2 / 3 + R.BarGap)
+rhythm.Size = UDim2.fromOffset(P.Side * R.BarWidth, R.BarHeight)
+rhythm.BackgroundColor3 = P.Rim
+rhythm.BackgroundTransparency = 0.25
+rhythm.BorderSizePixel = 0
+rhythm.Visible = false
+rhythm.Parent = root
+local rhCorner = Instance.new("UICorner")
+rhCorner.CornerRadius = UDim.new(0.5, 0)
+rhCorner.Parent = rhythm
+local rhythmFill = Instance.new("Frame")
+rhythmFill.Name = "Fill"
+rhythmFill.AnchorPoint = Vector2.new(0.5, 0)
+rhythmFill.Position = UDim2.fromScale(0.5, 0)
+rhythmFill.Size = UDim2.fromScale(1, 1)
+rhythmFill.BorderSizePixel = 0
+rhythmFill.Parent = rhythm
+local rfCorner = Instance.new("UICorner")
+rfCorner.CornerRadius = UDim.new(0.5, 0)
+rfCorner.Parent = rhythmFill
+local readyFlashUntil = 0
+local wasBusy = false
+
 -- Destello de parry: copia dorada del contorno que crece y se apaga
 local flash = Instance.new("Frame")
 flash.Name = "ParryFlash"
@@ -202,6 +261,8 @@ local function incoming(me, target)
 						side = dir ~= "" and MIRROR[dir] or nil,
 						unblockable = (m:GetAttribute("Telegraph") or "") == "Unblockable",
 						main = m == target,
+						hitAt = m:GetAttribute("HitAt") or 0,
+						startAt = m:GetAttribute("ActionStartAt") or 0,
 					})
 				end
 			end
@@ -277,6 +338,48 @@ RunService.RenderStepped:Connect(function()
 	end
 	kickDot.Visible = kick
 	if kick then kickDot.BackgroundTransparency = (1 - pulse) * 0.6 end
+
+	-- Anillo del golpe que viene (el del rival fijado, o el más cercano a pegar)
+	local serverNow = workspace:GetServerTimeNow()
+	local soonest
+	for _, a in incoming(char, target) do
+		if a.hitAt > serverNow and (not soonest or a.hitAt < soonest.hitAt) then soonest = a end
+	end
+	if soonest then
+		local total = math.max(0.05, soonest.hitAt - math.min(soonest.startAt > 0 and soonest.startAt or soonest.hitAt - R.Window, soonest.hitAt))
+		local frac = math.clamp((soonest.hitAt - serverNow) / total, 0, 1)
+		local size = R.RingMin + (R.RingMax - R.RingMin) * frac
+		ring.Size = UDim2.fromOffset(size, size)
+		ringStroke.Color = soonest.unblockable and P.Unblockable or P.Attack
+		ringTarget.BackgroundColor3 = ringStroke.Color
+		ring.Visible = true
+		ringTarget.Visible = true
+	else
+		ring.Visible = false
+		ringTarget.Visible = false
+	end
+
+	-- Tu ritmo: mientras dura tu acción, la barra se vacía; al terminar destella "ya podés"
+	local endsAt = char:GetAttribute("ActionEndsAt") or 0
+	local startAt = char:GetAttribute("ActionStartAt") or 0
+	local busy = endsAt > serverNow and (char:GetAttribute("AttackDir") or "") ~= ""
+	if busy then
+		local frac = math.clamp((endsAt - serverNow) / math.max(0.05, endsAt - startAt), 0, 1)
+		rhythmFill.Size = UDim2.fromScale(frac, 1)
+		local myHit = char:GetAttribute("HitAt") or 0
+		rhythmFill.BackgroundColor3 = myHit > serverNow and R.Windup or R.Recovery
+		rhythm.Visible = true
+		wasBusy = true
+	else
+		if wasBusy then readyFlashUntil = t + R.ReadyFlash end
+		wasBusy = false
+		local flash = readyFlashUntil - t
+		rhythm.Visible = flash > 0
+		rhythmFill.Size = UDim2.fromScale(1, 1)
+		rhythmFill.BackgroundColor3 = R.Ready
+		rhythmFill.BackgroundTransparency = 1 - math.clamp(flash / R.ReadyFlash, 0, 1)
+	end
+	if busy then rhythmFill.BackgroundTransparency = 0 end
 
 	-- Destello de parry
 	local left = flashUntil - t

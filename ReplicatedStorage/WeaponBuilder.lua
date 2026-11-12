@@ -32,7 +32,7 @@ local NATIVE = {
 
 -- Información para animaciones: dónde agarra la mano derecha (gripZ) y la izquierda (offhandZ)
 WeaponBuilder.Info = {
-	Sword = { gripZ = 0.15, twoHanded = true, offhandZ = -0.42, trail = { 1.0, 5.1 } }, -- 9/11: a dos manos (mango de 1,08 studs)
+	Sword = { gripZ = 0.15, twoHanded = false, trail = { 1.0, 5.1 } },
 	Rapier = { gripZ = 0.1, twoHanded = false, trail = { 1.2, 5.6 } },
 	Greatsword = { gripZ = 0.55, twoHanded = true, offhandZ = -0.65, trail = { 1.4, 7.6 } },
 	Dagger = { gripZ = 0.0, twoHanded = false, dual = true, trail = { 0.6, 2.87 } },

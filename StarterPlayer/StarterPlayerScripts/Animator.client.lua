@@ -195,7 +195,7 @@ local function solveLeftArm(char, st, tf)
 	if not (root and grip and tool and m.R and m.W and m.RS and m.RE and m.RW and m.LS and m.LE and m.LW) then return end
 	local weaponId = tool:GetAttribute("WeaponId") or ""
 	local info = WeaponBuilder.Info[weaponId]
-	local offhandZ = info and (info.twoHanded and info.offhandZ or AnimClips.OffhandFallback[weaponId])
+	local offhandZ = info and info.twoHanded and info.offhandZ
 	if not offhandZ then return end
 
 	-- Cinemática directa hasta el mango
@@ -581,8 +581,9 @@ local function update(char, dt, now)
 	end
 
 	-- IK de la mano izquierda con armas a dos manos
-	if AnimClips.TwoHandIK[arch] and not st.resting and not char:GetAttribute("Carrying") and not char:GetAttribute("ThrowCharging")
-		and not (clip and not clip.additive and usesJoint(clip, "LS") and arch ~= "OneHand") then
+	local weaponInfo = WeaponBuilder.Info[char:GetAttribute("WeaponId")]
+	if weaponInfo and weaponInfo.twoHanded and not st.resting and not char:GetAttribute("Carrying")
+		and not char:GetAttribute("ThrowCharging") and not (clip and not clip.additive and usesJoint(clip, "LS")) then
 		local ok = pcall(solveLeftArm, char, st, tf)
 		if not ok then st.ikFailed = true end
 	end

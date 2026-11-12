@@ -384,6 +384,9 @@ function UiTheme.frameArt(frame, kind)
 	img.SliceScale = spec.scale
 	-- 12/11/2026: encima del contenido (los encabezados tapaban el borde de arriba); el centro es transparente
 	img.ZIndex = frame.ZIndex + 20
+	-- es solo adorno: nunca tiene que tapar los clics de los botones que quedan debajo
+	img.Active = false
+	pcall(function() img.Interactable = false end)
 	img.Parent = frame
 	-- Se oculta el contorno plateado (lo reemplaza el marco); los de color propio (rareza, equipo) se conservan
 	local stroke = frame:FindFirstChildOfClass("UIStroke")

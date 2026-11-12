@@ -19,21 +19,43 @@ local touchKeys = {
 	Kick = "kick", Block = "block", Dodge = "dodge", Infuse = "infuse",
 }
 local binds = InputMap.defaults()
+-- 12/11/2026 (pedido del usuario): las teclas y botones se ven resaltados en el texto, para que nadie se pierda
+local KEY_COLOR = "#E8A33D"
 local function key(action)
-	if Device.isTouch() then return L.t("ui.touch." .. touchKeys[action]) end
-	local device = Device.isGamepad() and "Gamepad" or "Keyboard"
-	return InputMap.label(binds[device][action])
+	local label
+	if Device.isTouch() then
+		label = L.t("ui.touch." .. touchKeys[action])
+	else
+		local device = Device.isGamepad() and "Gamepad" or "Keyboard"
+		label = InputMap.label(binds[device][action])
+	end
+	return ('<font color="%s"><b>[%s]</b></font>'):format(KEY_COLOR, label)
 end
+-- acción que hay que tocar en cada paso (resalta su fila en la ayuda de botones)
+local STEP_ACTION = {
+	lock = "LockOn", switch = "SwitchTarget", light = "Attack", dirs = "Attack", heavy = "Heavy", combo = "Attack",
+	dodge = "Dodge", down = "Kick", carry = "Interact", throw = "Heavy", block = "Block", parry = "Block", infuse = "Infuse",
+}
 local function dirHint()
 	if Device.isTouch() then return L.t("gt.dirTouch") end
 	return Device.isGamepad() and L.t("gt.dirPad") or L.t("gt.dirMouse")
 end
+-- palabras clave en negrita y color hueso (las teclas ya van en dorado)
+local KEYWORDS = { "Armería", "Infusiones", "Infusión", "círculo azul", "muñeco", "triángulo", "guardia",
+	"parry", "derribo", "derribá", "combo", "esquivá", "fijá", "levantá", "lanzá",
+	"Armory", "Infusions", "blue circle", "dummy", "triangle", "Arsenal", "boneco", "triângulo" }
+local function emphasize(text)
+	for _, word in KEYWORDS do
+		text = text:gsub(word, '<b><font color="#F2D8A6">%0</font></b>')
+	end
+	return text
+end
 local function stepText(id)
-	return L.t("gt." .. id .. ".body", {
-		move = Device.isTouch() and L.t("gt.stick") or (Device.isGamepad() and L.t("gt.leftStick") or "W A S D"),
+	return emphasize(L.t("gt." .. id .. ".body", {
+		move = ("<font color=\"%s\"><b>%s</b></font>"):format(KEY_COLOR, Device.isTouch() and L.t("gt.stick") or (Device.isGamepad() and L.t("gt.leftStick") or "[W] [A] [S] [D]")),
 		lock = key("LockOn"), switch = key("SwitchTarget"), attack = key("Attack"), heavy = key("Heavy"),
 		kick = key("Kick"), block = key("Block"), dodge = key("Dodge"), infuse = key("Infuse"), dirs = dirHint(),
-	})
+	}))
 end
 
 local gui = Instance.new("ScreenGui")
@@ -44,30 +66,52 @@ gui.Enabled = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local panel = UiTheme.panel({ name = "Steps", parent = gui, anchor = Vector2.new(0.5, 0),
-	position = UDim2.new(0.5, 0, 0, 8), size = UDim2.new(0.78, 0, 0, 153),
+	position = UDim2.new(0.5, 0, 0, 8), size = UDim2.new(0.78, 0, 0, 170),
 	bg = C.BgPanel, transparency = 0.06, ornaments = true, ornamentSize = 10 })
 local limit = Instance.new("UISizeConstraint")
-limit.MaxSize = Vector2.new(640, 153)
+limit.MaxSize = Vector2.new(700, 170)
 limit.Parent = panel
 local counter = UiTheme.label({ parent = panel, position = UDim2.fromOffset(14, 8), size = UDim2.new(1, -28, 0, 17),
 	text = "", font = "Number", textSize = UiTheme.TextSizes.XS, color = C.TextSecondary,
 	alignX = Enum.TextXAlignment.Center })
-local title = UiTheme.label({ parent = panel, position = UDim2.fromOffset(14, 25), size = UDim2.new(1, -28, 0, 24),
-	text = "", font = "Title", textSize = 23, color = C.TextPrimary, alignX = Enum.TextXAlignment.Center })
-local body = UiTheme.label({ parent = panel, position = UDim2.fromOffset(14, 49), size = UDim2.new(1, -28, 0, 51),
-	text = "", font = "Body", textSize = 17, minTextSize = 13, maxTextSize = 17, scaled = true,
+local title = UiTheme.label({ parent = panel, position = UDim2.fromOffset(14, 24), size = UDim2.new(1, -28, 0, 32),
+	text = "", font = "Title", textSize = 30, color = C.GoldBright, alignX = Enum.TextXAlignment.Center })
+local body = UiTheme.label({ parent = panel, position = UDim2.fromOffset(14, 58), size = UDim2.new(1, -28, 0, 58),
+	text = "", font = "Body", textSize = 21, minTextSize = 15, maxTextSize = 21, scaled = true, richText = true,
 	color = C.TextPrimary, wrap = true, alignX = Enum.TextXAlignment.Center })
+local panelScale = Instance.new("UIScale")
+panelScale.Parent = panel
+local check = UiTheme.label({ name = "Check", parent = panel, anchor = Vector2.new(0.5, 0.5), position = UDim2.fromScale(0.5, 0.45),
+	size = UDim2.fromOffset(300, 60), text = "", font = "Title", textSize = 44, color = C.Success, alignX = Enum.TextXAlignment.Center, zIndex = 20 })
+check.TextStrokeTransparency = 0.2
 local skip = UiTheme.button({ name = "Skip", parent = panel, anchor = Vector2.new(1, 1),
-	position = UDim2.new(1, -8, 1, -6), size = UDim2.new(0.49, -5, 0, 44), text = L.t("gt.skip"),
-	textSize = 16, minTextSize = 13, maxTextSize = 16, scaled = true, variant = "secondary",
+	position = UDim2.new(1, -8, 1, -6), size = UDim2.fromOffset(150, 32), text = L.t("gt.skip"),
+	textSize = 14, minTextSize = 12, maxTextSize = 14, scaled = true, variant = "secondary",
 	onClick = function() GuidedRemote:FireServer("Skip") end })
-local armory = UiTheme.button({ name = "TutorialArmory", parent = panel, anchor = Vector2.new(0, 1),
-	position = UDim2.new(0, 8, 1, -6), size = UDim2.new(0.49, -5, 0, 44), text = L.t("ui.lobby.dock.armory"),
-	textSize = 16, minTextSize = 13, maxTextSize = 16, scaled = true, variant = "primary",
+
+-- Botón de Armería: solo en su paso, a la izquierda (donde está en la ciudad), en carmesí y con una flecha que lo señala
+local armoryHolder = Instance.new("Frame")
+armoryHolder.Name = "ArmoryCallout"
+armoryHolder.AnchorPoint = Vector2.new(0, 0.5)
+armoryHolder.Position = UDim2.new(0, 16, 0.5, 0)
+armoryHolder.Size = UDim2.fromOffset(300, 60)
+armoryHolder.BackgroundTransparency = 1
+armoryHolder.Visible = false
+armoryHolder.Parent = gui
+local armory = UiTheme.button({ name = "TutorialArmory", parent = armoryHolder, size = UDim2.fromOffset(190, 56),
+	text = L.t("ui.lobby.dock.armory"), icon = "armory", iconSize = 24, font = "Title", textSize = 22, variant = "focal",
 	onClick = function()
 		local toggle = player:FindFirstChild("ToggleArmory")
 		if toggle then toggle:Fire(true) end
 	end })
+local arrow = UiTheme.label({ name = "Arrow", parent = armoryHolder, anchor = Vector2.new(0, 0.5), position = UDim2.new(0, 200, 0.5, 0),
+	size = UDim2.fromOffset(90, 56), text = "◀", font = "Title", textSize = 48, color = C.GoldBright, alignX = Enum.TextXAlignment.Left })
+arrow.TextStrokeTransparency = 0.2
+RunService.RenderStepped:Connect(function()
+	if armoryHolder.Visible then
+		arrow.Position = UDim2.new(0, 200 + math.abs(math.sin(os.clock() * 5)) * 14, 0.5, 0)
+	end
+end)
 
 local index, count = 1, 0
 local seenDirs = {}
@@ -87,7 +131,8 @@ local function render()
 	skip.Text = L.t("gt.skip")
 	armory.Text = L.t("ui.lobby.dock.armory")
 	skip.Visible = step ~= "done"
-	armory.Visible = step ~= "done"
+	armoryHolder.Visible = step == "armory" and gui.Enabled
+	player:SetAttribute("TutorialAction", STEP_ACTION[step])
 end
 
 local function advance()
@@ -98,7 +143,15 @@ local function advance()
 	table.clear(comboTimes)
 	player:SetAttribute("TutorialLesson", G.Steps[index])
 	GuidedRemote:FireServer("Step", index)
-	UiTheme.playSound("UI_Equip")
+	UiTheme.playSound("UI_PurchaseOK")
+	-- «¡Bien!» y el panel salta un poco: se nota que el paso cambió
+	check.Text = L.t("gt.good")
+	check.TextTransparency = 0
+	check.TextStrokeTransparency = 0.2
+	panelScale.Scale = 1.08
+	game:GetService("TweenService"):Create(panelScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	game:GetService("TweenService"):Create(check, TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+		{ TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
 	render()
 	if G.Steps[index] == "done" then
 		task.delay(3, function()
@@ -110,7 +163,7 @@ end
 local function bump(id)
 	if not gui.Enabled or G.Steps[index] ~= id then return end
 	count += 1
-	if count >= (needs[id] or 1) then advance() else render() end
+	if count >= (needs[id] or 1) then advance() else UiTheme.playSound("UI_Click") render() end
 end
 
 Effect.OnClientEvent:Connect(function(kind, role, info)
@@ -205,16 +258,13 @@ end)
 
 local function updateLayout()
 	local compact = gui.AbsoluteSize.Y > 0 and gui.AbsoluteSize.Y < 440
-	local height = compact and 122 or 153
-	limit.MaxSize = Vector2.new(640, height)
+	local height = compact and 132 or 170
+	limit.MaxSize = Vector2.new(700, height)
 	panel.Size = UDim2.new(compact and 0.67 or 0.78, 0, 0, height)
-	title.Position = UDim2.fromOffset(14, compact and 19 or 25)
-	title.TextSize = compact and 19 or 23
-	body.Position = UDim2.fromOffset(14, compact and 40 or 49)
-	body.Size = UDim2.new(1, -28, 0, compact and 35 or 51)
-	local buttonHeight = compact and 40 or 44
-	skip.Size = UDim2.new(0.49, -5, 0, buttonHeight)
-	armory.Size = skip.Size
+	title.Position = UDim2.fromOffset(14, compact and 20 or 24)
+	title.TextSize = compact and 24 or 30
+	body.Position = UDim2.fromOffset(14, compact and 46 or 58)
+	body.Size = UDim2.new(1, -28, 0, compact and 44 or 58)
 end
 
 gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateLayout)
@@ -229,11 +279,13 @@ local function refresh()
 		player:SetAttribute("TutorialLesson", G.Steps[1])
 	elseif not inYard then
 		player:SetAttribute("TutorialLesson", nil)
+		player:SetAttribute("TutorialAction", nil)
+		armoryHolder.Visible = false
 	end
 	wasInYard = inYard
 	gui.Enabled = inYard and not player:GetAttribute("InitialLoading") and not player:GetAttribute("MainMenuOpen")
 		and not player:GetAttribute("MenuOpen")
-	if gui.Enabled then render() focusTutorial() end
+	if gui.Enabled then render() focusTutorial() else armoryHolder.Visible = false end
 end
 for _, attr in { "InTutorial", "InitialLoading", "MainMenuOpen", "MenuOpen" } do
 	player:GetAttributeChangedSignal(attr):Connect(refresh)

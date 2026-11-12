@@ -9,8 +9,6 @@
 import bpy, sys, json, math, os
 from mathutils import Matrix, Vector
 
-argv = sys.argv[sys.argv.index("--") + 1:]
-OUT, FILES = argv[0], argv[1:]
 STEP = 2  # muestrear cada 2 frames
 
 PARTS = {  # parte R15 -> hueso de Mixamo (sufijo)
@@ -54,7 +52,7 @@ def arc(u, v):
     return Matrix.Rotation(math.acos(max(-1, min(1, u.dot(v)))), 3, axis.normalized())
 
 
-def convert(path):
+def convert(path, sample_step=STEP, export_bones=False):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.fbx(filepath=path, automatic_bone_orientation=False)
     arm = next(o for o in bpy.context.scene.objects if o.type == "ARMATURE")
@@ -88,9 +86,19 @@ def convert(path):
     hip0 = rest["LowerTorso"].translation
     scale = R15_HIP_TO_ANKLE / max(0.1, (hip0 - rest["RightFoot"].translation).z)
     frames, speeds, start = [], [], None
+    raw_frames = []
     prevHand = None
     for f in range(f0, f1 + 1):
         bpy.context.scene.frame_set(f)
+        if export_bones:
+            sample = {}
+            for bone in arm.pose.bones:
+                position, orientation, _ = (W @ bone.matrix).decompose()
+                sample[bone.name] = {
+                    "position": [round(v, 6) for v in position],
+                    "rotationWXYZ": [round(v, 7) for v in orientation],
+                }
+            raw_frames.append({"frame": f, "seconds": round((f - f0) / fps, 6), "bones": sample})
         rot = {}
         for p, b in bones.items():
             m = W @ b.matrix
@@ -100,7 +108,7 @@ def convert(path):
         hp = hand.translation.copy()
         speeds.append(0 if prevHand is None else (hp - prevHand).length * fps)
         prevHand = hp
-        if (f - f0) % STEP != 0 and f != f1:
+        if (f - f0) % sample_step != 0 and f != f1:
             continue
         pose = {}
         for j, (p0, p1) in JOINTS.items():
@@ -119,16 +127,26 @@ def convert(path):
     while windF > 1 and speeds[windF - 1] <= speeds[windF]:
         windF -= 1
     n = max(1, f1 - f0)
-    return {"dur": round((f1 - f0) / fps, 3), "hit": round(hitF / n, 3), "windup": round(windF / n, 3),
-            "peak": round(max(speeds), 2), "keys": frames}
+    result = {"dur": round((f1 - f0) / fps, 3), "hit": round(hitF / n, 3), "windup": round(windF / n, 3),
+              "peak": round(max(speeds), 2), "keys": frames}
+    if export_bones:
+        result["bones"] = {
+            "fps": fps,
+            "parent": {bone.name: bone.parent.name if bone.parent else None for bone in arm.pose.bones},
+            "frames": raw_frames,
+        }
+    return result
 
 
-result = {}
-for f in FILES:
-    name = os.path.splitext(os.path.basename(f))[0]
-    try:
-        result[name] = convert(f)
-    except Exception as e:
-        result[name] = {"error": str(e)}
-with open(OUT, "w") as fh:
-    json.dump(result, fh)
+if __name__ == "__main__":
+    argv = sys.argv[sys.argv.index("--") + 1:]
+    output, files = argv[0], argv[1:]
+    result = {}
+    for filename in files:
+        name = os.path.splitext(os.path.basename(filename))[0]
+        try:
+            result[name] = convert(filename)
+        except Exception as exc:
+            result[name] = {"error": str(exc)}
+    with open(output, "w", encoding="utf-8") as stream:
+        json.dump(result, stream)

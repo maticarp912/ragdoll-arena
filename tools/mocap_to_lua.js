@@ -54,6 +54,21 @@ for (const [name, p] of Object.entries(PICK)) {
 	});
 	out += `C.${name} = { src = ${JSON.stringify(p.src)}, dur = ${fmt(Math.round(c.dur * span * 1000) / 1000)}, hit = ${fmt(Math.round(((c.hit - t0) / span) * 1000) / 1000)}, windup = ${fmt(Math.round(((c.windup - t0) / span) * 1000) / 1000)}, keys = {\n${lines.join("\n")}\n} }\n`;
 }
+const pilotPath = path.join(__dirname, "..", "modelos_armas", "v0.3", "Piloto Espada", "FuertesR15.json");
+if (fs.existsSync(pilotPath)) {
+	const swordClips = JSON.parse(fs.readFileSync(pilotPath, "utf8"));
+	for (const name of ["SwordHeavyUp", "SwordHeavyLeft", "SwordHeavyRight"]) {
+		const clip = swordClips[name];
+		if (!clip || !clip.keys.length) throw new Error("Falta el clip " + name);
+		out += "C." + name + " = { src = " + JSON.stringify(clip.source) + ", dur = " + clip.dur +
+			", hit = " + clip.hit + ", windup = " + clip.windup + ", keys = {\n";
+		for (const [time, pose] of clip.keys) {
+			const parts = Object.entries(pose).map(([joint, values]) => joint + "={" + values.map(fmt).join(",") + "}");
+			out += "\t\t{" + time + ",{" + parts.join(",") + "}},\n";
+		}
+		out += "} }\n";
+	}
+}
 out += "return C\n";
 const dest = path.join(__dirname, "..", "ReplicatedStorage", "MocapClips.lua");
 fs.writeFileSync(dest, out);

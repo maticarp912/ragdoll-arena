@@ -558,6 +558,34 @@ Dummies.setup(dummyHomes)
 -- 12/11/2026: el tutorial guiado devuelve a los jugadores a la ciudad con este punto
 workspace:SetAttribute("LobbySpawn", lobbyCFrame)
 
+-- 12/11/2026: luz del lobby. Todo lo de la ciudad 40 % más tenue y una luz cálida grande en el centro de la plaza.
+do
+	local LL = require(ReplicatedStorage:WaitForChild("CityConfig")).LobbyLight
+	local generated = workspace:FindFirstChild("GeneratedMap")
+	local city = generated and generated:FindFirstChild("City")
+	if city and LL then
+		for _, light in city:GetDescendants() do
+			if light:IsA("Light") then light.Brightness *= LL.OthersScale end
+		end
+		local holder = Instance.new("Part")
+		holder.Name = "LobbyCenterLight"
+		holder.Anchored = true
+		holder.CanCollide = false
+		holder.CanQuery = false
+		holder.CanTouch = false
+		holder.Transparency = 1
+		holder.Size = Vector3.one
+		holder.CFrame = CFrame.new(lobbyCFrame.Position + Vector3.new(0, LL.Height, 0))
+		holder.Parent = city
+		local light = Instance.new("PointLight")
+		light.Range = LL.Range
+		light.Brightness = LL.Brightness
+		light.Color = LL.Color
+		light.Shadows = true
+		light.Parent = holder
+	end
+end
+
 Players.PlayerAdded:Connect(setupPlayer)
 for _, p in Players:GetPlayers() do
 	task.spawn(setupPlayer, p)

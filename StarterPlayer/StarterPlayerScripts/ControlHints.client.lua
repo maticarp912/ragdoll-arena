@@ -72,11 +72,21 @@ local function chip(parent, text, order)
 end
 
 local function row(parent, actions, key, order, right)
+	-- 12/11/2026: en el tutorial, la fila del botón que hay que tocar se resalta en carmesí
+	local focusAction = player:GetAttribute("TutorialAction")
+	local focused = false
+	for _, a in type(actions) == "table" and actions or { actions } do if a == focusAction then focused = true end end
 	local r = Instance.new("Frame")
 	r.Name = key
 	r.LayoutOrder = order
-	r.BackgroundColor3 = C.BgAbyss
-	r.BackgroundTransparency = P.RowTransparency
+	r.BackgroundColor3 = focused and C.Focal or C.BgAbyss
+	r.BackgroundTransparency = focused and 0.05 or P.RowTransparency
+	if focused then
+		local sc = Instance.new("UIScale")
+		sc.Scale = 1.25
+		sc.Parent = r
+		UiTheme.stroke(r, C.GoldBright, 2, 0)
+	end
 	r.BorderSizePixel = 0
 	r.AutomaticSize = Enum.AutomaticSize.X
 	r.Size = UDim2.fromOffset(0, P.RowHeight)
@@ -133,6 +143,7 @@ end
 
 Device.Changed:Connect(function() rebuild() refresh() end)
 L.Changed:Connect(rebuild)
+player:GetAttributeChangedSignal("TutorialAction"):Connect(rebuild)
 for _, a in { "MenuOpen", "MainMenuOpen", "OptControlHints" } do
 	player:GetAttributeChangedSignal(a):Connect(refresh)
 end
