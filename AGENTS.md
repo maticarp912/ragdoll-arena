@@ -13,6 +13,8 @@ Leer primero `Notas/Traspaso a Codex.md` (estado, pendientes y cómo publicar), 
 - Antes de commitear: `node tools/check_lua.js .` sin errores.
 - Git: rama `main`, repo `maticarp912/ragdoll-arena`. Autor de commits: identidad noreply (nunca el email del usuario). Mensajes en español, formato `área: qué cambió`.
 
+- Interfaz: seguir `Notas/Guía de diseño de interfaz.md` (plan corto antes de rediseñar, estados completos, sin tics de diseño generado, probar con captura).
+
 ## Estructura
 - `ReplicatedStorage/`, `ServerScriptService/`, `StarterPlayer/StarterPlayerScripts/`, `ReplicatedFirst/`: código Luau (compatible con Rojo, ver `default.project.json`).
 - `tools/make_rbxlx.js`: genera `Ragdoll Arena.rbxlx` desde los `.lua` (`node tools/make_rbxlx.js . "Ragdoll Arena.rbxlx"`).

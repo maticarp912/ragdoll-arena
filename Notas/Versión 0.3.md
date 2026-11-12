@@ -49,3 +49,28 @@ La prueba local fue integrada a `Ragdoll Arena.rbxlx` en la raíz del proyecto d
 - Revisar una partida real 1v1 y 2v2, y probar mapeado con mando físico y carga en celular. Los recursos de streaming o generados después de entrar se solicitan cuando aparecen.
 - Integré el rediseño en el archivo local activo y guardé desde Studio. Los 103 scripts del place coinciden con el repositorio. La cámara volvió de Scriptable a Custom al terminar la cinemática simulada.
 
+
+
+## Revisión de los cambios de Opus · 12/11/2026 12:05 (Argentina)
+
+### Implementado por Opus
+
+- Ajustó el contraste de carga, el techo del puesto de alquimia, el triángulo de plata y el aviso «¡A luchar!». Sumó el menú de inicio, el despertar y tutorial guiado, una nueva distribución del HUD, la tienda con barra lateral, el perfil, los filtros de armería y la búsqueda «Jugar» en ambas colas.
+- El archivo local Ragdoll Arena.rbxlx coincide con los 107 scripts del repositorio. El control de sintaxis pasó los 107. La publicación 0.3 quedó registrada por Opus en [[Publicación 0.2]].
+
+### Comprobado en Studio
+
+- La copia local terminó la carga con cero recursos faltantes. Mostró el menú inicial y «Jugar» abrió el tutorial en el patio. La Salida avisó que el perfil de Studio era temporal.
+- El «Jugar» del lobby se pudo activar durante el tutorial. Ambos contadores pasaron a 1 con InTutorial activo. Al simular el inicio de una partida y enviar «Saltar» al servidor, el personaje volvió a la ciudad con InMatch y Prematch todavía activos.
+- Con un objetivo fijado en una antesala simulada, estuvieron visibles las barras propias y el triángulo. Las dos mitades del techo del puesto tienen la cumbrera arriba.
+- Los nombres de las cuatro imágenes consultados en Studio confirmaron barra_hud_04 (121288131222477), 05 (94464479484599), 08 (114096602913235) y 14 (115799578034954).
+
+### Hallazgos y pendientes
+
+1. **P1 · Tutorial y partidas.** MatchService.server.lua:580 y :591 permiten entrar en cola desde el tutorial. TutorialService.server.lua:164 devuelve al jugador a la ciudad incluso con una partida activa. Bloquear la cola y la elegibilidad durante el tutorial y proteger la salida del tutorial mientras InMatch esté activo. Repetir con dos jugadores reales.
+2. **P2 · Dirección táctil.** GuidedTutorial.client.lua:132 exige probar las tres direcciones y anuncia gestos táctiles. Controls.client.lua:573 solo traduce movimientos de mouse o del stick derecho a una postura. Con pantalla táctil sola se puede saltar el tutorial completo. Falta implementar el gesto o adaptar ese paso y comprobar en un teléfono con y sin mando.
+3. **P2 · Cierre de partida.** MatchService.server.lua:504 liquida a todo el grupo dentro de una sola llamada protegida. Si Stats.finish falla para un jugador, los siguientes se quedan sin su cierre. Aislar la liquidación por jugador y verificar con un fallo inducido.
+4. **P2 · Antesala.** HUD.client.lua:817 y DirectionalHUD.client.lua:222 muestran indicadores con objetivo fijado durante Prematch. Definir la visibilidad por fase y comprobar la distribución junto al panel de preparación en PC y celular.
+5. **Arte.** Los 28 PNG están registrados. Once quedaron sin uso visible identificado en el código: marcos clásicos 03–05, bordes oscuros 01–02, separadores 02–03 y ornamentos laterales 01–04. «¡A luchar!» usa el separador 01. En modelos_armas/v0.3 sigue estando el piloto Corte de Plata y queda pendiente el resto del catálogo.
+6. **Comprobación pendiente.** Partida completa 1v1 y 2v2, conteos de cola mientras hay una partida en curso, controles de celular y revisión de la versión publicada desde Roblox.
+
