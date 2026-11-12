@@ -117,6 +117,8 @@ CityConfig.LobbyLight = { OthersScale = 0.6, Height = 14, Range = 60, Brightness
 
 -- 12/11/2026: patio del tutorial guiado (TutorialService + GuidedTutorial.client). Lejos de la ciudad, flotando.
 CityConfig.GuidedTutorial = {
+	-- Subir este número obliga a todos (también a los veteranos) a hacer el tutorial de nuevo al entrar. 12/11/2026: 2 = reinicio pedido por el usuario
+	Version = 2,
 	Origin = Vector3.new(-450, 300, 900), YardSpacing = 2048, YardColumns = 6,
 	Size = 90, WallHeight = 3, PillarHeight = 12,
 	Floor = Color3.fromRGB(86, 88, 96), Wall = Color3.fromRGB(58, 60, 68), Torch = Color3.fromRGB(255, 170, 80),

@@ -98,14 +98,15 @@ local function removeSession(player)
 	occupied[state.slot] = nil
 end
 
+-- El tutorial se da por hecho solo si se completó (o saltó) en la versión actual de CityConfig.GuidedTutorial.Version.
+-- Los datos viejos guardaban TutorialGuidedDone = true sin versión: cuentan como versión 1.
+local function doneVersion(data)
+	return data.TutorialGuidedVersion or (data.TutorialGuidedDone and 1 or 0)
+end
+
 function GuidedTutorial.arrive(player, char)
 	local data = PlayerData.get(player)
-	if not data or data.TutorialGuidedDone or not player.Parent then return end
-	-- Quienes ya jugaban antes de esta versión conservan el acceso directo a la ciudad.
-	if not sessions[player] and ((data.Level or 1) > 1 or ((data.Stats and data.Stats.Matches) or 0) > 0) then
-		data.TutorialGuidedDone = true
-		return
-	end
+	if not data or doneVersion(data) >= (G.Version or 1) or not player.Parent then return end
 
 	local state = sessions[player] or createSession(player)
 	if state.healthConnection then state.healthConnection:Disconnect() end
@@ -126,6 +127,7 @@ local function finish(player)
 	local data = PlayerData.get(player)
 	if data then
 		data.TutorialGuidedDone = true
+		data.TutorialGuidedVersion = G.Version or 1
 		PlayerData.saveSoon(player)
 	end
 	local char = player.Character
