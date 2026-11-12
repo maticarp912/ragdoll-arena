@@ -17,3 +17,8 @@ Quedaron en `F:\RobloxJuegos\Archivo Ragdoll Arena`:
 - `Archivos trasladados.csv`: inventario de origen, destino y huella SHA-256.
 
 Studio puede conservar accesos viejos en Recientes. Para ir al archivo actual, abrilo desde F:.
+
+## 12/11/2026 17:45 (Claude)
+- **Ragdoll Sword pilot test.rbxlx** (`F:\RobloxJuegos\Archivo Ragdoll Arena`) quedó guardado con los 109 scripts del commit 0895f60: es la copia para probar lo último.
+- **Ragdoll Sword pilot playable.rbxlx** tiene scripts viejos. No copiar de ahí al proyecto.
+- MocapClips supera los 200.000 caracteres: por MCP solo se carga con ScriptEditorService:UpdateSourceAsync (Source da error). Conviene partirlo en varios módulos antes de crecer más.
