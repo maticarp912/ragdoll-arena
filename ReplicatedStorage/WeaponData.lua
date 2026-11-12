@@ -14,10 +14,6 @@
 --   sweetSpot     : golpes en el extremo del alcance (desde "from" x reach) hacen x"mult" de daño (Estoque).
 --   widths        : (opcional) ancho por golpe; si falta se usa width.
 --   whiffStaminaMult: (opcional) un golpe que no conecta gasta este múltiplo de su resistencia (Estoque).
--- direccional (0.2, solo con CombatConfig.Directional.Enabled): por arma
---   unblockableDirs: direcciones del FUERTE que no se pueden bloquear (Maza: arriba)
---   piercesGuard   : el fuerte atraviesa la guardia (Estoque); el parry sigue funcionando
---   stanceSwitch   : multiplica CombatConfig.Directional.SwitchTime (armas pesadas cambian de lado más lento)
 -- heavy  : ataque fuerte (E / M2). Destello naranja; rompe la guardia pasiva.
 --   windup / hitDelay / recovery: preparación (ventana de parry/esquiva), impacto y tiempo vulnerable.
 --   feintable, hyperArmor, unblockable, blockDamageMult, guardBreakStunMult (ver CombatConfig).
@@ -126,7 +122,7 @@ WeaponData.Data = {
 			blockDamageMult = 1.0, guardBreakStunMult = 1, -- atraviesa el bloqueo: entra todo el daño
 		},
 		mobility = { dodgeDistance = 1.05, dodgeCost = 0.9 },
-		trait = "Golpe en la punta +25 %; la Puntada atraviesa el bloqueo",
+		trait = "La punta premia la distancia precisa; la Puntada tiene más alcance",
 	},
 
 	-- MAZA: presión sobre Guardia y Stun. Destroza bloqueos y aturde, pero es lenta, corta
@@ -153,7 +149,7 @@ WeaponData.Data = {
 		},
 		mobility = { dodgeDistance = 0.9, dodgeCost = 1.25 },
 		riposte = { window = 0.8, damageMult = 1.5, speedMult = 0.6, recoil = 0.35 }, -- 10/11: contragolpe de peso
-		trait = "Gasta el doble de Guardia al bloquearla; Machaque imbloqueable",
+		trait = "Castiga la Guardia y causa mucho aturdimiento con Machaque",
 		blunt = true, -- martillo de guerra: sonido y efectos contundentes
 	},
 }
@@ -198,18 +194,6 @@ WeaponData.Feel = {
 -- Combate direccional (0.2): excepciones por arma, sin anular el sistema (propuesta de Codex en
 -- «Diseño Combate PvP Direccional Roblox»: maza solo el fuerte de arriba imbloqueable; estoque atraviesa solo con el fuerte).
 -- Solo se usan con CombatConfig.Directional.Enabled = true.
-WeaponData.Directional = {
-	Sword = { stanceSwitch = 1.0 },
-	Greatsword = { stanceSwitch = 1.35 },
-	Dagger = { stanceSwitch = 0.8 },
-	Rapier = { stanceSwitch = 0.9, piercesGuard = true },
-	Mace = { stanceSwitch = 1.35, unblockableDirs = { Up = true } },
-}
-
-function WeaponData.directional(id)
-	return WeaponData.Directional[id] or WeaponData.Directional.Sword
-end
-
 function WeaponData.feel(id)
 	return WeaponData.Feel[id] or WeaponData.Feel.Sword
 end

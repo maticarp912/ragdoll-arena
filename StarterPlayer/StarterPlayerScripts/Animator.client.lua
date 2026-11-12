@@ -338,14 +338,34 @@ local function update(char, dt, now)
 		end
 	end
 
-	-- Postura base
+	-- La pose local responde al input. El servidor conserva la guardia y el parry efectivos.
+	local blocking = char:GetAttribute("Blocking")
+	local guardSide = char:GetAttribute("Stance")
+	local localPlayer = Players.LocalPlayer
+	if directionalOn() and char == localPlayer.Character then
+		local inputAt = localPlayer:GetAttribute("GuardInputAt")
+		if inputAt and clockNow - inputAt < DIRCFG.Input.GuardPrediction then
+			local held = localPlayer:GetAttribute("GuardInputHeld")
+			if not held then
+				blocking = false
+			elseif char:GetAttribute("CanFight") and char:GetAttribute("Action") == "" and not char:GetAttribute("Frozen")
+				and (char:GetAttribute("StunnedUntil") or 0) <= now and (char:GetAttribute("GuardBrokenUntil") or 0) <= now
+				and (char:GetAttribute("BlockLockUntil") or 0) <= now then
+				blocking = true
+			end
+		end
+		local predicted = localPlayer:FindFirstChild("PredictedStance")
+		if predicted and (char:GetAttribute("AttackDir") or "") == "" and clockNow - (predicted:GetAttribute("At") or 0) < DIRCFG.Input.PredictHold then
+			if predicted.Value ~= "" then guardSide = predicted.Value end
+		end
+	end
 	local stance = AnimClips.Stances[arch] or AnimClips.Stances.OneHand
 	local target
 	if char:GetAttribute("ThrowCharging") then
 		target = AnimClips.Common.ThrowCharge
 	elseif char:GetAttribute("Carrying") then
 		target = AnimClips.Common.Carry
-	elseif char:GetAttribute("Blocking") then
+	elseif blocking then
 		target = stance.Guard
 	else
 		target = stance.Ready
@@ -358,7 +378,7 @@ local function update(char, dt, now)
 	end
 	st.resting = restKey ~= nil and now - (st.lastActive or 0) > AnimClips.Rest.Delay
 	if st.resting and AnimClips.Stances[restKey] then target = AnimClips.Stances[restKey] end
-	local k = 1 - math.exp(-Playback.StanceResponse * dt)
+	local k = 1 - math.exp(-(blocking and Playback.GuardResponse or Playback.StanceResponse) * dt)
 	for _, j in UPPER do
 		st.base[j] = lerpV(st.base[j] or target[j], target[j], k)
 	end
@@ -375,8 +395,8 @@ local function update(char, dt, now)
 	-- 0.2: postura direccional. La guardia se inclina hacia el lado elegido (en reposo, un poco):
 	-- así el rival también lee tu lado en tu cuerpo, no solo en su triángulo.
 	if directionalOn() then
-		local guardPose = DIRCLIPS.Guard[char:GetAttribute("Stance") or ""]
-		local w = char:GetAttribute("Blocking") and 1 or DIRCLIPS.ReadyWeight
+		local guardPose = DIRCLIPS.Guard[guardSide or ""]
+		local w = blocking and 1 or DIRCLIPS.ReadyWeight
 		local kk = 1 - math.exp(-DIRCLIPS.StanceResponse * dt)
 		st.stanceOff = st.stanceOff or {}
 		for _, j in UPPER do

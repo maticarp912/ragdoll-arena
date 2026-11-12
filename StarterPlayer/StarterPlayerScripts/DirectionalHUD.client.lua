@@ -10,9 +10,10 @@
 -- Lo que muestra (valores en PolishConfig.Directional):
 --   · Tu postura: ese lado en blanco; más brillante y celeste mientras bloqueás.
 --   · El ataque que viene: el lado por donde llega se pone rojo apenas el rival empieza a cargar
---     (dorado si es imbloqueable). Para bloquear, poné tu postura en ese mismo lado.
+--     Para bloquear, poné tu postura en ese mismo lado.
 --   · La patada que viene: punto naranja en el vértice de abajo (no se bloquea: se esquiva).
---   · El parry: destello dorado de todo el triángulo (el sonido lo pone Vfx.client con el evento "Feel").
+--   · El anillo dorado indica cuándo pulsar guardia. Tu lado se ilumina en dorado mientras puede parrear.
+--   · El parry confirmado mantiene su destello dorado de todo el triángulo.
 -- La postura se dibuja con la predicción del cliente (PredictedStance) hasta que el servidor confirma.
 
 local Players = game:GetService("Players")
@@ -142,7 +143,7 @@ kickDot.Visible = false
 kickDot.Parent = root
 
 -- 12/11/2026 (pedido del usuario): timing a la vista.
---   · Anillo en el centro: cuando el rival ataca, se cierra hasta el instante del golpe. Bloqueá cuando está chico.
+--   · Anillo en el centro: se cierra hasta el golpe. Cambia a dorado al entrar en la ventana de parry.
 --   · Barra debajo: tu propio golpe. Mientras corre no podés cambiar de lado; cuando se vacía, ya podés.
 local R = P.Rhythm
 local ring = Instance.new("Frame")
@@ -259,7 +260,6 @@ local function incoming(me, target)
 						model = m,
 						state = state,
 						side = dir ~= "" and MIRROR[dir] or nil,
-						unblockable = (m:GetAttribute("Telegraph") or "") == "Unblockable",
 						main = m == target,
 						hitAt = m:GetAttribute("HitAt") or 0,
 						startAt = m:GetAttribute("ActionStartAt") or 0,
@@ -302,9 +302,12 @@ RunService.RenderStepped:Connect(function()
 		root.Position = UDim2.fromOffset(vp.X / 2, vp.Y * 0.42)
 	end
 
-	local stance = myStance(char)
 	local blocking = char:GetAttribute("Blocking") == true
+	local stance = myStance(char)
 	local lockedSide = char:GetAttribute("AttackDir") == stance
+	local serverNow = workspace:GetServerTimeNow()
+	local blockStart = char:GetAttribute("BlockStart") or 0
+	local parryActive = blocking and serverNow >= blockStart and serverNow - blockStart <= DIR.ParryWindow
 	local t = os.clock()
 	local pulse = 1 - P.PulseAmp * (0.5 + 0.5 * math.sin(t * P.Pulse))
 
@@ -323,34 +326,44 @@ RunService.RenderStepped:Connect(function()
 		end
 	end
 
-	-- Ataques que vienen: rojo (o dorado si es imbloqueable) del lado por donde llegan
+	-- Ataques entrantes y su impacto más próximo.
 	local kick = false
+	local soonest
 	for _, a in incoming(char, target) do
+		if a.hitAt > serverNow and (not soonest or a.hitAt < soonest.hitAt) then soonest = a end
 		if a.state == "Kick" then
 			kick = true
 		elseif a.side and sides[a.side] then
 			local s = sides[a.side]
-			s.frame.BackgroundColor3 = a.unblockable and P.Unblockable or P.Attack
+			s.frame.BackgroundColor3 = P.Attack
 			s.frame.BackgroundTransparency = (a.main and 0 or 0.35) + (1 - pulse) * 0.5
-			s.stroke.Color = P.Attack
+			s.stroke.Color = s.frame.BackgroundColor3
 			s.stroke.Thickness = a.main and P.GuardGlow or 1
 		end
 	end
 	kickDot.Visible = kick
 	if kick then kickDot.BackgroundTransparency = (1 - pulse) * 0.6 end
 
-	-- Anillo del golpe que viene (el del rival fijado, o el más cercano a pegar)
-	local serverNow = workspace:GetServerTimeNow()
-	local soonest
-	for _, a in incoming(char, target) do
-		if a.hitAt > serverNow and (not soonest or a.hitAt < soonest.hitAt) then soonest = a end
+	-- La guardia efectiva tiene prioridad sobre el aviso de ataque en ese mismo lado.
+	local guard = sides[char:GetAttribute("Stance") or DIR.DefaultStance]
+	if parryActive and guard then
+		guard.frame.BackgroundColor3 = P.Parry
+		guard.frame.BackgroundTransparency = 0
+		guard.stroke.Color = P.Parry
+		guard.stroke.Thickness = P.GuardGlow
 	end
+
+	-- Anillo del golpe que viene. Las patadas conservan su señal de esquiva.
 	if soonest then
 		local total = math.max(0.05, soonest.hitAt - math.min(soonest.startAt > 0 and soonest.startAt or soonest.hitAt - R.Window, soonest.hitAt))
 		local frac = math.clamp((soonest.hitAt - serverNow) / total, 0, 1)
 		local size = R.RingMin + (R.RingMax - R.RingMin) * frac
 		ring.Size = UDim2.fromOffset(size, size)
-		ringStroke.Color = soonest.unblockable and P.Unblockable or P.Attack
+		local guardReady = not blocking and (char:GetAttribute("Action") or "") == ""
+			and serverNow >= math.max(char:GetAttribute("BlockLockUntil") or 0, char:GetAttribute("GuardBrokenUntil") or 0,
+				char:GetAttribute("StunnedUntil") or 0)
+		local parryCue = guardReady and soonest.side and soonest.state ~= "Kick" and soonest.hitAt - serverNow <= DIR.ParryWindow
+		ringStroke.Color = parryCue and P.Parry or (soonest.state == "Kick" and P.Kick or P.Attack)
 		ringTarget.BackgroundColor3 = ringStroke.Color
 		ring.Visible = true
 		ringTarget.Visible = true

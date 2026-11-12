@@ -22,7 +22,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CombatConfig = require(ReplicatedStorage:WaitForChild("CombatConfig"))
-local WeaponData = require(ReplicatedStorage:WaitForChild("WeaponData"))
 
 local D = CombatConfig.Directional
 local Directional = {}
@@ -30,7 +29,7 @@ local Directional = {}
 local VALID = { Up = true, Left = true, Right = true }
 local MIRROR = { Up = "Up", Left = "Right", Right = "Left" }
 
-local data = setmetatable({}, { __mode = "k" }) -- [char] = { prev, changedAt, stanceTimes, pending }
+local data = setmetatable({}, { __mode = "k" }) -- [char] = límites de entrada, siguiente postura y parries pendientes
 
 local function now()
 	return workspace:GetServerTimeNow()
@@ -39,7 +38,7 @@ end
 local function get(char)
 	local d = data[char]
 	if not d then
-		d = { prev = nil, changedAt = 0, stanceCount = 0, stanceWindow = 0, pending = {} }
+		d = { stanceCount = 0, stanceWindow = 0, pending = {} }
 		data[char] = d
 	end
 	return d
@@ -78,7 +77,7 @@ function Directional.setStance(char, dir)
 	dir = Directional.validDir(dir)
 	if not dir then return false end
 	if char:GetAttribute("KnockedDown") or char:GetAttribute("Ragdolled") or char:GetAttribute("CarriedBy")
-		or char:GetAttribute("Frozen") or Directional.validDir(char:GetAttribute("AttackDir")) then
+		or char:GetAttribute("Frozen") then
 		return false
 	end
 	local d = get(char)
@@ -91,35 +90,25 @@ function Directional.setStance(char, dir)
 	d.stanceCount += 1
 	if d.stanceCount > D.StanceMaxRate then return false end
 
-	local current = char:GetAttribute("Stance") or D.DefaultStance
-	if current == dir then return true end
-	d.prev = current
-	d.changedAt = t
-	char:SetAttribute("Stance", dir)
+	if Directional.validDir(char:GetAttribute("AttackDir")) then
+		if (char:GetAttribute("ActionEndsAt") or 0) - t > D.Input.StanceBuffer then return false end
+		d.nextStance = dir
+	else
+		char:SetAttribute("Stance", dir)
+	end
 	return true
 end
 
--- Lado que cubre la guardia AHORA: durante SwitchTime sigue cubriendo el lado anterior
+-- Aplicar el último lado elegido justo antes de que pueda empezar el siguiente golpe.
+function Directional.finishAttack(char, completed)
+	local d = data[char]
+	if not d or not d.nextStance then return end
+	if completed then char:SetAttribute("Stance", d.nextStance) end
+	d.nextStance = nil
+end
+
 function Directional.guardSide(char)
-	local d = get(char)
-	local stance = char:GetAttribute("Stance") or D.DefaultStance
-	local mult = WeaponData.directional(char:GetAttribute("WeaponId")).stanceSwitch or 1
-	if d.prev and now() - d.changedAt < D.SwitchTime * mult then
-		return d.prev
-	end
-	return stance
-end
-
-----------------------------------------------------------------------
--- Excepciones del fuerte por arma (Maza: arriba imbloqueable; Estoque: atraviesa)
-----------------------------------------------------------------------
-function Directional.heavyUnblockable(char, dir)
-	local wd = WeaponData.directional(char:GetAttribute("WeaponId"))
-	return wd.unblockableDirs ~= nil and wd.unblockableDirs[dir or ""] == true
-end
-
-function Directional.heavyPierces(char)
-	return WeaponData.directional(char:GetAttribute("WeaponId")).piercesGuard == true
+	return char:GetAttribute("Stance") or D.DefaultStance
 end
 
 ----------------------------------------------------------------------

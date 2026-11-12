@@ -244,3 +244,24 @@ La prueba local fue integrada a `Ragdoll Arena.rbxlx` en la raíz del proyecto d
 ### Pendiente
 
 - La experiencia publicada queda pendiente de indicación del usuario. La textura de Vigilia Violeta todavía muestra un aviso de representación en Studio, aunque cargó y se vio en la prueba local.
+
+## Ritmo de ataque y guardia dorada
+
+### Implementado
+
+- Se agregan 150 ms antes del impacto de ligeros, fuertes y patadas, después de calcular la velocidad y el mínimo previo de 240 ms. La animación y el aviso usan el nuevo momento de impacto. La recuperación conserva su duración.
+- El anillo se pone dorado cuando falta una ventana de parry para el impacto y la guardia está disponible. Al pulsar guardia, el lado confirmado por el servidor queda dorado durante 250 ms. Si el golpe de arma llega en ese intervalo y por el lado cubierto, se resuelve como parry.
+- Saqué la demora de cambio de lado de 96 a 162 ms. En los últimos 160 ms de recuperación se puede elegir la dirección del próximo golpe y anticipar una pulsación nueva de guardia. El golpe en curso conserva su lado hasta el final. La pose local de guardia empieza a reaccionar al botón mientras el servidor confirma la acción.
+- Los fuertes de las cinco armas son bloqueables y parreables en el modo direccional, incluso con infusión. Las patadas siguen rompiendo guardia y Fuego conserva su daño parcial sobre bloqueos normales. Dagas mantiene su ritmo rápido. El tutorial y el consejo de carga explican la ventana en ES, EN y PT-BR.
+
+### Comprobado en Studio
+
+- Los ligeros y fuertes de las cinco armas y la patada impactaron con los 150 ms añadidos. El ligero de Espada pasó de 308 a 458 ms. El fuerte de Espadón pasó de 726 a 876 ms. El ligero de Dagas con Rayo quedó en 390 ms.
+- En Play bloqueé un fuerte real de cada arma y parreé un fuerte de Dagas con la pulsación a 170 ms del impacto. El servidor cambió de lado y parreó un ataque por ese lado en el mismo paso. Al mantener la guardia pasada la ventana, el golpe se bloqueó. Un ataque por el lado equivocado pegó.
+- El primer ataque comenzó 15 ms después de enviar el input local de prueba. La dirección encolada se aplicó al siguiente golpe. Una guardia pulsada 100 ms antes del cierre entró 4 ms después del final de la recuperación. Son mediciones de una sesión local de Studio.
+- El anillo pasó de rojo a dorado. El lado de guardia volvió a celeste al terminar la ventana. Captura con el instante dorado fijado para ver el color en `F:/RobloxJuegos/Archivo Ragdoll Arena/Guardia dorada.jpg`.
+- Guardé `Ragdoll Sword pilot test.rbxlx` y comparé los scripts con el repo.
+
+### Pendiente
+
+- Verificar sensación con la latencia de una partida en línea y con mando físico. La publicación queda pendiente de indicación del usuario.

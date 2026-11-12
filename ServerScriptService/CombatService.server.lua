@@ -96,7 +96,7 @@ Input.OnServerEvent:Connect(function(player, action, arg, extra, seq)
 		-- Postura direccional (C16): arriba, izquierda o derecha. Cualquier otro valor se descarta.
 		if not Directional.enabled() or not Directional.setStance(char, arg) then reject(player, seq, action) end
 	elseif action == "BlockStart" or action == "GuardDown" then
-		Combat.blockStart(char, false)
+		if not Combat.blockStart(char, false) then reject(player, seq, action) end
 	elseif action == "BlockEnd" or action == "GuardUp" then
 		Combat.blockEnd(char, false)
 	elseif action == "KickRelease" then

@@ -481,6 +481,7 @@ local function faceAim(char, aim)
 end
 
 local pendingAttackSeq, pendingAttackUntil = nil, 0
+local pendingGuardSeq
 local function stanceLocked(char)
 	local action = char:GetAttribute("Action")
 	if action == "M1" or action == "Heavy" then
@@ -488,6 +489,13 @@ local function stanceLocked(char)
 		return true
 	end
 	return os.clock() < pendingAttackUntil
+end
+
+local function canPickStance(char)
+	if not stanceLocked(char) then return true end
+	local action = char:GetAttribute("Action")
+	return (action == "M1" or action == "Heavy")
+		and (char:GetAttribute("ActionEndsAt") or 0) - workspace:GetServerTimeNow() <= DIR.Input.StanceBuffer
 end
 
 local function send(action)
@@ -514,6 +522,11 @@ local function send(action)
 		and not stanceLocked(char) and char:GetAttribute("Action") == "" then
 		pendingAttackSeq, pendingAttackUntil = seq, os.clock() + DIR.Input.PredictHold
 	end
+	if directionalOn() and (action == "BlockStart" or action == "BlockEnd") then
+		pendingGuardSeq = seq
+		player:SetAttribute("GuardInputHeld", action == "BlockStart")
+		player:SetAttribute("GuardInputAt", os.clock())
+	end
 	Input:FireServer(action, arg, extra, seq)
 end
 
@@ -530,7 +543,7 @@ local function setStance(dir)
 	if player:GetAttribute("InitialLoading") then return end
 	if not directionalOn() or not table.find(DIR.Dirs, dir) then return end
 	local char = getChar()
-	if not char or isDownLocal(char) or stanceLocked(char) then return end
+	if not char or isDownLocal(char) or not canPickStance(char) then return end
 	local recent = os.clock() - (predictedStance:GetAttribute("At") or 0) < DIR.Input.PredictHold
 	local current = recent and predictedStance.Value ~= "" and predictedStance.Value or char:GetAttribute("Stance")
 	if current == dir then return end
@@ -544,6 +557,8 @@ Effect.OnClientEvent:Connect(function(kind, seq, action)
 	if kind ~= "InputReject" then return end
 	if seq == pendingAttackSeq and (action == "M1" or action == "Heavy") then
 		pendingAttackSeq, pendingAttackUntil = nil, 0
+	elseif seq == pendingGuardSeq and action == "BlockStart" then
+		player:SetAttribute("GuardInputAt", nil)
 	elseif action == "Stance" then
 		local char = getChar()
 		predictedStance.Value = char and (char:GetAttribute("Stance") or "") or ""
@@ -560,6 +575,8 @@ if player.Character then watchAttack(player.Character) end
 
 player.CharacterAdded:Connect(function(char)
 	watchAttack(char)
+	pendingGuardSeq = nil
+	player:SetAttribute("GuardInputAt", nil)
 	predictedStance.Value = ""
 	predictedStance:SetAttribute("At", 0)
 end)
@@ -567,7 +584,7 @@ end)
 local function stanceInputActive()
 	if not directionalOn() or not locked or player:GetAttribute("MenuOpen") then return false end
 	local char = getChar()
-	return char ~= nil and not isDownLocal(char) and not stanceLocked(char)
+	return char ~= nil and not isDownLocal(char) and canPickStance(char)
 end
 
 -- Gesto del mouse: se acumula el movimiento y se pierde rápido; pasado el umbral elige el lado

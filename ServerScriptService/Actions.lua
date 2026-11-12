@@ -60,6 +60,14 @@ local function timing(animKey, duration)
 	end
 end
 
+-- Agrega el margen antes del impacto y conserva la recuperación del golpe.
+local function delayImpact(duration, speed, hitTime, hitMarker)
+	local delay = CFG.Attack.ExtraWindup
+	local impact = hitTime + delay
+	if hitMarker and hitMarker > 0 then speed *= hitMarker / impact end
+	return duration + delay, speed, impact
+end
+
 -- Paso adelante con el golpe (cada arma avanza distinto: WeaponData.Feel.lunge).
 -- Se da justo antes del impacto y se anula si la acción se cortó (parry, golpe recibido...).
 local function lunge(char, token, distance, at)
@@ -171,8 +179,10 @@ function Actions.m1(char)
 	-- Si alguna vez hay animaciones subidas (ID en Assets) para M1_n, se siguen usando esas.
 	if dir ~= "" and not Assets.anim(animKey) then animKey = "Weapons." .. wid .. ".Dir" .. dir end
 	local animSpeed, marker = timing(animKey, duration)
-	local hitTime = marker("Hit") or (combo.hitTime[step] * tempo() / atkSpeed)
+	local hitMarker = marker("Hit")
+	local hitTime = hitMarker or (combo.hitTime[step] * tempo() / atkSpeed)
 	if dirOn then hitTime = math.max(hitTime, CFG.Directional.MinAttackHit) end
+	duration, animSpeed, hitTime = delayImpact(duration, animSpeed, hitTime, hitMarker)
 	if step == 1 then
 		st.comboChain = (st.comboChain or 0) + 1
 		st.comboLanded = {}
@@ -267,19 +277,17 @@ function Actions.heavy(char)
 	local baseHit = baseWindup + h.hitDelay * tempo() / atkSpeed
 	local duration = baseHit + h.recovery * tempo() / atkSpeed
 	local animSpeed, marker = timing(animKey, duration)
-	local windup = marker("WindupEnd") or baseWindup
-	local hitTime = marker("Hit") or math.max(baseHit, windup + 0.02)
+	local windupMarker = marker("WindupEnd")
+	local windup = windupMarker or baseWindup
+	local hitMarker = marker("Hit")
+	local hitTime = hitMarker or math.max(baseHit, windup + 0.02)
 	if dirOn then hitTime = math.max(hitTime, CFG.Directional.MinAttackHit) end
+	local originalSpeed = animSpeed
+	duration, animSpeed, hitTime = delayImpact(duration, animSpeed, hitTime, hitMarker)
+	windup = windupMarker and windupMarker * originalSpeed / animSpeed or windup + CFG.Attack.ExtraWindup
 
-	-- Imbloqueable: por arma, o por estar con la infusión activa (decisión 2, Fase C).
-	-- Direccional: la excepción de cada arma depende de la dirección (Maza: solo arriba).
-	local infused = char:GetAttribute("InfusedHeavyUnblockable") == true
-	local unblockable
-	if dirOn then
-		unblockable = Directional.heavyUnblockable(char, dir) or infused
-	else
-		unblockable = h.unblockable or infused
-	end
+	-- En direccional todos los golpes de arma admiten guardia por el lado correcto.
+	local unblockable = not dirOn and (h.unblockable or char:GetAttribute("InfusedHeavyUnblockable") == true)
 
 	local token = Combat.beginAction(char, "Heavy", duration, "Windup")
 	st.comboStep = 0
@@ -316,7 +324,6 @@ function Actions.heavy(char)
 			blockDamageMult = h.blockDamageMult,
 			guardBreakStunMult = h.guardBreakStunMult,
 			dir = dir,
-			pierces = dirOn and Directional.heavyPierces(char) or nil,
 		})
 		if #results == 0 then whiffPenalty(char, "heavy", def.combo.whiffStaminaMult) end
 	end)
@@ -346,7 +353,9 @@ function Actions.kick(char)
 	local windupT = DK and DK.Windup or K.Windup
 	local duration = windupT + (DK and DK.Recovery or K.Recovery)
 	local animSpeed, marker = timing("Generic.Kick", duration)
-	local hitTime = marker("Hit") or windupT
+	local hitMarker = marker("Hit")
+	local hitTime = hitMarker or windupT
+	duration, animSpeed, hitTime = delayImpact(duration, animSpeed, hitTime, hitMarker)
 
 	local token = Combat.beginAction(char, "Kick", duration, "Windup")
 	st.kickReadyAt = t + (DK and DK.Cooldown or K.Cooldown)
@@ -407,11 +416,15 @@ function Actions.kickDowned(char, victim)
 	if not Combat.spendStamina(char, CFG.Stamina.Kick) then return false end
 	local DK = CFG.Directional.Kick
 	local duration = DK.Windup + DK.Recovery * 0.6
+	local animSpeed, marker = timing("Generic.Kick", duration)
+	local hitMarker = marker("Hit")
+	local hitTime = hitMarker or DK.Windup
+	duration, animSpeed, hitTime = delayImpact(duration, animSpeed, hitTime, hitMarker)
 	local token = Combat.beginAction(char, "Kick", duration, "Windup")
 	st.kickReadyAt = t + DK.Cooldown * 0.6
-	Anim.play(char, "Generic.Kick", { duration = duration, hitTime = DK.Windup })
+	Anim.play(char, "Generic.Kick", { speed = animSpeed, duration = duration, hitTime = hitTime })
 	Fx.soundAt("Kick_Swing", char)
-	task.delay(DK.Windup, function()
+	task.delay(hitTime, function()
 		if not Combat.valid(char, token) or not victim.Parent or not victim:GetAttribute("KnockedDown")
 			or victim:GetAttribute("CarriedBy") then return end
 		Combat.setPhase(char, "Recovery")

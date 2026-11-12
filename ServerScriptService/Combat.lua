@@ -240,10 +240,13 @@ function Combat.endAction(char, token)
 	st.action = ""
 	st.busyUntil = 0
 	clearActionAttrs(char)
+	Directional.finishAttack(char, true)
 	Combat.refreshSpeed(char)
-	-- Si el jugador sigue manteniendo F, vuelve a la guardia (sin ventana de parry)
 	if st.wantsBlock then
-		Combat.blockStart(char, true)
+		local fresh = Directional.enabled() and st.blockPressedAt
+			and now() - st.blockPressedAt <= CFG.Directional.Input.GuardBuffer
+		st.blockPressedAt = nil
+		Combat.blockStart(char, not fresh)
 	end
 end
 
@@ -256,6 +259,8 @@ function Combat.cancelAction(char)
 	st.queuedM1 = false
 	st.comboStep = 0
 	clearActionAttrs(char)
+	Directional.finishAttack(char, false)
+	st.blockPressedAt = nil
 	Anim.stopActions(char)
 	Combat.refreshSpeed(char)
 end
@@ -401,6 +406,7 @@ end
 -- quiet = true: volver a la guardia sin ventana de parry (p. ej. tras terminar un ataque)
 function Combat.blockStart(char, quiet)
 	local st = Combat.state(char)
+	local wasHeld = st.wantsBlock
 	st.wantsBlock = true
 	if not Combat.canAct(char) then return false end
 	local t = now()
@@ -409,10 +415,16 @@ function Combat.blockStart(char, quiet)
 	if (char:GetAttribute("BlockLockUntil") or 0) > t and not quiet then return false end
 
 	if st.busyUntil > t then
-		-- Finta: F cancela la preparación del fuerte
-		if not Combat.tryFeint(char) then return false end
+		-- La guardia puede fintar un fuerte o quedar en cola cerca del final de otra acción.
+		if not Combat.tryFeint(char) then
+			if Directional.enabled() and not quiet and not wasHeld and st.busyUntil - t <= CFG.Directional.Input.GuardBuffer then
+				st.blockPressedAt = t
+			end
+			return false
+		end
 	end
 
+	st.blockPressedAt = nil
 	char:SetAttribute("Blocking", true)
 	char:SetAttribute("BlockStart", quiet and (t - Combat.parryWindow() - 1) or t)
 	Anim.play(char, "Weapons." .. (char:GetAttribute("WeaponId") or "Sword") .. ".Block", { looped = true, fade = 0.06 })
@@ -422,7 +434,7 @@ function Combat.blockStart(char, quiet)
 	return true
 end
 
--- Ventana de parry vigente (0.1: CombatConfig.Block; direccional: la común de 0,15 s)
+-- Ventana de parry según el modo, compartida con el indicador del HUD.
 function Combat.parryWindow()
 	if Directional.enabled() then return CFG.Directional.ParryWindow end
 	return CFG.Block.ParryWindow
@@ -431,7 +443,10 @@ end
 -- noLock = true: no castigar el soltar F (lo usan las rupturas y los muñecos)
 function Combat.blockEnd(char, noLock, keepWanting)
 	local st = Combat.state(char)
-	if not keepWanting then st.wantsBlock = false end
+	if not keepWanting then
+		st.wantsBlock = false
+		st.blockPressedAt = nil
+	end
 	if not char:GetAttribute("Blocking") then return end
 	char:SetAttribute("Blocking", false)
 	local t = now()
@@ -730,11 +745,6 @@ local function dealDirectional(attacker, victim, hit, damage)
 	-- Resultado con el estado del defensor en el momento de resolver
 	local function settle()
 		if guarding() and Directional.guardSide(victim) == side then
-			if hit.kind == "Heavy" and hit.unblockable then
-				return doHit(attacker, victim, hit, damage)
-			elseif hit.kind == "Heavy" and hit.pierces then
-				return doHit(attacker, victim, hit, damage * (hit.blockDamageMult or 1))
-			end
 			return doBlocked(victim, attacker, hit, damage)
 		end
 		return doHit(attacker, victim, hit, damage * (blocking and DC.SideHitGuardMult or 1))
@@ -766,7 +776,7 @@ end
 
 -- hit = { kind = "Light"|"Heavy"|"Kick", damage, stun, knockback, unblockable, parryable,
 --         blockDamageMult, guardBreakStunMult, guardDrain,
---         dir (direccional: AttackDir del atacante), pierces, finisher, onResult(resultado) }
+--         dir (direccional: AttackDir del atacante), finisher, onResult(resultado) }
 -- Devuelve: "hit" | "blocked" | "parry" | "guardbreak" | "dodged" | "none" | "immune" | "pending"
 -- "pending" (solo direccional): el golpe espera el margen de ping; onResult recibe el resultado final.
 local resolve

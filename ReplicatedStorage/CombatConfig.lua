@@ -118,6 +118,7 @@ CombatConfig.Kick = {
 }
 
 CombatConfig.Attack = {
+	ExtraWindup = 0.15,        -- s de preparación añadidos antes del impacto, incluso con modificadores de velocidad
 	ComboResetTime = 0.9,      -- s tras terminar un golpe para seguir el combo
 	BufferWindow = 0.35,       -- si pulsas M1 en los últimos X s de un golpe o esquiva, se encola el siguiente (9/11: era 0.25)
 	MoveSpeedMult = 0.55,      -- velocidad mientras atacas
@@ -244,10 +245,9 @@ CombatConfig.Directional = {
 	MinAttackHit = 0.24,       -- tiempo de reacción mínimo con infusiones o contragolpes activos
 
 	-- Defensa por dirección
-	ParryWindow = 0.15,        -- D1: ventana común de parry tras una pulsación NUEVA de guardia (s)
+	ParryWindow = 0.25,        -- segundos de guardia dorada tras una pulsación nueva
 	ParryGrace = 0.1,          -- compensación de ping máxima: acepta un parry que llega hasta min(ping, esto) tarde
 	ParryWhiffLock = 0.3,      -- soltar la guardia dentro de la ventana sin parrear: no podés volver a parrear en este tiempo
-	SwitchTime = 0.12,         -- cambiar de lado tarda esto: mientras dura, la guardia sigue cubriendo el lado anterior
 	StanceMaxRate = 15,        -- cambios de postura por segundo que acepta el servidor (anti-spam)
 	SideHitGuardMult = 1.0,    -- un golpe que entra por un lado no cubierto hace el daño completo (multiplicador)
 
@@ -284,13 +284,16 @@ CombatConfig.Directional = {
 
 	-- Entrada (valores por defecto; los rangos se exponen en Ajustes más adelante)
 	Input = {
-		MouseThreshold = 26,   -- px de gesto acumulado para elegir un lado (D2: movimiento de cámara)
+		MouseThreshold = 16,   -- px de gesto acumulado para elegir un lado (D2: movimiento de cámara)
 		MouseDecay = 10,       -- el gesto acumulado se pierde a este ritmo (1/s): solo cuentan gestos cortos
 		MouseUpBias = 1.15,    -- arriba necesita un poco más de recorrido vertical que horizontal (histéresis)
-		StickDeadZone = 0.55,  -- stick derecho: pasado este radio se elige el sector
-		StickRelease = 0.3,    -- y hay que volver por debajo de esto para elegir otro
+		StickDeadZone = 0.44,  -- stick derecho: pasado este radio se elige el sector
+		StickRelease = 0.23,    -- y hay que volver por debajo de esto para elegir otro
 		StickDownIgnore = true,-- el stick hacia abajo no hace nada
-		PredictHold = 0.45,    -- el triángulo muestra la postura predicha hasta que el servidor la confirme (s)
+		PredictHold = 0.45,        -- espera máxima por la confirmación de postura (s)
+		StanceBuffer = 0.16,       -- guardar el siguiente lado al final de la recuperación
+		GuardBuffer = 0.16,        -- anticipar una pulsación de guardia antes de terminar la acción
+		GuardPrediction = 0.18,    -- anticipación visual local mientras llega la confirmación
 	},
 }
 

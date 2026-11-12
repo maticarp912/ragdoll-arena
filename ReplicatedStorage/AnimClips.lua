@@ -23,6 +23,7 @@ AnimClips.Playback = {
 	Transition = 0.09,
 	Recovery = 0.16,
 	StanceResponse = 16,
+	GuardResponse = 34,
 }
 
 AnimClips.Joints = {
@@ -46,7 +47,7 @@ AnimClips.Directional = {
 		Right = { W = { 0, -26, -4 }, N = { 0, 18, 0 }, RS = { -8, 0, 26 }, RW = { 0, 38, 0 }, LS = { 6, 0, 12 } },
 	},
 	ReadyWeight = 0.45,
-	StanceResponse = 18, -- rapidez con que la pose sigue al cambio de lado
+	StanceResponse = 32, -- rapidez con que la pose sigue al cambio de lado
 	-- Golpe por dirección (en el marco del atacante): carga hacia su lado y cruza al otro tras el impacto
 	Attack = {
 		Up = {

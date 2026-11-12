@@ -154,7 +154,7 @@ return {
 		["ui.loading.tip1"] = "CONSEJO: Un toque justo al bloquear ejecuta un Parry que abre la guardia rival.",
 		["ui.loading.tip2"] = "CONSEJO: Cuando derribes a un enemigo, acércate y usa Agarrar para lanzarlo fuera de la arena.",
 		["ui.loading.tip3"] = "CONSEJO: Las infusiones siguen un ciclo: Fuego vence a Rayo, Rayo a Hielo, Hielo a Sombra y Sombra a Fuego.",
-		["ui.loading.tip4"] = "CONSEJO: Los ataques con destello rojo-dorado son imbloqueables: esquivá o respondé con un Parry preciso.",
+		["ui.loading.tip4"] = "CONSEJO: Elegí el lado del ataque. Pulsá guardia cuando el anillo se ponga dorado para hacer parry.",
 
 		-- 0.2 (D15): Tres skins nuevas de la Ruleta
 		["skin.CrimsonEclipse"] = "Filo del Eclipse Carmesí",
@@ -454,7 +454,7 @@ return {
 		["ui.loading.tip1"] = "TIP: Timing your block right before impact triggers a Parry that staggers the opponent.",
 		["ui.loading.tip2"] = "TIP: When an enemy is knocked down, move in and Grab them to hurl them out of the arena.",
 		["ui.loading.tip3"] = "TIP: Infusions follow a cycle: Fire beats Lightning, Lightning beats Ice, Ice beats Shadow, and Shadow beats Fire.",
-		["ui.loading.tip4"] = "TIP: Attacks with a golden-red flash are unblockable—dodge away or answer with a precise Parry.",
+		["ui.loading.tip4"] = "TIP: Match the attack direction. Press guard when the ring turns gold to parry.",
 
 		-- 0.2 (D15): Tres skins nuevas de la Ruleta
 		["skin.CrimsonEclipse"] = "Crimson Eclipse Edge",
@@ -754,7 +754,7 @@ return {
 		["ui.loading.tip1"] = "DICA: Bloquear no instante exato executa um Parry que abre a guarda rival.",
 		["ui.loading.tip2"] = "DICA: Ao derrubar um inimigo, aproxime-se e use Agarrar para lançá-lo para fora da arena.",
 		["ui.loading.tip3"] = "DICA: As infusões seguem um ciclo: Fogo vence Raio, Raio vence Gelo, Gelo vence Sombra e Sombra vence Fogo.",
-		["ui.loading.tip4"] = "DICA: Ataques com brilho vermelho-dourado são indefensáveis: esquive ou responda com um Parry preciso.",
+		["ui.loading.tip4"] = "DICA: Ajuste a guarda para o lado do ataque e pressione quando o anel ficar dourado para aparar.",
 
 		-- 0.2 (D15): Tres skins nuevas de la Ruleta
 		["skin.CrimsonEclipse"] = "Fio do Eclipse Carmesim",

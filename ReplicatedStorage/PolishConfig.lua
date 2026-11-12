@@ -76,7 +76,7 @@ return {
   Rhythm = { RingMax = 120, RingMin = 22, RingThickness = 3, Window = 0.5, BarWidth = 0.8, BarHeight = 7, BarGap = 18,
    Windup = Color3.fromRGB(255, 196, 92), Recovery = Color3.fromRGB(150, 160, 178), Ready = Color3.fromRGB(150, 230, 170), ReadyFlash = 0.35 },
   Rim = Color3.fromRGB(16, 18, 24), RimWidth = 2, RimTransparency = 0.35, Vertex = 13, VertexColor = Color3.fromRGB(214, 219, 230), Guard = Color3.fromRGB(150, 205, 255),
-  Committed = Color3.fromRGB(155, 201, 224), Attack = Color3.fromRGB(255, 40, 32), Unblockable = Color3.fromRGB(255, 196, 64), Kick = Color3.fromRGB(255, 140, 30),
+  Committed = Color3.fromRGB(155, 201, 224), Attack = Color3.fromRGB(255, 40, 32), Kick = Color3.fromRGB(255, 140, 30),
   Parry = Color3.fromRGB(255, 226, 120), ParryTime = 0.35, ParryScale = 1.35,
   Pulse = 14, PulseAmp = 0.25, OtherAttackers = 14, KickDot = 16,
  },
