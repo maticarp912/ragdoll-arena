@@ -36,3 +36,7 @@ Studio puede conservar accesos viejos en Recientes. Para ir al archivo actual, a
 
 - **Ragdoll Sword pilot test.rbxlx** en F: tiene los 21 ataques adaptados, el mínimo efectivo de 0,24 s y las cuatro infusiones de cinco capas para las cinco armas.
 - Las pruebas de impacto, la validación del retarget y las capturas están en [[Versión 0.3#Ataques direccionales restantes (punto C)]] y [[Versión 0.3#Infusiones de cinco capas (punto D)]].
+
+## 12/11/2026 22:25 (Claude) — publicación
+- La experiencia publicada (placeId 91305058765116) quedó con los 114 scripts del commit ba1c6dd: guardia dorada (ParryWindow 0,25), +150 ms antes del golpe, 21 ataques, aura de 5 capas, Vigilia Violeta, mocap por arma, tutorial con ficha y Saltar manteniendo, Ctrl suelta el mouse.
+- Antes de publicar: sin scripts sobrantes y prueba en Play sin errores en consola.
