@@ -21,7 +21,7 @@ local SHORT = {
 	ButtonR1 = "RB", ButtonR2 = "RT", ButtonL1 = "LB", ButtonL2 = "LT", ButtonR3 = "R3", ButtonL3 = "L3",
 	DPadUp = "↑", DPadDown = "↓", DPadLeft = "←", DPadRight = "→",
 }
-local LEFT = { { "Dodge", "hint.dodge" }, { "LockOn", "hint.lock" }, { "SwitchTarget", "hint.switch" } }
+local LEFT = { { "Dodge", "hint.dodge" }, { "LockOn", "hint.lock" }, { "SwitchTarget", "hint.switch" }, { "__Ctrl", "hint.freeMouse" } }
 local RIGHT = { { "Block", "hint.block" }, { { "Attack", "Heavy" }, "hint.attack" }, { "Kick", "hint.kick" }, { "Infuse", "hint.infuse" } }
 
 local gui = Instance.new("ScreenGui")
@@ -108,8 +108,12 @@ local function row(parent, actions, key, order, right)
 	local device = Device.isGamepad() and "Gamepad" or "Keyboard"
 	local defaults = InputMap.defaults()[device] or {}
 	for i, a in type(actions) == "table" and actions or { actions } do
-		local name = defaults[a]
-		chip(r, SHORT[name] or InputMap.label(name), i)
+		if a == "__Ctrl" then
+			chip(r, "Ctrl", i) -- tecla fija (no se reasigna)
+		else
+			local name = defaults[a]
+			chip(r, SHORT[name] or InputMap.label(name), i)
+		end
 	end
 	local lbl = Instance.new("TextLabel")
 	lbl.LayoutOrder = 10
@@ -129,7 +133,9 @@ local function rebuild()
 			if ch:IsA("Frame") then ch:Destroy() end
 		end
 	end
-	for i, h in LEFT do row(leftCol, h[1], h[2], i, false) end
+	for i, h in LEFT do
+		if not (h[1] == "__Ctrl" and Device.isGamepad()) then row(leftCol, h[1], h[2], i, false) end
+	end
 	for i, h in RIGHT do row(rightCol, h[1], h[2], i, true) end
 end
 

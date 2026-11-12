@@ -237,6 +237,16 @@ local function permanentLock()
 end
 local relockAt = 0
 local dirMouseOn = false -- el ratón quedó centrado por el direccional (hay que soltarlo al salir)
+-- 12/11/2026 (pedido del usuario): Ctrl suelta el mouse aunque estés fijando a alguien, y otra vez Ctrl lo vuelve
+-- a centrar. Suelto: la cámara se mueve con clic derecho y arrastrar, y podés tocar la interfaz.
+local freeMouse = false
+UserInputService.InputBegan:Connect(function(input, processed)
+	if processed then return end
+	if input.KeyCode == Enum.KeyCode.LeftControl or input.KeyCode == Enum.KeyCode.RightControl then
+		freeMouse = not freeMouse
+		player:SetAttribute("FreeMouse", freeMouse)
+	end
+end)
 
 -- Fijado automático (9/11): al entrar a la arena se fija al rival más cercano. El HUD completo
 -- se muestra mientras haya objetivo fijado (LockTarget.Value).
@@ -319,7 +329,7 @@ RunService:BindToRenderStep("LockOn", Enum.RenderPriority.Camera.Value + 1, func
 	end
 
 	-- Modo apuntado al cargar: ratón centrado, la cámara gira con el ratón y el cuerpo mira hacia donde lanzará
-	local aiming = carrying and not player:GetAttribute("MenuOpen") and hum.Health > 0
+	local aiming = carrying and not player:GetAttribute("MenuOpen") and hum.Health > 0 and not freeMouse
 	if aiming then
 		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
 		local look = camera.CFrame.LookVector
@@ -339,6 +349,7 @@ RunService:BindToRenderStep("LockOn", Enum.RenderPriority.Camera.Value + 1, func
 	-- Direccional (D2): con objetivo fijado el mouse no gira la cámara; queda centrado y sus gestos eligen el lado
 	local phase = workspace:GetAttribute("MatchPhase")
 	local wantDirMouse = directionalOn() and locked ~= nil and UserInputService.MouseEnabled and not Device.isTouch() and not Device.isGamepad() and not aiming
+		and not freeMouse
 		and not player:GetAttribute("MenuOpen") and hum.Health > 0
 		and (phase == nil or phase == "" or phase == "Round" or phase == "Lobby")
 	if wantDirMouse then

@@ -84,10 +84,36 @@ panelScale.Parent = panel
 local check = UiTheme.label({ name = "Check", parent = panel, anchor = Vector2.new(0.5, 0.5), position = UDim2.fromScale(0.5, 0.45),
 	size = UDim2.fromOffset(300, 60), text = "", font = "Title", textSize = 44, color = C.Success, alignX = Enum.TextXAlignment.Center, zIndex = 20 })
 check.TextStrokeTransparency = 0.2
-local skip = UiTheme.button({ name = "Skip", parent = panel, anchor = Vector2.new(1, 1),
-	position = UDim2.new(1, -8, 1, -6), size = UDim2.fromOffset(150, 32), text = L.t("gt.skip"),
-	textSize = 14, minTextSize = 12, maxTextSize = 14, scaled = true, variant = "secondary",
-	onClick = function() GuidedRemote:FireServer("Skip") end })
+-- 12/11/2026 (pedido del usuario): lejos del panel (arriba a la derecha) y hay que mantenerlo apretado, así no se toca sin querer
+local SKIP_HOLD = 1.2
+local skip = UiTheme.button({ name = "Skip", parent = gui, anchor = Vector2.new(1, 0),
+	position = UDim2.new(1, -12, 0, 100), size = UDim2.fromOffset(190, 34), text = L.t("gt.skipHold"),
+	textSize = 14, minTextSize = 11, maxTextSize = 14, scaled = true, variant = "secondary" })
+local skipFill = Instance.new("Frame")
+skipFill.Name = "HoldFill"
+skipFill.BackgroundColor3 = C.Focal
+skipFill.BackgroundTransparency = 0.5 -- se ve el texto a través
+skipFill.BorderSizePixel = 0
+skipFill.Size = UDim2.fromScale(0, 1)
+skipFill.ZIndex = skip.ZIndex
+skipFill.Parent = skip
+local holdStart
+skip.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch
+		or input.KeyCode == Enum.KeyCode.ButtonA then
+		holdStart = os.clock()
+	end
+end)
+skip.InputEnded:Connect(function() holdStart = nil skipFill.Size = UDim2.fromScale(0, 1) end)
+RunService.RenderStepped:Connect(function()
+	if not holdStart then return end
+	local k = (os.clock() - holdStart) / SKIP_HOLD
+	skipFill.Size = UDim2.fromScale(math.clamp(k, 0, 1), 1)
+	if k >= 1 then
+		holdStart = nil
+		GuidedRemote:FireServer("Skip")
+	end
+end)
 
 -- Botón de Armería: solo en su paso, a la izquierda (donde está en la ciudad), en carmesí y con una flecha que lo señala
 local armoryHolder = Instance.new("Frame")
@@ -183,7 +209,7 @@ local function render()
 	body.Text = stepText(step)
 	counter.Text = L.t("gt.counter", { step = index, total = #G.Steps })
 	if needs[step] then counter.Text ..= (" · %d/%d"):format(count, needs[step]) end
-	skip.Text = L.t("gt.skip")
+	skip.Text = L.t("gt.skipHold")
 	armory.Text = L.t("ui.lobby.dock.armory")
 	skip.Visible = step ~= "done"
 	armoryHolder.Visible = step == "armory" and gui.Enabled
@@ -354,6 +380,7 @@ local function refresh()
 	gui.Enabled = inYard and not player:GetAttribute("InitialLoading") and not player:GetAttribute("MainMenuOpen")
 		and not player:GetAttribute("MenuOpen")
 	if gui.Enabled then render() focusTutorial() else armoryHolder.Visible = false codexCard.Visible = false end
+	skip.Visible = gui.Enabled and G.Steps[index] ~= "done"
 end
 for _, attr in { "InTutorial", "InitialLoading", "MainMenuOpen", "MenuOpen" } do
 	player:GetAttributeChangedSignal(attr):Connect(refresh)
