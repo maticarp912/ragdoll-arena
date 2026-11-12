@@ -112,4 +112,15 @@ CityConfig.PlazaFinish = {
 
 CityConfig.Seed = 1888
 
+-- 12/11/2026: patio del tutorial guiado (TutorialService + GuidedTutorial.client). Lejos de la ciudad, flotando.
+CityConfig.GuidedTutorial = {
+	Origin = Vector3.new(-450, 300, 900), Size = 90, WallHeight = 3, PillarHeight = 12,
+	Floor = Color3.fromRGB(86, 88, 96), Wall = Color3.fromRGB(58, 60, 68), Torch = Color3.fromRGB(255, 170, 80),
+	TorchRange = 22, TorchBrightness = 1.6, Marker = Color3.fromRGB(120, 200, 255), MarkerSize = 9,
+	SpawnOffset = Vector3.new(0, 3, 32), MarkerOffset = Vector3.new(0, 0.2, 14),
+	DummyOffsets = { Vector3.new(-9, 3, -6), Vector3.new(9, 3, -6) }, BotOffset = Vector3.new(0, 3, -24),
+	Steps = 11, BotFromStep = 9, MinHealth = 0.3, RefillHealth = 0.7, FallLimit = 40,
+	MarkerReach = 6, ComboWindow = 3, LightHits = 2, BlocksNeeded = 2,
+}
+
 return CityConfig

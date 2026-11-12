@@ -527,6 +527,8 @@ local function setupPlayer(player: Player)
 end
 
 Dummies.setup(dummyHomes)
+-- 12/11/2026: el tutorial guiado devuelve a los jugadores a la ciudad con este punto
+workspace:SetAttribute("LobbySpawn", lobbyCFrame)
 
 Players.PlayerAdded:Connect(setupPlayer)
 for _, p in Players:GetPlayers() do

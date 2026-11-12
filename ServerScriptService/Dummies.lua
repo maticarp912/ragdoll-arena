@@ -38,7 +38,7 @@ Dummies.ModeNames = {
 }
 -- Pausa entre elegir el lado y empezar el golpe (para que se lea en el triángulo)
 local DIR_TELL = 0.3
-local MAX_DUMMIES = 6
+local MAX_DUMMIES = 10 -- 6 del patio + los del tutorial guiado
 local TARGET_RANGE = 26   -- solo persigue a jugadores cerca de su sitio
 
 local folder = workspace:FindFirstChild("Dummies")
@@ -170,7 +170,8 @@ local function think(slot)
 	if not hum or not root then return end
 	local brain = slot.brain
 	local t = now()
-	local mode = workspace:GetAttribute("DummyMode") or "Idle"
+	-- 12/11/2026: un muñeco puede tener su propio modo (tutorial guiado); si no, el global
+	local mode = (type(slot.mode) == "function" and slot.mode()) or slot.mode or workspace:GetAttribute("DummyMode") or "Idle"
 
 	-- Se cura solo tras un rato sin recibir daño
 	if hum.Health < hum.MaxHealth and t - (model:GetAttribute("LastDamagedAt") or 0) >= CFG.Debug.DummyHealDelay then
@@ -300,12 +301,12 @@ local function respawn(slot)
 	end)
 end
 
-function Dummies.add(home)
+function Dummies.add(home, mode)
 	if #slots >= MAX_DUMMIES then return false end
-	local slot = { home = home, model = nil, brain = {} }
+	local slot = { home = home, model = nil, brain = {}, mode = mode }
 	table.insert(slots, slot)
 	respawn(slot)
-	return true
+	return true, slot
 end
 
 function Dummies.setup(homes)

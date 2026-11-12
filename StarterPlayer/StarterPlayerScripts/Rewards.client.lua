@@ -2500,9 +2500,8 @@ task.spawn(function()
 	local changedEv = remotes:WaitForChild("RewardsChanged", 15)
 	if changedEv and changedEv:IsA("RemoteEvent") then
 		changedEv.OnClientEvent:Connect(function(payload)
-			if type(payload) == "table" and payload.source == "Tutorial" and type(payload.reward) == "table" then
-				showPrizeCelebration(payload.reward)
-			end
+			-- 12/11/2026 (pedido del usuario): los pasos del tutorial ya no abren el cofre en mitad de la pantalla.
+			-- El premio se cobra igual; solo se avisa con el panel del tutorial.
 			refreshState(true)
 		end)
 	end

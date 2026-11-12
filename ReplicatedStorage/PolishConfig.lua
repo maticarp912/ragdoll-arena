@@ -18,6 +18,26 @@ return {
    InfusionY = 38, InfusionWidth = 220, InfusionIcon = 26, ShadowTintLift = 0.35, RivalWidth = 300,
    StunWidth = 260, StunHeight = 8, GuardY = 26, GuardWidth = 440, GuardHeight = 14, Shield = 34 },
   InfusionIcon = { Size = 28, ActiveAmp = 0.14, ActiveSpeed = 9, FullAmp = 0.06, FullSpeed = 4, ActiveWobble = 40, ExhaustTilt = 14 } },
+ -- 12/11/2026: menú inicial (MainMenu.client): escena del caballero, opciones y despertar
+ MainMenu = {
+  Seed = 77, Origin = Vector3.new(0, 1400, -7000), HillRadius = 220, Rocks = 14, RockSpread = 160, RockDistance = 110,
+  RockHeight = { Min = 14, Max = 40 }, Flowers = 260, FlowerSpread = 60, OrangeShare = 0.55,
+  Stars = 420, SkyYaw = 75, SkyPitch = { Min = 8, Max = 70 }, SkyRadius = 260, StarSize = { Min = 0.5, Max = 1.6 }, TwinklePerFrame = 4,
+  MoonYaw = -8, MoonPitch = 34, MoonSize = 9,
+  Grass = Color3.fromRGB(28, 70, 46), FarGrass = Color3.fromRGB(12, 26, 22), Rock = Color3.fromRGB(14, 16, 22),
+  Orange = Color3.fromRGB(255, 140, 50), Blue = Color3.fromRGB(110, 180, 255), Star = Color3.fromRGB(255, 186, 74),
+  Moon = Color3.fromRGB(205, 225, 255), WarmLight = Color3.fromRGB(255, 170, 110), WarmRange = 40, WarmBrightness = 1.2,
+  LightOffset = Vector3.new(4, 14, 6),
+  SwordSkin = "CrimsonEclipse", SwordScale = 2.6, SwordOffset = Vector3.new(4, 2, -2), SwordTilt = -12, SwordLean = 6, SwordBuried = 0.22,
+  CameraOffset = Vector3.new(-2, 7, 24), CameraLook = Vector3.new(2, 13, -12), CameraDrift = 0.8, FieldOfView = 60,
+  TitleColor = Color3.fromRGB(242, 230, 190), OptionColor = Color3.fromRGB(226, 218, 196), OptionHover = Color3.fromRGB(255, 196, 92),
+  OptionSize = 34, OptionHeight = 48, OptionStep = 62,
+  SettleTime = 0.6, LieHeight = 0.7, SitHeight = 2.3, EyeHeight = 4.6, ThirdUp = 1.6, ThirdBack = 11, ThirdSide = 1.5,
+  LieTime = 1.2, SitTime = 1.4, StandTime = 1.8, BlurStart = 22,
+ },
+ -- 12/11/2026: ayuda de botones abajo a los costados (ControlHints.client), solo PC y mando
+ ControlHints = { Margin = 12, Bottom = 10, Width = 420, Gap = 4, RowHeight = 26, RowTransparency = 0.25, ChipHeight = 20,
+  ChipColor = Color3.fromRGB(236, 238, 242), ChipText = Color3.fromRGB(16, 18, 24), ChipTextSize = 13, TextSize = 16 },
  -- 12/11/2026: contorno de equipo en partida (TeamOutline.client)
  TeamOutline = { Ally = Color3.fromRGB(70, 150, 255), Enemy = Color3.fromRGB(235, 50, 50), Transparency = 0.1, Interval = 0.25 },
  MobileHUD = {

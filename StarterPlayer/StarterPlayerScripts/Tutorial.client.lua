@@ -117,7 +117,8 @@ RunService.RenderStepped:Connect(function(dt)
 		gui.Enabled = false
 		return
 	end
-	local show = finishedAt ~= nil or eligible()
+	-- 12/11/2026: en el patio del tutorial guiado y en el menú inicial manda GuidedTutorial / MainMenu
+	local show = (finishedAt ~= nil or eligible()) and not player:GetAttribute("InTutorial") and not player:GetAttribute("MainMenuOpen")
 	gui.Enabled = show
 	if not show then return end
 
