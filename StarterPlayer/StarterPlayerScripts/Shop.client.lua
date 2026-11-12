@@ -145,6 +145,8 @@ backdrop.ZIndex = 1
 backdrop.Parent = gui
 
 local BASE_W, BASE_H = 1060, 650
+-- 12/11/2026 (pedido del usuario): categorías en una barra lateral a la izquierda, estilo tienda de temporada
+local SIDEBAR = 210
 local panel = UiTheme.panel({
 	name = "ShopWindow",
 	parent = gui,
@@ -1145,8 +1147,9 @@ function render()
 	local width = mobile and math.min(700, usable.X - 28) or BASE_W
 	local height = mobile and math.clamp(usable.Y - 28, 540, 760) or BASE_H
 	compactShop = mobile
-	panel.Size = UDim2.fromOffset(width, height)
-	scale.Scale = mobile and math.min(1, (usable.Y - 28) / height) or UiTheme.computeScale(usable, width, height, player)
+	local side = mobile and 0 or SIDEBAR
+	panel.Size = UDim2.fromOffset(width + side, height)
+	scale.Scale = mobile and math.min(1, (usable.Y - 28) / height) or UiTheme.computeScale(usable, width + side, height, player)
 
 	-- Cabecera: título del Escaparate, saldo de monedas, botón Abrir Armería y botón Cerrar
 	local header = Instance.new("Frame")
@@ -1220,6 +1223,26 @@ function render()
 		end,
 	})
 
+	local root = panel
+	local sidebar, host
+	if not mobile then
+		sidebar = Instance.new("Frame")
+		sidebar.Name = "Sidebar"
+		sidebar.Position = UDim2.fromOffset(0, 66)
+		sidebar.Size = UDim2.new(0, SIDEBAR, 1, -78)
+		sidebar.BackgroundColor3 = C.BgAbyss
+		sidebar.BackgroundTransparency = 0.35
+		sidebar.BorderSizePixel = 0
+		sidebar.Parent = root
+		host = Instance.new("Frame")
+		host.Name = "Content"
+		host.BackgroundTransparency = 1
+		host.Position = UDim2.fromOffset(SIDEBAR, 0)
+		host.Size = UDim2.new(1, -SIDEBAR, 1, 0)
+		host.Parent = root
+	end
+	local panel = host or root -- lo que sigue se dibuja a la derecha de la barra lateral
+
 	-- Barra de pestañas del Escaparate: Destacado, Skins, Auras, Multiplicadores, Almas y Monedas
 	local tabsBar = Instance.new(mobile and "ScrollingFrame" or "Frame")
 	if mobile then
@@ -1239,13 +1262,14 @@ function render()
 
 	local firstButton = nil
 	local tabDefs = {
-		{ id = "Showcase", label = L.t("ui.shop.tab.Showcase") },
-		{ id = "Skins", label = L.t("ui.shop.tab.Skins") },
-		{ id = "Auras", label = L.t("ui.shop.tab.Auras") },
-		{ id = "Boosts", label = L.t("ui.shop.tab.Boosts") },
-		{ id = "Vault", label = L.t("mz.vault") },
+		{ id = "Showcase", label = L.t("ui.shop.side.Weapons"), icon = "armory" },
+		{ id = "Skins", label = L.t("ui.shop.tab.Skins"), icon = "attack" },
+		{ id = "Auras", label = L.t("ui.shop.tab.Auras"), icon = "aura_crown" },
+		{ id = "Boosts", label = L.t("ui.shop.side.Boosts"), icon = "boost_souls" },
+		{ id = "Vault", label = L.t("mz.vault"), icon = "rewards" },
+		{ id = "Coins", label = L.t("ui.shop.side.Souls"), icon = "soul" },
 	}
-	if debugSouls then table.insert(tabDefs, { id = "Souls", label = L.t("ui.shop.tab.Souls") }) end
+	if debugSouls then table.insert(tabDefs, { id = "Souls", label = L.t("ui.shop.tab.Souls"), icon = "gem" }) end
 	if tab == "Souls" and not debugSouls then tab = "Showcase" end
 	for i, def in tabDefs do
 		local b = UiTheme.tabButton({
@@ -1257,6 +1281,7 @@ function render()
 			active = tab == def.id,
 			onClick = function()
 				if def.id == "Vault" then openVault(nil) return end
+				if def.id == "Coins" then openVault("Gems") return end
 				tab = def.id inspecting = false
 				render()
 			end,
@@ -1266,6 +1291,60 @@ function render()
 			firstButton = b
 			if mobile then tabsBar.CanvasPosition = Vector2.new((i - 1) * 134, 0) end
 		end
+	end
+
+	-- Barra lateral (PC y mando): categorías grandes, la activa en dorado con una marca a la izquierda
+	if sidebar then
+		tabsBar.Visible = false
+		local list = Instance.new("UIListLayout")
+		list.Padding = UDim.new(0, 4)
+		list.SortOrder = Enum.SortOrder.LayoutOrder
+		list.Parent = sidebar
+		local pad = Instance.new("UIPadding")
+		pad.PaddingTop = UDim.new(0, 14)
+		pad.Parent = sidebar
+		for i, def in tabDefs do
+			local active = tab == def.id
+			local b = Instance.new("TextButton")
+			b.Name = "Side_" .. def.id
+			b.LayoutOrder = i
+			b.AutoButtonColor = false
+			b.Size = UDim2.new(1, 0, 0, 54)
+			b.BackgroundColor3 = C.BgPanel
+			b.BackgroundTransparency = active and 0.2 or 1
+			b.BorderSizePixel = 0
+			b.Text = ""
+			b.Parent = sidebar
+			local mark = Instance.new("Frame")
+			mark.Size = UDim2.new(0, 4, 1, -12)
+			mark.Position = UDim2.fromOffset(0, 6)
+			mark.BackgroundColor3 = C.GoldBright
+			mark.BorderSizePixel = 0
+			mark.Visible = active
+			mark.Parent = b
+			local ic = UiAssets.icon(b, def.icon, 24, active and C.GoldBright or C.TextSecondary)
+			ic.AnchorPoint = Vector2.new(0, 0.5)
+			ic.Position = UDim2.new(0, 18, 0.5, 0)
+			UiTheme.label({ parent = b, position = UDim2.fromOffset(52, 0), size = UDim2.new(1, -58, 1, 0),
+				text = string.upper(def.label), font = "Title", textSize = UiTheme.TextSizes.LG, scaled = true, maxTextSize = 24,
+				minTextSize = 12, color = active and C.GoldBright or C.TextSecondary })
+			b.MouseEnter:Connect(function() if not active then b.BackgroundTransparency = 0.6 end end)
+			b.MouseLeave:Connect(function() if not active then b.BackgroundTransparency = 1 end end)
+			b.Activated:Connect(function()
+				UiTheme.playSound("UI_Click")
+				if def.id == "Vault" then openVault(nil) return end
+				if def.id == "Coins" then openVault("Gems") return end
+				tab = def.id inspecting = false
+				render()
+			end)
+			if active then firstButton = b end
+		end
+		-- título grande de la categoría arriba del contenido
+		local current
+		for _, def in tabDefs do if def.id == tab then current = def end end
+		UiTheme.label({ parent = panel, position = UDim2.fromOffset(20, 66), size = UDim2.new(1, -40, 0, 42),
+			text = string.upper(current and current.label or ""), font = "Title", textSize = UiTheme.TextSizes.XXL or 30,
+			scaled = true, maxTextSize = 34, color = C.TextPrimary })
 	end
 
 	local top = mobile and 204 or 116

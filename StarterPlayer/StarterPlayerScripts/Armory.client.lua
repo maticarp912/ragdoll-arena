@@ -93,7 +93,10 @@ scale.Parent = panel
 ----------------------------------------------------------------------
 local tab = "Weapons"
 local weaponFilter = player:GetAttribute("WeaponId") or "Sword"
-local skinOwnership = "owned" -- "owned" | "all"
+local skinOwnership = "owned" -- "owned" | "all" | "locked"
+local skinSort = "quality" -- "quality" | "alpha" | "owned" (12/11/2026)
+local SKIN_COLUMN = 150 -- ancho de la columna de armas en Skins
+local RARITY_RANK = { Common = 1, Uncommon = 2, Rare = 3, Epic = 4, Legendary = 5, Mythic = 6 }
 local selectedId = nil
 local opened = false
 local busy = false
@@ -799,42 +802,63 @@ function render()
 		return
 	end
 	local leftW = mobile and (width - 40) or math.floor(width * 0.58)
+	-- 12/11/2026 (pedido del usuario): en Skins, las armas en una columna a la izquierda y arriba
+	-- los filtros de estado (todas / en propiedad / bloqueadas) y de orden (calidad, A-Z, primero las mías).
+	local listX = 20
 	if tab == "Skins" then
-		local weaponBar = Instance.new("Frame")
-		weaponBar.Position = UDim2.fromOffset(20, top)
-		weaponBar.Size = UDim2.fromOffset(leftW, 34)
-		weaponBar.BackgroundTransparency = 1
-		weaponBar.Parent = panel
-
-		local bw = math.floor(leftW / #Weapons.Order)
-		for i, wid in Weapons.Order do
-			UiTheme.button({
-				parent = weaponBar,
-				position = UDim2.fromOffset((i - 1) * bw, 0),
-				size = UDim2.fromOffset(bw - 6, 34),
-				text = L.t("weapon." .. wid),
-				selected = wid == weaponFilter,
-				textSize = UiTheme.TextSizes.XS,
-				onClick = function()
-					weaponFilter = wid
-					selectedId = nil
-					render()
-				end,
-			})
-		end
-
+		local stateKeys = { all = "ar.state.all", owned = "ar.state.owned", locked = "ar.state.locked" }
+		local sortKeys = { quality = "ar.sort.quality", alpha = "ar.sort.alpha", owned = "ar.sort.owned" }
+		local filterW = mobile and math.floor((leftW - 8) / 2) or 220
 		UiTheme.button({
+			name = "StateFilter",
 			parent = panel,
-			position = UDim2.fromOffset(20, top + 38),
-			size = UDim2.fromOffset(220, 32),
-			text = L.t("ui.filter.ownership", { value = skinOwnership == "owned" and L.t("ui.armory.ownedOnly") or L.t("ui.armory.allSkins") }),
+			position = UDim2.fromOffset(mobile and 20 or (20 + SKIN_COLUMN + 10), top),
+			size = UDim2.fromOffset(filterW, 32),
+			text = L.t("ar.state", { value = L.t(stateKeys[skinOwnership] or "ar.state.all") }),
 			textSize = UiTheme.TextSizes.XS,
 			onClick = function()
-				skinOwnership = skinOwnership == "owned" and "all" or "owned"
+				skinOwnership = ({ all = "owned", owned = "locked", locked = "all" })[skinOwnership] or "all"
 				render()
 			end,
 		})
-		top += 78
+		UiTheme.button({
+			name = "SortFilter",
+			parent = panel,
+			position = UDim2.fromOffset(mobile and (28 + filterW) or (20 + SKIN_COLUMN + 10 + filterW + 8), top),
+			size = UDim2.fromOffset(filterW, 32),
+			text = L.t("ar.sort", { value = L.t(sortKeys[skinSort] or "ar.sort.quality") }),
+			textSize = UiTheme.TextSizes.XS,
+			onClick = function()
+				skinSort = ({ quality = "alpha", alpha = "owned", owned = "quality" })[skinSort] or "quality"
+				render()
+			end,
+		})
+		top += 40
+
+		if mobile then
+			local weaponBar = Instance.new("Frame")
+			weaponBar.Position = UDim2.fromOffset(20, top)
+			weaponBar.Size = UDim2.fromOffset(leftW, 34)
+			weaponBar.BackgroundTransparency = 1
+			weaponBar.Parent = panel
+			local bw = math.floor(leftW / #Weapons.Order)
+			for i, wid in Weapons.Order do
+				UiTheme.button({ parent = weaponBar, position = UDim2.fromOffset((i - 1) * bw, 0), size = UDim2.fromOffset(bw - 6, 34),
+					text = L.t("weapon." .. wid), selected = wid == weaponFilter, textSize = UiTheme.TextSizes.XS,
+					onClick = function() weaponFilter = wid selectedId = nil render() end })
+			end
+			top += 40
+		else
+			-- columna de armas
+			for i, wid in Weapons.Order do
+				UiTheme.button({ name = "Weapon_" .. wid, parent = panel, position = UDim2.fromOffset(20, top + (i - 1) * 50),
+					size = UDim2.fromOffset(SKIN_COLUMN, 44), text = L.t("weapon." .. wid), selected = wid == weaponFilter,
+					icon = "attack", iconSize = 18, textSize = UiTheme.TextSizes.SM,
+					onClick = function() weaponFilter = wid selectedId = nil render() end })
+			end
+			listX = 20 + SKIN_COLUMN + 10
+			leftW -= SKIN_COLUMN + 10
+		end
 	end
 
 	local contentH = height - top - 44
@@ -842,7 +866,7 @@ function render()
 
 	local content = Instance.new("ScrollingFrame")
 	content.Name = "ArmoryList"
-	content.Position = UDim2.fromOffset(20, top)
+	content.Position = UDim2.fromOffset(listX, top)
 	content.Size = UDim2.fromOffset(leftW, listH)
 	content.BackgroundTransparency = 1
 	content.BorderSizePixel = 0
@@ -853,9 +877,9 @@ function render()
 	content.Parent = panel
 
 	-- Panel derecho: Vista 3D del Personaje + resumen de pieza seleccionada
-	local rightX = mobile and 20 or (28 + leftW)
+	local rightX = mobile and 20 or (listX + 8 + leftW)
 	local rightY = mobile and (top + listH + 8) or 118
-	local rightW = mobile and (width - 40) or (width - leftW - 48)
+	local rightW = mobile and (width - 40) or (width - (listX + 8 + leftW) - 20)
 	local rightH = mobile and (contentH - listH - 8) or (height - 118 - 44)
 
 	local stagePanel = UiTheme.panel({
@@ -974,6 +998,29 @@ function render()
 
 		local ids = tab == "Weapons" and Weapons.Order
 			or (tab == "Skins" and Skins.Order or (Auras and Auras.Order or {}))
+		if tab == "Skins" then
+			ids = table.clone(ids)
+			local function rank(id)
+				local sd = Skins.Data[id]
+				local r = sd and Rewards.rarityTheme(Rewards.skinRarity(id, sd))
+				return RARITY_RANK[r] or 0
+			end
+			local orderOf = {}
+			for i, id in Skins.Order do orderOf[id] = i end
+			table.sort(ids, function(x, y)
+				if skinSort == "owned" and (ownedSkinsMap[x] and true or false) ~= (ownedSkinsMap[y] and true or false) then
+					return ownedSkinsMap[x] == true
+				end
+				if skinSort == "alpha" then
+					local nx, ny = itemName(x), itemName(y)
+					if nx ~= ny then return nx < ny end
+				else
+					local rx, ry = rank(x), rank(y)
+					if rx ~= ry then return rx > ry end
+				end
+				return orderOf[x] < orderOf[y]
+			end)
+		end
 
 		for _, id in ids do
 			local s = tab == "Skins" and Skins.Data[id] or nil
@@ -982,7 +1029,8 @@ function render()
 			if tab == "Skins" and s then
 				show = (not s.weapon or s.weapon == weaponFilter)
 					and not s.comingSoon
-					and (skinOwnership == "all" or ownedSkinsMap[id])
+					and (skinOwnership == "all" or (skinOwnership == "owned" and ownedSkinsMap[id])
+						or (skinOwnership == "locked" and not ownedSkinsMap[id]))
 					and (not s.boxOnly or ownedSkinsMap[id]) -- 10/11: las de Tormenta solo si las tenés
 			elseif tab == "Auras" and a then
 				show = ownedAurasMap[id] or skinOwnership == "all"

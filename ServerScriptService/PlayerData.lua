@@ -108,7 +108,7 @@ local function refresh(player: Player)
 	player:SetAttribute("InfusionId", data.InfusionId)
 	player:SetAttribute("Language", data.Language)
  player:SetAttribute("TouchLayoutJson", HttpService:JSONEncode(data.TouchLayout))
- for _, stat in { "Wins", "Kills", "Knockdowns", "Matches" } do player:SetAttribute("Stat" .. stat, data.Stats[stat] or E.Zero) end
+ for _, stat in { "Wins", "Kills", "Knockdowns", "Matches", "Parries", "RingOuts", "Kicks", "Finishers", "GuardBreaks", "Throws" } do player:SetAttribute("Stat" .. stat, data.Stats[stat] or E.Zero) end
  local auras = {}
  for id in Auras.Data do if PlayerData.owns(player, "OwnedAuras", id) then table.insert(auras, id) end end
  table.sort(auras) player:SetAttribute("OwnedAuras", table.concat(auras, ","))

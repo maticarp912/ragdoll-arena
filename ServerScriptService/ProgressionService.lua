@@ -118,6 +118,19 @@ function Service.boost(player, kind, multiplier, seconds)
  b[key] = math.min(P.MaxBoostSeconds, b[key] + seconds)
  Service.refresh(player) Data.saveSoon(player) return true
 end
+-- Atributo WeaponStats = "Sword:12:7,Mace:3:1" (arma:partidas:victorias) para el Perfil
+function Service.publishWeaponStats(player, d)
+ d = d or Data.get(player)
+ if not d or type(d.Mastery) ~= "table" then return end
+ local parts = {}
+ for weapon, m in d.Mastery do
+  if type(m) == "table" and (tonumber(m.games) or 0) > 0 then
+   table.insert(parts, weapon .. ":" .. math.floor(tonumber(m.games) or 0) .. ":" .. math.floor(tonumber(m.wins) or 0))
+  end
+ end
+ player:SetAttribute("WeaponStats", table.concat(parts, ","))
+end
+
 function Service.mastery(player, weapon, won, kills)
  local d = Data.get(player)
  if not d or not Weapons.Data[weapon] then return nil end
@@ -125,6 +138,10 @@ function Service.mastery(player, weapon, won, kills)
  if type(m) ~= "table" then m = { level = 1, xp = 0, rebirths = 0, awarded = {} } d.Mastery[weapon] = m end
  local cfg = P.Mastery
  if type(m.awarded) ~= "table" then m.awarded = {} end
+ -- 12/11/2026: partidas y victorias por arma (pantalla de Perfil). Cuentan desde la 0.3.
+ m.games = (tonumber(m.games) or 0) + 1
+ if won then m.wins = (tonumber(m.wins) or 0) + 1 end
+ Service.publishWeaponStats(player, d)
  local function bounded(n, fallback, max)
   return type(n) == "number" and n == n and math.abs(n) < math.huge and math.clamp(math.floor(n), 0, max) or fallback
  end
@@ -194,4 +211,14 @@ RunService.Heartbeat:Connect(function(dt)
  end
 end)
 Players.PlayerRemoving:Connect(function(player) last[player] = nil end)
+Players.PlayerAdded:Connect(function(pl)
+ task.spawn(function()
+  for _ = 1, 30 do
+   if not pl.Parent then return end
+   if Data.get(pl) then Service.publishWeaponStats(pl) return end
+   task.wait(1)
+  end
+ end)
+end)
+
 return Service

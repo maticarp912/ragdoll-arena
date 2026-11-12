@@ -184,17 +184,23 @@ end)
 ----------------------------------------------------------------------
 -- Se muestra solo en el patio y después del menú inicial
 ----------------------------------------------------------------------
+local wasInYard = false
 local function refresh()
 	local on = player:GetAttribute("InTutorial") == true and player:GetAttribute("MainMenuOpen") ~= true
-	if on and not gui.Enabled then
+		and player:GetAttribute("MenuOpen") ~= true
+	-- arranca de cero solo al entrar al patio (abrir un menú no reinicia el progreso)
+	local inYard = player:GetAttribute("InTutorial") == true
+	if inYard and not wasInYard then
 		index, count = 1, 0
-		render()
 	end
+	wasInYard = inYard
+	if on then render() end
 	gui.Enabled = on
 	scale.Scale = Device.isTouch() and 0.8 or 1
 end
 player:GetAttributeChangedSignal("InTutorial"):Connect(refresh)
 player:GetAttributeChangedSignal("MainMenuOpen"):Connect(refresh)
+player:GetAttributeChangedSignal("MenuOpen"):Connect(refresh)
 L.Changed:Connect(function() if gui.Enabled then render() end end)
 header.Text = L.t("gt.header")
 refresh()

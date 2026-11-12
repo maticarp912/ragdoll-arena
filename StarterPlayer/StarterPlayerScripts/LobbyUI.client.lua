@@ -193,6 +193,25 @@ local boardsBtn = UiTheme.button({
 	end,
 })
 
+-- 12/11/2026: Perfil (ProfileUI.client): estadísticas, armas más usadas y título
+local profileBtn = UiTheme.button({
+	name = "ProfileBtn",
+	parent = leftDock,
+	layoutOrder = 7,
+	size = UDim2.fromOffset(168, 42),
+	text = L.t("pf.title"),
+	icon = "trophy",
+	iconSize = 20,
+	font = "Header",
+	textSize = UiTheme.TextSizes.MD,
+	variant = "secondary",
+	onClick = function()
+		player:SetAttribute("ProfileOpen", not player:GetAttribute("ProfileOpen"))
+	end,
+})
+leftDock.Size = UDim2.fromOffset(172, 344)
+L.Changed:Connect(function() profileBtn.Text = L.t("pf.title") end)
+
 ----------------------------------------------------------------------
 -- 2. Barra de cola inferior (Contrato C3)
 --    Abajo al centro: buscar 1v1 o 2v2.
