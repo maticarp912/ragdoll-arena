@@ -123,7 +123,7 @@ CityConfig.GuidedTutorial = {
 	TorchRange = 22, TorchBrightness = 1.6, Marker = Color3.fromRGB(120, 200, 255), MarkerSize = 9,
 	SpawnOffset = Vector3.new(0, 3, 32), MarkerOffset = Vector3.new(0, 0.2, 14),
 	DummyOffsets = { Vector3.new(-9, 3, -6), Vector3.new(9, 3, -6) }, BotOffset = Vector3.new(0, 3, -24),
-	Steps = { "move", "armory", "lock", "switch", "light", "dirs", "heavy", "combo", "dodge", "down", "carry", "throw", "block", "parry", "infuse", "done" },
+	Steps = { "move", "armory", "lock", "switch", "light", "dirs", "heavy", "combo", "dodge", "down", "carry", "throw", "block", "parry", "infuse", "codex", "done" }, -- 12/11/2026: «codex» = ficha rápida de infusiones y armas
 	MinHealth = 0.3, RefillHealth = 0.7, FallLimit = 40,
 	MarkerReach = 6, ComboWindow = 3, LightHits = 2, BlocksNeeded = 2,
 }

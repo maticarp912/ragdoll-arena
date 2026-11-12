@@ -113,6 +113,61 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
+-- 12/11/2026 (pedido del usuario): después de la infusión, una ficha rápida de qué hace cada infusión y cada arma
+local UiAssets = require(ReplicatedStorage:WaitForChild("UiAssets"))
+local Infusions = require(ReplicatedStorage:WaitForChild("Infusions"))
+local WeaponData = require(ReplicatedStorage:WaitForChild("WeaponData"))
+local codexCard = UiTheme.panel({ name = "Codex", parent = gui, anchor = Vector2.new(0.5, 0), position = UDim2.new(0.5, 0, 0, 190),
+	size = UDim2.fromOffset(760, 330), bg = C.BgPrimary, transparency = 0.04, ornaments = true, ornamentSize = 10 })
+codexCard.Visible = false
+local codexScale = Instance.new("UIScale")
+codexScale.Parent = codexCard
+local advanceRef -- se completa más abajo (advance se define después)
+local function buildCodex()
+	for _, ch in codexCard:GetChildren() do
+		if ch:IsA("GuiObject") and ch.Name ~= "FrameArt" and ch.Name ~= "Ornaments" then ch:Destroy() end
+	end
+	local function section(y, text)
+		UiTheme.label({ parent = codexCard, position = UDim2.fromOffset(20, y), size = UDim2.new(1, -40, 0, 22), text = text,
+			font = "Title", textSize = 20, color = C.GoldBright })
+	end
+	section(12, L.t("gt.codex.infusions"))
+	for i, id in Infusions.Order do
+		local def = Infusions.get(id)
+		local cell = Instance.new("Frame")
+		cell.BackgroundTransparency = 1
+		cell.Position = UDim2.fromOffset(20 + (i - 1) * 182, 38)
+		cell.Size = UDim2.fromOffset(176, 92)
+		cell.Parent = codexCard
+		local ic = UiAssets.icon(cell, id, 34, def and def.color or C.TextPrimary)
+		ic.Position = UDim2.fromOffset(0, 2)
+		UiTheme.label({ parent = cell, position = UDim2.fromOffset(40, 0), size = UDim2.new(1, -40, 0, 22), text = L.t("infusion." .. id),
+			font = "Header", textSize = 18, color = def and def.color or C.TextPrimary })
+		local d = UiTheme.label({ parent = cell, position = UDim2.fromOffset(0, 40), size = UDim2.new(1, -4, 0, 50),
+			text = L.t("infusionMotto." .. id), font = "Body", textSize = 15, color = C.TextSecondary,
+			alignY = Enum.TextYAlignment.Top })
+		d.TextWrapped = true
+	end
+	section(136, L.t("gt.codex.weapons"))
+	for i, id in WeaponData.Order do
+		local cell = Instance.new("Frame")
+		cell.BackgroundTransparency = 1
+		cell.Position = UDim2.fromOffset(20 + (i - 1) * 145, 162)
+		cell.Size = UDim2.fromOffset(140, 104)
+		cell.Parent = codexCard
+		UiTheme.label({ parent = cell, size = UDim2.new(1, 0, 0, 22), text = L.t("weapon." .. id), font = "Header", textSize = 18,
+			color = C.TextPrimary })
+		local d = UiTheme.label({ parent = cell, position = UDim2.fromOffset(0, 24), size = UDim2.new(1, -6, 0, 78),
+			text = L.t("weaponDesc." .. id), font = "Body", textSize = 15, color = C.TextSecondary, alignY = Enum.TextYAlignment.Top })
+		d.TextWrapped = true
+	end
+	UiTheme.label({ parent = codexCard, position = UDim2.fromOffset(20, 270), size = UDim2.new(1, -230, 0, 44),
+		text = L.t("gt.codex.hint"), font = "Body", textSize = 15, color = C.TextSecondary, alignY = Enum.TextYAlignment.Top }).TextWrapped = true
+	UiTheme.button({ name = "CodexOk", parent = codexCard, anchor = Vector2.new(1, 1), position = UDim2.new(1, -16, 1, -14),
+		size = UDim2.fromOffset(190, 48), text = L.t("gt.codex.ok"), font = "Title", textSize = 20, variant = "focal",
+		onClick = function() if advanceRef then advanceRef() end end })
+end
+
 local index, count = 1, 0
 local seenDirs = {}
 local comboTimes = {}
@@ -132,6 +187,16 @@ local function render()
 	armory.Text = L.t("ui.lobby.dock.armory")
 	skip.Visible = step ~= "done"
 	armoryHolder.Visible = step == "armory" and gui.Enabled
+	local showCodex = step == "codex" and gui.Enabled
+	if showCodex and not codexCard.Visible then
+		buildCodex()
+		local vp = gui.AbsoluteSize
+		local fit = math.clamp(math.min((vp.X - 24) / 760, (vp.Y - 200) / 330), 0.5, 1)
+		codexScale.Scale = fit * 0.9
+		game:GetService("TweenService"):Create(codexScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = fit }):Play()
+		if Device.isGamepad() then game:GetService("GuiService").SelectedObject = codexCard:FindFirstChild("CodexOk", true) end
+	end
+	codexCard.Visible = showCodex
 	player:SetAttribute("TutorialAction", STEP_ACTION[step])
 end
 
@@ -159,6 +224,8 @@ local function advance()
 		end)
 	end
 end
+
+advanceRef = function() if G.Steps[index] == "codex" then advance() end end
 
 local function bump(id)
 	if not gui.Enabled or G.Steps[index] ~= id then return end
@@ -281,11 +348,12 @@ local function refresh()
 		player:SetAttribute("TutorialLesson", nil)
 		player:SetAttribute("TutorialAction", nil)
 		armoryHolder.Visible = false
+		codexCard.Visible = false
 	end
 	wasInYard = inYard
 	gui.Enabled = inYard and not player:GetAttribute("InitialLoading") and not player:GetAttribute("MainMenuOpen")
 		and not player:GetAttribute("MenuOpen")
-	if gui.Enabled then render() focusTutorial() else armoryHolder.Visible = false end
+	if gui.Enabled then render() focusTutorial() else armoryHolder.Visible = false codexCard.Visible = false end
 end
 for _, attr in { "InTutorial", "InitialLoading", "MainMenuOpen", "MenuOpen" } do
 	player:GetAttributeChangedSignal(attr):Connect(refresh)
