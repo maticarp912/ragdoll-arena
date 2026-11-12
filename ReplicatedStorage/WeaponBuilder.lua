@@ -380,6 +380,10 @@ local function addTrailAttachments(part, z0, z1, handleZ, tipPos, basePos)
 	tip.Name = "BladeTip"
 	tip.Position = Vector3.new(tPos.X, tPos.Y, tPos.Z - handleZ)
 	tip.Parent = part
+	local middle = Instance.new("Attachment")
+	middle.Name = "BladeMid"
+	middle.Position = base.Position:Lerp(tip.Position, 0.5)
+	middle.Parent = part
 	local trail = Instance.new("Trail")
 	trail.Name = "SwingTrail"
 	trail.Attachment0 = base

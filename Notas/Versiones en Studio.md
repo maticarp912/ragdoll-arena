@@ -31,3 +31,8 @@ Studio puede conservar accesos viejos en Recientes. Para ir al archivo actual, a
 
 - **Ragdoll Sword pilot test.rbxlx** quedó guardado en F: con la skin Relic10 conectada. La ventana en la que se importó el FBX pedía Guardar como, por lo que se guardó desde la otra ventana editable del mismo archivo de prueba. La skin se construye por ID y el place guardado no contiene la malla gigante de la importación.
 - Pruebas y capturas en [[Versión 0.3#Vigilia Violeta en Studio (punto B)]].
+
+## Ataques direccionales e infusiones (puntos C y D)
+
+- **Ragdoll Sword pilot test.rbxlx** en F: tiene los 21 ataques adaptados, el mínimo efectivo de 0,24 s y las cuatro infusiones de cinco capas para las cinco armas.
+- Las pruebas de impacto, la validación del retarget y las capturas están en [[Versión 0.3#Ataques direccionales restantes (punto C)]] y [[Versión 0.3#Infusiones de cinco capas (punto D)]].

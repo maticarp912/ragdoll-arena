@@ -3,6 +3,8 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local Auras = require(script.Parent:WaitForChild("Auras"))
 local F = Auras.Fx
+local Infusions = require(script.Parent:WaitForChild("Infusions"))
+local I = Infusions.Aura
 local Fx = {}
 function Fx.attach(target, auraId, options)
  options = options or {}
@@ -135,4 +137,136 @@ function Fx.attach(target, auraId, options)
  if not stopped then connection=RunService.Heartbeat:Connect(update) end
  return cleanup
 end
+-- Las cinco capas se montan sobre los attachments del arma que ya usa la estela.
+function Fx.attachInfusion(weapon, id)
+ local def = Infusions.get(id)
+ local profile = I.Profiles[id]
+ local base = weapon:FindFirstChild("BladeBase", true)
+ local tip = weapon:FindFirstChild("BladeTip", true)
+ if not def or not profile or not base or not base:IsA("Attachment") or not tip or not tip:IsA("Attachment") then return nil end
+ local anchor = base.Parent
+ if not anchor or not anchor:IsA("BasePart") then return nil end
+ local delta = tip.WorldPosition - base.WorldPosition
+ if delta.Magnitude < I.MinBladeLength then return nil end
+ local style = I.Weapons[weapon:GetAttribute("WeaponId")] or I.Weapons.Sword
+ local folder = Instance.new("Folder")
+ folder.Name = "InfusionAura"
+ folder:SetAttribute("InfusionId", id)
+ folder.Parent = weapon
+
+ -- Arcos y chispas nacen dentro de una caja angosta soldada al tramo visible.
+ local holder = Instance.new("Part")
+ holder.Name = "InfusionBladeVolume"
+ holder.Size = Vector3.new(style.volume.X, style.volume.Y, delta.Magnitude)
+ holder.Transparency = 1
+ holder.CanCollide = false
+ holder.CanQuery = false
+ holder.CanTouch = false
+ holder.CastShadow = false
+ holder.Massless = true
+ holder.RootPriority = -127
+ local middle = weapon:FindFirstChild("BladeMid", true)
+ local center = middle and middle:IsA("Attachment") and middle.WorldPosition or base.WorldPosition:Lerp(tip.WorldPosition, 0.5)
+ holder.CFrame = CFrame.lookAt(center, center + delta, anchor.CFrame.UpVector)
+ holder.Parent = folder
+ local weld = Instance.new("WeldConstraint")
+ weld.Part0 = anchor
+ weld.Part1 = holder
+ weld.Parent = holder
+ local origin = Instance.new("Attachment")
+ origin.Name = "InfusionOrigin"
+ origin.Parent = holder
+
+ local function beam(name, width, speed, alpha, curl)
+  local b = Instance.new("Beam")
+  b.Name = name
+  b.Attachment0 = base
+  b.Attachment1 = tip
+  b.FaceCamera = true
+  b.Segments = I.BeamSegments
+  b.Color = ColorSequence.new(def.color, def.color2)
+  b.Width0 = width * style.width
+  b.Width1 = b.Width0 * I.TipWidth
+  b.Texture = I.BeamTexture
+  b.TextureMode = Enum.TextureMode.Wrap
+  b.TextureLength = I.BeamTextureLength
+  b.TextureSpeed = speed
+  b.LightEmission = profile.emission
+  b.LightInfluence = I.LightInfluence
+  b.ZOffset = style.depth
+  b.CurveSize0 = curl * style.width
+  b.CurveSize1 = -b.CurveSize0
+  b.Transparency = NumberSequence.new(alpha)
+  b.Parent = holder
+ end
+
+ beam("CentralRay", I.CoreWidth, profile.flow, I.CoreAlpha, profile.curl)
+ for index, glow in I.Glow do
+  beam("Glow" .. index, glow.width, profile.flow * glow.speed, glow.alpha, profile.curl * glow.curve)
+ end
+
+ local function particle(name, parent, texture, settings, rate)
+  local e = Instance.new("ParticleEmitter")
+  e.Name = name
+  e.Texture = texture
+  e.Color = ColorSequence.new(def.color, def.color2)
+  e.Transparency = settings.alpha
+  e.Size = NumberSequence.new(settings.size * style.width, 0)
+  e.Lifetime = settings.life
+  e.LightEmission = profile.emission
+  e.LightInfluence = I.LightInfluence
+  e.Rotation = I.ParticleRotation
+  e.Rate = rate * style.rate
+  if parent == holder then
+   e.Shape = Enum.ParticleEmitterShape.Box
+   e.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+  end
+  e.Parent = parent
+  return e
+ end
+
+ local arcs = particle("Arcs", holder, I.ArcAtlas, I.Arcs, I.Arcs.rate)
+ arcs.LockedToPart = true
+ arcs.Speed = I.Stationary
+ arcs.FlipbookLayout = Enum.ParticleFlipbookLayout.Grid8x8
+ arcs.FlipbookMode = Enum.ParticleFlipbookMode.Loop
+ arcs.FlipbookFramerate = NumberRange.new(profile.arcFps)
+ arcs.FlipbookStartRandom = true
+
+ local volutes = particle("Volutes", style.surfaceVolutes and holder or origin, profile.texture, I.Volutes, profile.rate)
+ volutes.Speed = profile.speed
+ volutes.Acceleration = profile.acceleration
+ volutes.Orientation = Enum.ParticleOrientation.VelocityParallel
+ volutes.SpreadAngle = I.Volutes.spread
+ volutes.Drag = profile.drag
+
+ local sparks = particle("Sparks", holder, I.SparkAtlas, I.Sparks, I.Sparks.rate)
+ sparks.LockedToPart = true
+ sparks.Speed = I.Stationary
+ sparks.FlipbookLayout = Enum.ParticleFlipbookLayout.Grid8x8
+ sparks.FlipbookMode = Enum.ParticleFlipbookMode.Loop
+ sparks.FlipbookFramerate = I.Stationary
+ sparks.FlipbookStartRandom = true
+
+ if weapon:IsA("Tool") then
+  local light = Instance.new("PointLight")
+  light.Name = "InfusionLight"
+  light.Color = def.color
+  light.Brightness = profile.light
+  light.Range = I.LightRange
+  light.Parent = origin
+ end
+
+ local trail = weapon:FindFirstChild("SwingTrail", true)
+ local oldColor
+ if trail and trail:IsA("Trail") then
+  oldColor = trail.Color
+  trail.Color = ColorSequence.new(def.color, def.color2)
+ end
+ return function()
+  folder:Destroy()
+  if oldColor and trail.Parent then trail.Color = oldColor end
+ end
+end
+
 return Fx

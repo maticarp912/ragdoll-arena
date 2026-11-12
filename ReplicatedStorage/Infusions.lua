@@ -1,5 +1,5 @@
 -- ModuleScript: ReplicatedStorage/Infusions
--- Las infusiones son la "ulti": con la barra llena, Q enciende el arma durante unos segundos.
+-- Las infusiones son la "ulti": con la barra llena, R enciende el arma durante unos segundos.
 -- Mientras está activa, el efecto se aplica a los golpes básicos (M1) y a los fuertes.
 -- Cada una tiene ventajas (mods sobre ti), efectos al golpear (sobre el rival) y un coste.
 -- Contras en ciclo (piedra-papel-tijera): Fuego > Rayo > Hielo > Sombra > Fuego.
@@ -64,6 +64,54 @@ Infusions.Data = {
 		mods = { MoveSpeedMult = 1.15, DodgeDistanceMult = 1.3, DodgeIFrameBonus = 0.1, StunMult = 0.8 },
 		guardMaxMult = 0.7,
 		onHit = { backstab = 1.2, afterDodge = 1.25, afterDodgeWindow = 2 },
+	},
+}
+
+-- Apariencia de la hoja. Las cifras de combate siguen en Data.
+Infusions.Aura = {
+	MaxDistance = 145, MinBladeLength = 0.15,
+	CoreWidth = 0.115, CoreAlpha = 0.13, TipWidth = 0.7, BeamSegments = 12,
+	BeamTexture = "rbxasset://textures/particles/sparkles_main.dds", BeamTextureLength = 0.65,
+	-- Flipbooks Grid8x8 del ejemplo Volcano Island de Roblox Creator Hub.
+	ArcAtlas = "rbxassetid://17363668312", SparkAtlas = "rbxassetid://17363669906",
+	Stationary = NumberRange.new(0), LightRange = 5, LightInfluence = 0.22,
+	ParticleRotation = NumberRange.new(-180, 180),
+	Glow = {
+		{ width = 0.21, speed = 0.72, alpha = 0.42, curve = -0.85 },
+		{ width = 0.36, speed = 0.43, alpha = 0.61, curve = 0.55 },
+		{ width = 0.56, speed = -0.19, alpha = 0.77, curve = 0.25 },
+	},
+	Arcs = { rate = 9, size = 1.05, life = NumberRange.new(0.22, 0.38), alpha = NumberSequence.new(0.28, 1) },
+	Volutes = { size = 0.68, life = NumberRange.new(0.28, 0.58), spread = Vector2.new(60, 60), alpha = NumberSequence.new(0.28, 1) },
+	Sparks = { rate = 11, size = 0.29, life = NumberRange.new(0.25, 0.52), alpha = NumberSequence.new(0.08, 1) },
+	Weapons = {
+		Sword = { width = 1, volume = Vector2.new(0.38, 0.38), depth = 0.16, rate = 1 },
+		Greatsword = { width = 1.22, volume = Vector2.new(0.64, 0.64), depth = 0.29, rate = 1.16 },
+		Dagger = { width = 0.68, volume = Vector2.new(0.25, 0.25), depth = 0.10, rate = 0.57 },
+		Rapier = { width = 0.71, volume = Vector2.new(0.25, 0.25), depth = 0.10, rate = 0.9 },
+		Mace = { width = 1.38, volume = Vector2.new(1.65, 3.1), depth = 0.86, rate = 1.12, surfaceVolutes = true },
+	},
+	Profiles = {
+		Fire = {
+			flow = 5.8, arcFps = 17, curl = 0.19, emission = 0.86, light = 0.88, rate = 14, drag = 1.8,
+			speed = NumberRange.new(1.2, 2.8), acceleration = Vector3.new(0, 9, 0),
+			texture = "rbxasset://textures/particles/fire_main.dds",
+		},
+		Lightning = {
+			flow = 11.5, arcFps = 29, curl = 0.29, emission = 1, light = 1.1, rate = 14, drag = 4,
+			speed = NumberRange.new(2.5, 6), acceleration = Vector3.new(0, 0.8, 0),
+			texture = "rbxasset://textures/particles/sparkles_main.dds",
+		},
+		Ice = {
+			flow = -4.8, arcFps = 13, curl = 0.09, emission = 0.76, light = 0.65, rate = 12, drag = 2.6,
+			speed = NumberRange.new(0.6, 1.7), acceleration = Vector3.new(0, -7, 0),
+			texture = "rbxasset://textures/particles/smoke_main.dds",
+		},
+		Shadow = {
+			flow = 2.5, arcFps = 7, curl = 0.25, emission = 0.52, light = 0.36, rate = 9, drag = 3.5,
+			speed = NumberRange.new(0.4, 1.15), acceleration = Vector3.new(0, 1.7, 0),
+			texture = "rbxasset://textures/particles/smoke_main.dds",
+		},
 	},
 }
 

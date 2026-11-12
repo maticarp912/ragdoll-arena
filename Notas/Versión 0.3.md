@@ -222,5 +222,25 @@ La prueba local fue integrada a `Ragdoll Arena.rbxlx` en la raíz del proyecto d
 
 ### Pendiente
 
-- Comprobar Rayo con los ataques más rápidos durante el punto D.
+- El mínimo con Rayo quedó comprobado en [[Versión 0.3#Infusiones de cinco capas (punto D)]].
 - La experiencia publicada queda pendiente de indicación del usuario.
+
+## Infusiones de cinco capas (punto D)
+
+### Implementado
+
+- AuraFx e Infusion.client montan un rayo central, arcos de flipbook, volutas orientadas con su velocidad, chispas de flipbook estático y tres Beams superpuestos para el halo. WeaponBuilder agrega BladeMid entre los anclajes existentes.
+- Fuego asciende, Hielo cae, Rayo fluye más rápido y Sombra deja volutas violetas más lentas. El volumen sigue la hoja y cubre las dos dagas. En Maza emite desde la superficie que rodea la cabeza.
+- El cliente limpia el aura al cambiar de arma, al apagar la infusión y cuando el combatiente se aleja. Los valores de combate y la duración siguen en Infusions. Los dos atlas reutilizados son del ejemplo oficial [Volcano Island](https://create.roblox.com/docs/tutorials/use-case-tutorials/vfx/create-volcanoes).
+
+### Comprobado en Studio
+
+- Probé las 20 combinaciones de las cuatro infusiones y las cinco armas en Play. Verifiqué las cinco capas, los tres anclajes y el volumen soldado. En Dagas hubo dos auras simultáneas. En Maza las volutas nacieron sobre la superficie. Vigilia Violeta también aceptó la infusión y soltó el efecto al cambiar de arma.
+- R dejó la infusión apagada con 99 de carga. Con 100 encendió Fuego, aplicó ×1,2 y dejó bajar la carga. Al agotarse volvió a 0, restauró ×1 y quitó el aura.
+- Dagas y Estoque, con el ×1,25 de velocidad de Rayo, anunciaron 240 ms entre ActionStartAt y HitAt. Los dos ataques impactaron al muñeco.
+- Las capturas están en `F:/RobloxJuegos/Archivo Ragdoll Arena/Capturas infusiones`. Guardé el place de prueba en F: y cotejé los scripts con el repo.
+- Chequeo de Luau y LihFolk sobre 115 archivos. Ambos pasaron y LihFolk devolvió 0 errores y 0 avisos.
+
+### Pendiente
+
+- La experiencia publicada queda pendiente de indicación del usuario. La textura de Vigilia Violeta todavía muestra un aviso de representación en Studio, aunque cargó y se vio en la prueba local.

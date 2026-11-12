@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 local Infusions = require(RS:WaitForChild("Infusions"))
 local A = require(RS:WaitForChild("PolishConfig")).Aura
+local AuraFx = require(RS:WaitForChild("AuraFx"))
 local states = {}
 local function emitter(parent, id, burst)
  local def = Infusions.get(id)
@@ -25,67 +26,23 @@ local function emitter(parent, id, burst)
  return p
 end
 local function clear(st)
- for _, obj in st.objects do obj:Destroy() end
- for trail, color in st.trails do if trail.Parent then trail.Color = color end end
- st.objects = {}
- st.trails = {}
+ if st.feet then st.feet:Destroy() st.feet = nil end
+ for _, cleanup in st.weapons do cleanup() end
+ table.clear(st.weapons)
 end
-local function add(st, obj) table.insert(st.objects, obj) return obj end
-local function weapon(st, tool, id)
- local def = Infusions.get(id)
- local h = add(st, Instance.new("Highlight"))
- h.Adornee = tool
- h.FillColor = def.color
- h.OutlineColor = def.color
- h.FillTransparency = A.FreezeAlpha
- h.Parent = tool
- -- Las skins con muchas piezas de hoja solo llevan partículas en las más grandes
- local blades = {}
- for _, obj in tool:GetDescendants() do
-  if obj:IsA("BasePart") and obj:GetAttribute("Role") == "Blade" then
-   table.insert(blades, obj)
-  elseif obj:IsA("Trail") and obj.Name == "SwingTrail" then
-   st.trails[obj] = obj.Color
-   obj.Color = ColorSequence.new(def.color)
-  end
+
+local function syncWeapons(char, st, id)
+ for weapon, cleanup in st.weapons do
+  if weapon.Parent ~= char then cleanup() st.weapons[weapon] = nil end
  end
- table.sort(blades, function(a, b) return a.Size.Magnitude > b.Size.Magnitude end)
- for i = 1, math.min(#blades, A.MaxBladeEmitters or 4) do
-  local obj = blades[i]
-  add(st, emitter(obj, id))
-  emitter(obj, id, true)
-  if id == "Ice" then
-   local crystal = add(st, emitter(obj, id))
-   crystal.Texture = A.Crystal
-  end
- end
- local tip, base
- for _, obj in tool:GetDescendants() do
-  if obj:IsA("Attachment") then
-   if obj.Name == "BladeTip" then tip = obj elseif obj.Name == "BladeBase" then base = obj end
-  end
- end
- if tip then
-  local light = add(st, Instance.new("PointLight"))
-  light.Color = def.color
-  light.Brightness = A.Light
-  light.Range = A.Range
-  light.Parent = tip
- end
- if id == "Lightning" and tip and base and tip:IsA("Attachment") and base:IsA("Attachment") then
-  local beam = add(st, Instance.new("Beam"))
-  beam.Attachment0 = base
-  beam.Attachment1 = tip
-  beam.Color = ColorSequence.new(def.color)
-  beam.Width0 = A.BeamWidth
-  beam.Width1 = A.BeamWidth
-  beam.FaceCamera = true
-  beam.Parent = base
+ for _, child in char:GetChildren() do
+  local isWeapon = (child:IsA("Tool") or child.Name == "OffhandWeapon") and child:GetAttribute("WeaponId")
+  if isWeapon and not st.weapons[child] then st.weapons[child] = AuraFx.attachInfusion(child, id) end
  end
 end
 local function watch(char)
  if states[char] then return end
- states[char] = { objects = {}, trails = {}, weapons = {}, id = nil }
+ states[char] = { weapons = {} }
 end
 Collection:GetInstanceAddedSignal("Combatant"):Connect(watch)
 for _, char in Collection:GetTagged("Combatant") do watch(char) end
@@ -104,28 +61,23 @@ RunService.Heartbeat:Connect(function(dt)
   local root = char:FindFirstChild("HumanoidRootPart")
   local hum = char:FindFirstChildOfClass("Humanoid")
   local alive = char.Parent and hum and hum.Health > 0
-  local id = alive and char:GetAttribute("InfusionActive") and char:GetAttribute("InfusionId") or nil
+  local camera = workspace.CurrentCamera
+  local near = root and camera and (root.Position - camera.CFrame.Position).Magnitude <= Infusions.Aura.MaxDistance
+  local id = alive and near and char:GetAttribute("InfusionActive") and char:GetAttribute("InfusionId") or nil
+  if id and not Infusions.get(id) then id = nil end
   if id ~= st.id then
-   clear(st) st.weapons = {} st.id = id
-   if id and root and Infusions.get(id) then
-    local feet = add(st, Instance.new("Attachment"))
-    feet.Position = A.Feet feet.Parent = root
-    add(st, emitter(feet, id)) emitter(feet, id, true)
+   clear(st)
+   st.id = id
+   if id then
+    local feet = Instance.new("Attachment")
+    feet.Position = A.Feet
+    feet.Parent = root
+    st.feet = feet
+    emitter(feet, id)
+    emitter(feet, id, true)
    end
   end
-  if id and Infusions.get(id) then
-   for _, child in char:GetChildren() do
-    if (child:IsA("Tool") or child.Name == "OffhandWeapon") and not st.weapons[child] then
-     st.weapons[child] = true weapon(st, child, id)
-    end
-   end
-   for _, obj in st.objects do
-    if obj:IsA("Beam") then
-     obj.CurveSize0 = (math.random() * 2 - 1) * A.Curve
-     obj.CurveSize1 = (math.random() * 2 - 1) * A.Curve
-    end
-   end
-  end
+  if id then syncWeapons(char, st, id) end
   local burn = alive and root and (char:GetAttribute("BurnUntil") or 0) > now
   if burn and not st.burn then st.burn = emitter(root, "Fire")
   elseif not burn and st.burn then st.burn:Destroy() st.burn = nil end
