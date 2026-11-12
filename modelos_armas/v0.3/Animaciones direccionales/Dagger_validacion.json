@@ -1,0 +1,68 @@
+{
+  "DaggerDirUp": {
+    "frames": 33,
+    "retargetedFrames": 33,
+    "insertedKeys": 0,
+    "sourceTorsoCrossings": 0,
+    "reachCorrections": 0,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0,
+    "source": "Standing Melee Attack Downward.fbx"
+  },
+  "DaggerDirLeft": {
+    "frames": 33,
+    "retargetedFrames": 33,
+    "insertedKeys": 0,
+    "sourceTorsoCrossings": 6,
+    "reachCorrections": 1,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0,
+    "source": "Sword And Shield Attack.fbx"
+  },
+  "DaggerDirRight": {
+    "frames": 33,
+    "retargetedFrames": 33,
+    "insertedKeys": 0,
+    "sourceTorsoCrossings": 2,
+    "reachCorrections": 1,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0,
+    "source": "Standing Melee Attack Backhand.fbx"
+  },
+  "DaggerHeavyUp": {
+    "frames": 33,
+    "retargetedFrames": 33,
+    "insertedKeys": 0,
+    "sourceTorsoCrossings": 0,
+    "reachCorrections": 0,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0,
+    "source": "Standing Melee Attack Downward.fbx"
+  },
+  "DaggerHeavyLeft": {
+    "frames": 33,
+    "retargetedFrames": 33,
+    "insertedKeys": 0,
+    "sourceTorsoCrossings": 6,
+    "reachCorrections": 1,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0,
+    "source": "Sword And Shield Attack.fbx"
+  },
+  "DaggerHeavyRight": {
+    "frames": 33,
+    "retargetedFrames": 33,
+    "insertedKeys": 0,
+    "sourceTorsoCrossings": 2,
+    "reachCorrections": 1,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0,
+    "source": "Standing Melee Attack Backhand.fbx"
+  }
+}

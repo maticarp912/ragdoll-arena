@@ -1,0 +1,68 @@
+{
+  "RapierDirUp": {
+    "frames": 33,
+    "retargetedFrames": 33,
+    "insertedKeys": 0,
+    "sourceTorsoCrossings": 0,
+    "reachCorrections": 0,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0.0,
+    "source": "Standing Melee Attack Downward.fbx"
+  },
+  "RapierDirLeft": {
+    "frames": 33,
+    "retargetedFrames": 33,
+    "insertedKeys": 0,
+    "sourceTorsoCrossings": 6,
+    "reachCorrections": 0,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0.0,
+    "source": "Sword And Shield Attack.fbx"
+  },
+  "RapierDirRight": {
+    "frames": 33,
+    "retargetedFrames": 33,
+    "insertedKeys": 0,
+    "sourceTorsoCrossings": 2,
+    "reachCorrections": 0,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0.0,
+    "source": "Standing Melee Attack Backhand.fbx"
+  },
+  "RapierHeavyUp": {
+    "frames": 33,
+    "retargetedFrames": 33,
+    "insertedKeys": 0,
+    "sourceTorsoCrossings": 6,
+    "reachCorrections": 0,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0.0,
+    "source": "Sword And Shield Attack.fbx"
+  },
+  "RapierHeavyLeft": {
+    "frames": 33,
+    "retargetedFrames": 33,
+    "insertedKeys": 0,
+    "sourceTorsoCrossings": 0,
+    "reachCorrections": 4,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0.0,
+    "source": "Standing Melee Attack Downward.fbx"
+  },
+  "RapierHeavyRight": {
+    "frames": 33,
+    "retargetedFrames": 33,
+    "insertedKeys": 0,
+    "sourceTorsoCrossings": 2,
+    "reachCorrections": 2,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0.0,
+    "source": "Standing Melee Attack Backhand.fbx"
+  }
+}

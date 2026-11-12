@@ -716,11 +716,17 @@ function AnimClips.resolve(key, archetype)
 	if not key or key == "" then return nil end
 	local w, k = string.match(key, "^Weapons%.(%w+)%.([%w_]+)$")
 	local heavySide = k and string.match(k, "^Heavy(%a+)$")
-	if heavySide then
-		local pilot = w == "Sword" and mocapCached("SwordHeavy" .. heavySide)
-		return pilot or directionalHeavy(archetype or "OneHand", heavySide)
-	end
 	local dirName = k and string.match(k, "^Dir(%a+)$")
+	if heavySide or dirName then
+		local adapted = mocapCached(w .. k)
+		if adapted then
+			if w == "Sword" then return adapted end -- conservar el piloto aprobado
+			local out = table.clone(adapted)
+			out.dirLayer = 0 -- el retarget ya incluye el lado y el recorrido de las manos
+			return out
+		end
+	end
+	if heavySide then return directionalHeavy(archetype or "OneHand", heavySide) end
 	if dirName then
 		local dm = AnimClips.DirMap[archetype or "OneHand"] or AnimClips.DirMap.OneHand
 		local entry = dm[dirName]

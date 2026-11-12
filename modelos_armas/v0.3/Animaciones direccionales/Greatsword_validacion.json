@@ -1,0 +1,46 @@
+{
+  "GreatswordDirUp": {
+    "frames": 36,
+    "retargetedFrames": 33,
+    "insertedKeys": 3,
+    "sourceTorsoCrossings": 0,
+    "reachCorrections": 0,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0.050678,
+    "source": "great sword attack.fbx"
+  },
+  "GreatswordHeavyUp": {
+    "frames": 36,
+    "retargetedFrames": 33,
+    "insertedKeys": 3,
+    "sourceTorsoCrossings": 0,
+    "reachCorrections": 0,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0.043687,
+    "source": "great sword jump attack.fbx"
+  },
+  "GreatswordHeavyLeft": {
+    "frames": 33,
+    "retargetedFrames": 33,
+    "insertedKeys": 0,
+    "sourceTorsoCrossings": 0,
+    "reachCorrections": 0,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0.03877,
+    "source": "great sword slash (3).fbx"
+  },
+  "GreatswordHeavyRight": {
+    "frames": 33,
+    "retargetedFrames": 33,
+    "insertedKeys": 0,
+    "sourceTorsoCrossings": 0,
+    "reachCorrections": 1,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0.039729,
+    "source": "great sword slash.fbx"
+  }
+}

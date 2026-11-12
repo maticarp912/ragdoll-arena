@@ -194,3 +194,33 @@ La prueba local fue integrada a `Ragdoll Arena.rbxlx` en la raíz del proyecto d
 
 - Confirmar que la experiencia publicada puede cargar ambos assets cuando se publique esta tanda.
 - Esperar el OK para el punto C y empezar por Espadón.
+
+## Ataques direccionales restantes (punto C)
+
+### Implementado
+
+- Adapté 21 ataques nuevos en este orden: Espadón (4), Dagas (6), Estoque (6) y Maza (5). El Animator reproduce los 30 ligeros y fuertes direccionales con clips de captura o adaptaciones de esos clips. Los tres fuertes de Espada aprobados siguen iguales.
+- Blender lee los FBX por cuadro. El retarget conserva el peso y el paso de la fuente y reconstruye el recorrido del arma con el rig R15 medido. Espadón y Maza sostienen el mismo mango con ambas manos. Cada daga conserva su agarre. El Estoque usa las referencias de espada para el cuerpo y estocadas adaptadas para la mano derecha.
+- El servidor conserva los tiempos de WeaponData y aplica un piso efectivo de 0,24 s a los ataques direccionales con modificadores de velocidad. El cliente sincroniza el impacto con HitAt.
+
+### Validación de los clips
+
+| Arma | Clips | Cuadros retargeteados | Ajustes de alcance | Claves intermedias añadidas | Cruces con el torso en la fuente | Error máximo de agarre (studs) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Espadón | 4 | 132 | 1 | 6 | 0 | 0,050678 |
+| Dagas | 6 | 198 | 4 | 0 | 16 | 0 |
+| Estoque | 6 | 198 | 6 | 0 | 16 | 0 |
+| Maza | 5 | 165 | 1 | 0 | 0 | 0,038736 |
+
+- En los clips exportados hubo 0 cruces con el torso en los cuadros clave y en tres muestras por intervalo. El error de agarre mide la separación de las manos respecto al mango en el rig medido. Los reportes por ataque y las fuentes elegidas están en `modelos_armas/v0.3/Animaciones direccionales`.
+
+### Comprobado en Studio
+
+- En Play se resolvieron los 30 ataques. Los 21 nuevos impactaron en el muñeco y el servidor publicó el lado y el clip correctos. Impactos de 264 a 726 ms con las armas sin infusión.
+- Capturas de Espadón, Dagas, Estoque y Maza en `F:/RobloxJuegos/Archivo Ragdoll Arena/Capturas ataques direccionales`. La prueba ancló al muñeco y al personaje para mantener la distancia. Las capturas congelan el clip en el cuadro de impacto.
+- Guardé `Ragdoll Sword pilot test.rbxlx` con los clips. El chequeo de Luau pasó los 115 archivos.
+
+### Pendiente
+
+- Comprobar Rayo con los ataques más rápidos durante el punto D.
+- La experiencia publicada queda pendiente de indicación del usuario.

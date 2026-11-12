@@ -32,7 +32,7 @@ const PICK = {
 const PRE = 0.3, POST = 0.55;
 
 const fmt = (v) => (Number.isInteger(v) ? String(v) : String(Math.round(v * 100) / 100));
-const modules = { Greatsword: [], Mace: [], Sword: [], Shared: [] };
+const modules = { Greatsword: [], Mace: [], Sword: [], Dagger: [], Rapier: [], Shared: [] };
 const generated = "-- Generado por tools/mocap_to_lua.js. No editar a mano.\n";
 const clipHeader = `-- Animaciones de Mixamo convertidas a poses R15 con tools/mixamo_to_r15.py (Blender).
 -- Formato igual que AnimClips: keys = { {t, pose}, ... }, t de 0 a 1; hit/windup = momentos del golpe.
@@ -55,11 +55,9 @@ for (const [name, p] of Object.entries(PICK)) {
 	});
 	modules[p.weapon ?? "Shared"].push(`C.${name} = { src = ${JSON.stringify(p.src)}, dur = ${fmt(Math.round(c.dur * span * 1000) / 1000)}, hit = ${fmt(Math.round(((c.hit - t0) / span) * 1000) / 1000)}, windup = ${fmt(Math.round(((c.windup - t0) / span) * 1000) / 1000)}, keys = {\n${lines.join("\n")}\n} }\n`);
 }
-const pilotPath = path.join(__dirname, "..", "modelos_armas", "v0.3", "Piloto Espada", "FuertesR15.json");
-if (fs.existsSync(pilotPath)) {
-	const swordClips = JSON.parse(fs.readFileSync(pilotPath, "utf8"));
-	for (const name of ["SwordHeavyUp", "SwordHeavyLeft", "SwordHeavyRight"]) {
-		const clip = swordClips[name];
+function appendRetargeted(weapon, file) {
+	const clips = JSON.parse(fs.readFileSync(file, "utf8"));
+	for (const [name, clip] of Object.entries(clips)) {
 		if (!clip || !clip.keys.length) throw new Error("Falta el clip " + name);
 		let out = "C." + name + " = { src = " + JSON.stringify(clip.source) + ", dur = " + clip.dur +
 			", hit = " + clip.hit + ", windup = " + clip.windup + ", keys = {\n";
@@ -67,14 +65,24 @@ if (fs.existsSync(pilotPath)) {
 			const parts = Object.entries(pose).map(([joint, values]) => joint + "={" + values.map(fmt).join(",") + "}");
 			out += "\t\t{" + time + ",{" + parts.join(",") + "}},\n";
 		}
-		modules.Sword.push(out + "} }\n");
+		modules[weapon].push(out + "} }\n");
 	}
+}
+
+const models = path.join(__dirname, "..", "modelos_armas", "v0.3");
+const pilotPath = path.join(models, "Piloto Espada", "FuertesR15.json");
+if (fs.existsSync(pilotPath)) appendRetargeted("Sword", pilotPath);
+for (const weapon of ["Greatsword", "Dagger", "Rapier", "Mace"]) {
+	const file = path.join(models, "Animaciones direccionales", weapon + ".json");
+	if (fs.existsSync(file)) appendRetargeted(weapon, file);
 }
 const dest = path.join(__dirname, "..", "ReplicatedStorage");
 const imports = [];
 for (const [weapon, clips] of Object.entries(modules)) {
+	if (!clips.length) continue;
 	const name = "MocapClips" + weapon;
 	const source = generated + clipHeader + clips.join("") + "return C\n";
+	if (source.length >= 200000) throw new Error(name + " supera el límite de tamaño");
 	fs.writeFileSync(path.join(dest, name + ".lua"), source);
 	imports.push(`\trequire(script.Parent:WaitForChild("${name}")),`);
 	console.log(name + ".lua", clips.length, "clips", Buffer.byteLength(source), "bytes");

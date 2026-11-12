@@ -1,0 +1,57 @@
+{
+  "MaceDirUp": {
+    "frames": 33,
+    "retargetedFrames": 33,
+    "insertedKeys": 0,
+    "sourceTorsoCrossings": 0,
+    "reachCorrections": 0,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0.038736,
+    "source": "great sword attack.fbx"
+  },
+  "MaceDirLeft": {
+    "frames": 33,
+    "retargetedFrames": 33,
+    "insertedKeys": 0,
+    "sourceTorsoCrossings": 0,
+    "reachCorrections": 0,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0.032241,
+    "source": "great sword slash (5).fbx"
+  },
+  "MaceHeavyUp": {
+    "frames": 33,
+    "retargetedFrames": 33,
+    "insertedKeys": 0,
+    "sourceTorsoCrossings": 0,
+    "reachCorrections": 0,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0.038538,
+    "source": "great sword jump attack.fbx"
+  },
+  "MaceHeavyLeft": {
+    "frames": 33,
+    "retargetedFrames": 33,
+    "insertedKeys": 0,
+    "sourceTorsoCrossings": 0,
+    "reachCorrections": 0,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0.023874,
+    "source": "great sword slash (3).fbx"
+  },
+  "MaceHeavyRight": {
+    "frames": 33,
+    "retargetedFrames": 33,
+    "insertedKeys": 0,
+    "sourceTorsoCrossings": 0,
+    "reachCorrections": 1,
+    "intersections": 0,
+    "intersectionsBetweenKeys": 0,
+    "maxGripErrorStuds": 0.037714,
+    "source": "great sword slash (2).fbx"
+  }
+}

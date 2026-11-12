@@ -5,6 +5,8 @@ for _, group in {
 	require(script.Parent:WaitForChild("MocapClipsGreatsword")),
 	require(script.Parent:WaitForChild("MocapClipsMace")),
 	require(script.Parent:WaitForChild("MocapClipsSword")),
+	require(script.Parent:WaitForChild("MocapClipsDagger")),
+	require(script.Parent:WaitForChild("MocapClipsRapier")),
 	require(script.Parent:WaitForChild("MocapClipsShared")),
 } do
 	for name, clip in group do

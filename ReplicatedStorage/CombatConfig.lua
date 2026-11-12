@@ -241,6 +241,7 @@ CombatConfig.Directional = {
 	Enabled = true,  -- 10/11/2026 20:40: activado por el usuario para la 0.2
 	Dirs = { "Up", "Left", "Right" },  -- únicas direcciones válidas (el servidor descarta cualquier otra)
 	DefaultStance = "Up",
+	MinAttackHit = 0.24,       -- tiempo de reacción mínimo con infusiones o contragolpes activos
 
 	-- Defensa por dirección
 	ParryWindow = 0.15,        -- D1: ventana común de parry tras una pulsación NUEVA de guardia (s)

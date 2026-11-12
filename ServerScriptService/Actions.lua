@@ -172,6 +172,7 @@ function Actions.m1(char)
 	if dir ~= "" and not Assets.anim(animKey) then animKey = "Weapons." .. wid .. ".Dir" .. dir end
 	local animSpeed, marker = timing(animKey, duration)
 	local hitTime = marker("Hit") or (combo.hitTime[step] * tempo() / atkSpeed)
+	if dirOn then hitTime = math.max(hitTime, CFG.Directional.MinAttackHit) end
 	if step == 1 then
 		st.comboChain = (st.comboChain or 0) + 1
 		st.comboLanded = {}
@@ -268,6 +269,7 @@ function Actions.heavy(char)
 	local animSpeed, marker = timing(animKey, duration)
 	local windup = marker("WindupEnd") or baseWindup
 	local hitTime = marker("Hit") or math.max(baseHit, windup + 0.02)
+	if dirOn then hitTime = math.max(hitTime, CFG.Directional.MinAttackHit) end
 
 	-- Imbloqueable: por arma, o por estar con la infusión activa (decisión 2, Fase C).
 	-- Direccional: la excepción de cada arma depende de la dirección (Maza: solo arriba).
