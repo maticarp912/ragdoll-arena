@@ -22,3 +22,7 @@ Studio puede conservar accesos viejos en Recientes. Para ir al archivo actual, a
 - **Ragdoll Sword pilot test.rbxlx** (`F:\RobloxJuegos\Archivo Ragdoll Arena`) quedó guardado con los 109 scripts del commit 0895f60: es la copia para probar lo último.
 - **Ragdoll Sword pilot playable.rbxlx** tiene scripts viejos. No copiar de ahí al proyecto.
 - MocapClips supera los 200.000 caracteres: por MCP solo se carga con ScriptEditorService:UpdateSourceAsync (Source da error). Conviene partirlo en varios módulos antes de crecer más.
+
+## Mocap por arma (punto A)
+- **Ragdoll Sword pilot test.rbxlx** quedó guardado por MCP con el índice y los cuatro módulos. Es la copia local que se usó para probar los fuertes de Espada después de la división.
+- El módulo más grande tiene 86.747 bytes. El detalle de las pruebas y las capturas está en [[Versión 0.3#Mocap por arma (punto A)]].

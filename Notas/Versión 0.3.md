@@ -157,3 +157,21 @@ La prueba local fue integrada a `Ragdoll Arena.rbxlx` en la raíz del proyecto d
 - Studio MCP rechazó subir el FBX porque la carpeta de F: no está autorizada para cargas. Importar el FBX desde Studio y pasar MeshId y TextureID o ColorMap. Después probar escala, orientación y textura de Vigilia equipada y en la vista previa.
 - Revisar el piloto antes de preparar las otras 21 variantes o modelar otra skin. La publicación queda pendiente.
 
+
+## Mocap por arma (punto A)
+
+### Implementado
+
+- El generador deja 8 clips en Espadón, 3 en Maza, 6 en Espada y 7 en el módulo compartido. `MocapClips` conserva las mismas 24 claves para `AnimClips`. Dagas y Estoque siguen usando sus rutas actuales.
+- Comparé el contenido de los 24 clips con el de Git, incluidos los tiempos y cada clave de pose. Los datos coinciden. El módulo más grande ocupa 86.747 bytes y el chequeo de Luau pasó los 113 archivos.
+
+### Comprobado en Studio
+
+- La copia local `Ragdoll Sword pilot test.rbxlx` se guardó con los cuatro módulos y el índice. Antes de integrarlos comprobé que sus controles, tutorial y configuración coincidieran con el repo.
+- En Edit el índice devolvió los 24 clips. En Play, los tres fuertes de Espada ejecutaron el clip correspondiente, quitaron 28 de vida al muñeco y marcaron el impacto a los 0,539 s.
+- Capturas de la preparación de los tres golpes en `F:/RobloxJuegos/Archivo Ragdoll Arena/Capturas Mocap por arma`. Se encuadraron en Play con el HUD oculto y luz ambiente ajustada para la captura.
+
+### Pendiente
+
+- Revisar las capturas y esperar el OK para empezar B, la importación y prueba de Vigilia Violeta. Las otras 21 animaciones y las infusiones de cinco capas quedan para C y D.
+- La publicación sigue pendiente de indicación del usuario.
