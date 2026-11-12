@@ -94,6 +94,7 @@ end
 ----------------------------------------------------------------------
 function Combat.isEnemy(attackerChar, victimChar)
 	if attackerChar == victimChar then return false end
+	if attackerChar:GetAttribute("TutorialOwnerUserId") ~= victimChar:GetAttribute("TutorialOwnerUserId") then return false end
 	if attackerChar:GetAttribute("IsDummy") and victimChar:GetAttribute("IsDummy") then return false end
 	local ap = Players:GetPlayerFromCharacter(attackerChar)
 	local vp = Players:GetPlayerFromCharacter(victimChar)
@@ -1190,6 +1191,7 @@ end
 
 -- Arma del jugador según su elección y skin
 function Combat.setupCharacter(player, char)
+	if player.Character ~= char then return end
 	local def = Combat.setupCombatant(char, player:GetAttribute("WeaponId"))
 	if not def then return end
 	local weaponId = char:GetAttribute("WeaponId")
@@ -1200,18 +1202,20 @@ function Combat.setupCharacter(player, char)
 		char:SetAttribute("InfusionCharge", player:GetAttribute("MatchInfusionCharge") or 0)
 	end
 
-	local backpack = player:WaitForChild("Backpack", 3)
-	if not backpack then return end
-	for _, t in backpack:GetChildren() do
+	local skinId = player:GetAttribute("EquippedSkin")
+	local tool = WeaponBuilder.build(weaponId, skinId)
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	for _, t in backpack and backpack:GetChildren() or {} do
 		if t:IsA("Tool") then t:Destroy() end
 	end
 	for _, t in char:GetChildren() do
 		if t:IsA("Tool") then t:Destroy() end
 	end
-	local tool = WeaponBuilder.build(weaponId, player:GetAttribute("EquippedSkin"))
-	tool.Parent = backpack
+	-- Equipar sobre el Humanoid evita depender de la mochila que Roblox recrea al reaparecer.
 	hum:EquipTool(tool)
-	WeaponBuilder.addOffhand(char, weaponId, player:GetAttribute("EquippedSkin"))
+	if tool.Parent ~= char then tool.Parent = char end
+	WeaponBuilder.addOffhand(char, weaponId, skinId)
+	return tool
 end
 
 ----------------------------------------------------------------------

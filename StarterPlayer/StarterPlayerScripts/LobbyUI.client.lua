@@ -261,7 +261,7 @@ local playBtn = UiTheme.button({
 	text = L.t("ui.queue.play"),
 	font = "Title",
 	textSize = UiTheme.TextSizes.XXL or 30,
-	variant = "gold",
+	variant = "focal", -- la acción principal del lobby
 	onClick = function()
 		requestedMode = "Any"
 		if QueueRemote then QueueRemote:FireServer("Join", "Any") end
@@ -440,7 +440,7 @@ function renderModal()
 		parent = header,
 		position = UDim2.fromOffset(22, 0),
 		size = UDim2.fromOffset(w - 160, 54),
-		text = string.upper(L.t(titleKey)),
+		text = UiTheme.upper(L.t(titleKey)),
 		font = "Title",
 		textSize = UiTheme.TextSizes.XXL,
 		color = C.GoldBright,
@@ -761,9 +761,10 @@ end)
 local function refreshBar()
 	local inMatch = player:GetAttribute("InMatch") == true
 	local menuOpen = player:GetAttribute("MenuOpen") == true
-	queueBar.Visible = not inMatch and not menuOpen
-	leftDock.Visible = not inMatch and not menuOpen
-	if inMatch then
+	local inTutorial = player:GetAttribute("InTutorial") == true
+	queueBar.Visible = not inMatch and not inTutorial and not menuOpen
+	leftDock.Visible = queueBar.Visible
+	if inMatch or inTutorial then
 		requestedMode = nil
 		if activeModal then toggleModal(nil) end
 	end
@@ -811,6 +812,7 @@ local function refreshBar()
 	end
 end
 
+player:GetAttributeChangedSignal("InTutorial"):Connect(refreshBar)
 L.Changed:Connect(function()
 	refreshBar()
 	if activeModal then renderModal() end

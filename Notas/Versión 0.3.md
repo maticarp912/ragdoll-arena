@@ -74,3 +74,64 @@ La prueba local fue integrada a `Ragdoll Arena.rbxlx` en la raíz del proyecto d
 5. **Arte.** Los 28 PNG están registrados. Once quedaron sin uso visible identificado en el código: marcos clásicos 03–05, bordes oscuros 01–02, separadores 02–03 y ornamentos laterales 01–04. «¡A luchar!» usa el separador 01. En modelos_armas/v0.3 sigue estando el piloto Corte de Plata y queda pendiente el resto del catálogo.
 6. **Comprobación pendiente.** Partida completa 1v1 y 2v2, conteos de cola mientras hay una partida en curso, controles de celular y revisión de la versión publicada desde Roblox.
 
+
+## Controles táctiles, tutorial y equilibrio · 12/11/2026 12:54 (Argentina)
+
+### Implementado
+
+- Agrupé ataque, fuerte, guardia y esquiva para el pulgar derecho. La cruceta de tres lados usa la postura compartida con mouse y mando. Aparece con objetivo fijado y se desactiva junto a los controles de combate en la antesala.
+- El tutorial tiene 16 pasos, instrucciones centradas y un botón de salto más grande. Enseña Armas e Infusiones en una Armería reducida, esquiva, agarre, lanzamiento y activación de infusión. Solo muestra los controles útiles a la lección. Oculta tienda, recompensas, cola y HUD general. El servidor excluye a los participantes de las colas durante el tutorial.
+- La curación pasiva funciona en el lobby y se suspende durante las partidas. Espadón de 290 a 260 de vida y fuerte de 50 a 45 de daño. Maza de 317 a 270 de vida y fuerte de 46 a 41 de daño. Bajaron también sus básicos y la presión de sus golpes pesados. La resistencia por básico/fuerte quedó en 22/45 Espada, 29/60 Espadón, 15/29 Dagas, 18/36 Estoque y 29/60 Maza.
+- Exporté 107 combinaciones de arma y skin en cinco .blend por clase, con cada pieza separada. Hay un sexto .blend con los 21 pilotos FBX y sus texturas empaquetadas. Carpeta `modelos_armas/Blender - catálogo 0.3`. Los modelos de juego convertidos conservan la forma y los colores de Roblox con materiales equivalentes de Blender.
+
+### Comprobado
+
+- Los 108 scripts del place local de F: coinciden con el repo. Chequeo de Lua y LihFolk sin errores ni avisos.
+- En Play local, la vida quedó en 155,52 durante una ronda simulada y volvió a subir en el lobby. Confirmé Armería con las dos pestañas y el acceso a tienda oculto. El HUD del lobby quedó oculto en el tutorial y el servidor rechazó la solicitud de cola.
+- En modo táctil simulado, fijé un muñeco y pulsé la cruceta para pasar de arriba a derecha y a izquierda. El servidor conservó la postura izquierda al intentar cambiarla durante un ataque simulado. Con las acciones reales del servidor, un básico de Espada consumió 22 de resistencia y después se pudo hacer una esquiva.
+- Reabrí los seis .blend. Verifiqué 25 espadas, 19 espadones, 17 dagas, 21 estoques, 25 mazas y 21 pilotos FBX con 21 texturas empaquetadas.
+
+### Pendiente
+
+- Completar las 16 lecciones de punta a punta en un celular físico, con y sin mando, y calibrar el balance en partidas 1v1 y 2v2.
+- Al publicar esta tanda por paquete, copiar también `__PACK/SCS/Health` a `StarterPlayer/StarterCharacterScripts` como Script. El place local ya lo incluye.
+
+
+## Tutorial privado y espada al aparecer · 12/11/2026 13:55 (Argentina)
+
+### Implementado
+
+- MatchService equipa el arma antes de asignar el patio. La carga espera el personaje preparado y el despertar devuelve la visibilidad del personaje y del arma si se interrumpe.
+- Cada jugador nuevo recibe un patio propio con dos muñecos quietos y un bot para bloqueo y parry. El servidor restringe daño, agarre y objetivos al patio del dueño. Reaparecer conserva el patio y el paso. Terminar, saltar o desconectarse libera el patio y sus tres muñecos.
+- Integrado en Ragdoll Arena.rbxlx de F:. Los 109 scripts coinciden con el repo. Chequeos de Lua y LihFolk sin errores ni avisos.
+
+### Comprobado en Studio
+
+- Dos clientes nuevos aparecieron con espada equipada y soldada a la mano. Los patios quedaron a 2048 studs entre sí, con tres muñecos propios cada uno. Un cliente reapareció armado en su mismo patio y el otro salió a la ciudad sin alterar la sesión restante. El servidor rechazó los muñecos ajenos como objetivos de combate.
+- En una prueba adicional, pulsé «Jugar» y confirmé el tutorial activo y 35 piezas de la espada visibles después de despertar.
+
+### Pendiente
+
+- Publicar esta tanda y repetir la primera entrada desde Roblox con dos cuentas nuevas.
+
+
+## Fase 0 · Animación, infusiones y skins · 12/11/2026 14:47 (Argentina)
+
+### Estado y propuesta
+
+- **F1.** El proyecto guarda 55 conversiones en tools/mocap_all.json y 21 clips en MocapClips. El conversor actual exporta rotaciones R15 cada dos cuadros y solo posición de raíz. Extender el flujo de Blender en segundo plano para guardar transformación de todos los huesos por cuadro y pedir por nombre solo los FBX fuente que falten. Para Estoque, partir de una estocada. Para Dagas, adaptar dos manos de forma independiente. generate_animation queda para huecos.
+- **F2.** Ya se mapean 15 partes de R15 y el cliente hace IK de mano izquierda. El conversor usa una altura fija y no valida intersecciones. Aplicar las proporciones de CombatConfig.Body y evaluar hoja contra torso. Informar cuadros corregidos y error máximo de agarre en studs. Espada y Estoque a una mano, Espadón y Maza a dos, Dagas una por mano. La Espada actual tiene tanto twoHanded como OffhandFallback, que se deben corregir juntos en esta fase.
+- **F3.** En Studio se resolvieron los 30 ataques direccionales existentes. Seis ligeros usan Mixamo y los otros 24 ataques tienen animación procedural. Presupuesto de variantes por pulir, ligero/fuerte: Espada 0/3, Espadón 1/3, Dagas 3/3, Estoque 3/3 y Maza 2/3. Son 24 clips objetivo con fuentes reutilizables. Guardias direccionales, combo de tres, patada, parry, impacto, aturdimiento y derribo ya tienen poses o clips. Mantener Animator en cliente con Transform en Stepped y sincronizar con AnimHit/AnimWindup del servidor.
+- **F4.** Infusion.client ya usa emisores, luz y un Beam de Rayo. AuraFx ya atenúa las auras cosméticas del arma durante la infusión. El builder da BladeBase y BladeTip en los cinco modelos base. Agregar el anclaje intermedio y completar el rayo, arcos, volutas, chispas fijas y triple brillo dentro de la ruta existente. Declarar las cuatro variantes en Infusions.lua y ajustar posición y coste para hojas cortas, largas y cabeza de maza.
+- **F5.** La tecla R y el umbral de 100 están conectados. El servidor ya vacía la barra a medida que transcurren los 12 segundos y desactiva el buff al llegar a cero. El HUD lee la carga replicada y muestra el tiempo restante. Conservar este flujo y probar las cuatro variantes cuando estén conectadas al aura nueva.
+- **F6.** Revisé las 36 referencias visuales de las cinco clases, incluidas las 10 de espadas. El Handle procedural de las cinco armas base es cuadrado y los 22 MeshId registrados están en cero. Piloto propuesto: Vigilia Violeta (Relic10, 666cbeed9aec5569d54b076fd2f6be9f.jpg), por su vista frontal de 878 × 1500. Mango extruido de 24 lados, silueta original, espesor menor en el eje X, Mirror donde corresponde y Solidify. Proyectar la imagen original sobre la hoja y comprobar menos de 2000 triángulos en el FBX final. Para mazas sin perfil lateral, registrar el grosor estimado. Conservar el pivote de agarre y el catálogo.
+
+### Comprobado en Studio y en el repo
+
+- En Edit comprobé la resolución de los clips, las dos manos de la Espada actual, los cinco mangos cuadrados, los dos anclajes por arma y el registro de mallas. El chequeo de Luau pasó los 109 scripts.
+- En Play pulsé R con 99 y con 100 de carga. Con 99 quedó apagada. Con 100 se activó Fuego y el multiplicador de daño pasó de 1 a 1,2. La carga bajó durante el efecto, terminó en 0 y el daño volvió a ×1.
+
+### Pendiente
+
+- Inicio de la Fase 1 sujeto al OK del usuario. Luego se acuerda la lista exacta de FBX y se prueba una exportación. Fases 2 a 6 quedan para sus respectivas revisiones.
+

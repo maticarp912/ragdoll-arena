@@ -42,6 +42,7 @@ console.log("Scripts incluidos:");
 const rs = scriptsIn(path.join(src, "ReplicatedStorage"), "ModuleScript");
 const sss = scriptsIn(path.join(src, "ServerScriptService"), "ModuleScript");
 const sps = scriptsIn(path.join(src, "StarterPlayer", "StarterPlayerScripts"), "LocalScript");
+const scs = scriptsIn(path.join(src, "StarterPlayer", "StarterCharacterScripts"), "Script");
 // ReplicatedFirst (etapa 8): pantalla de carga. Carpeta opcional; sus .lua son LocalScripts.
 const rf = scriptsIn(path.join(src, "ReplicatedFirst"), "LocalScript");
 
@@ -58,7 +59,10 @@ const body =
   container("ReplicatedFirst", "ReplicatedFirst", rf) +
   container("ReplicatedStorage", "ReplicatedStorage", rs) +
   container("ServerScriptService", "ServerScriptService", sss) +
-  container("StarterPlayer", "StarterPlayer", [container("StarterPlayerScripts", "StarterPlayerScripts", sps)], starterPlayerProps);
+  container("StarterPlayer", "StarterPlayer", [
+    container("StarterPlayerScripts", "StarterPlayerScripts", sps),
+    container("StarterCharacterScripts", "StarterCharacterScripts", scs),
+  ], starterPlayerProps);
 
 const xml = `<?xml version="1.0" encoding="utf-8"?>\n<roblox version="4">${body}</roblox>\n`;
 fs.writeFileSync(out, xml, "utf8");

@@ -1815,7 +1815,7 @@ function render()
 			name = "SpinButton", parent = wheelPanel, anchor = Vector2.new(0.5, 1),
 			position = UDim2.new(0.5, 0, 1, -REVEAL.ButtonH), size = UDim2.new(1, -REVEAL.Margin * 2, 0, REVEAL.ButtonH),
 			text = spinBtnText, font = "Title", textSize = UiTheme.TextSizes.SM,
-			variant = canSpin and "gold" or "secondary", disabled = not canSpin or not serverStateReady,
+			variant = canSpin and "focal" or "secondary", disabled = not canSpin or not serverStateReady,
 			onClick = function()
 				if spinMode == "Paid" then showPaidConfirmation(function() beginSpin("Paid") end)
 				else beginSpin(spinMode) end
@@ -2252,7 +2252,7 @@ function render()
 			parent = albumPanel,
 			position = UDim2.fromOffset(16, 10),
 			size = UDim2.new(1, -32, 0, 22),
-			text = L.t("ui.rewards.collectionTitle") .. " — " .. string.upper(L.t("weapon." .. selectedWeapon)),
+			text = L.t("ui.rewards.collectionTitle") .. " — " .. UiTheme.upper(L.t("weapon." .. selectedWeapon)),
 			font = "Title",
 			textSize = UiTheme.TextSizes.LG,
 			color = C.GoldBright,
@@ -2353,7 +2353,7 @@ function render()
 			parent = mastPanel,
 			position = UDim2.fromOffset(16, 14),
 			size = UDim2.new(1, -32, 0, 26),
-			text = L.t("ui.rewards.masteryTitle", { weapon = string.upper(L.t("weapon." .. selectedWeapon)) }),
+			text = L.t("ui.rewards.masteryTitle", { weapon = UiTheme.upper(L.t("weapon." .. selectedWeapon)) }),
 			font = "Title",
 			textSize = UiTheme.TextSizes.LG,
 			color = C.GoldBright,
@@ -2431,7 +2431,7 @@ end
 ----------------------------------------------------------------------
 function setOpen(value)
 	if opened == value or spinning or busy then return end
-	if value and player:GetAttribute("InMatch") then return end
+	if value and (player:GetAttribute("InMatch") or player:GetAttribute("InTutorial")) then return end
 	opened = value
 	player:SetAttribute("RewardsOpen", value)
 	if value then

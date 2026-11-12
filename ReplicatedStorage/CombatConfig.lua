@@ -168,6 +168,8 @@ CombatConfig.Revive = {
 
 -- Stamina: la gastan la esquiva, los golpes básicos, el fuerte y la patada.
 -- Etapa 8: el gasto de los golpes depende del arma (WeaponData.Stamina); Heavy y M1 de acá son el respaldo.
+CombatConfig.LobbyHealth = { Interval = 1, Fraction = 0.01 }
+
 CombatConfig.Stamina = {
 	Max = 100,
 	RegenDelay = 0.8,          -- s sin gastar antes de regenerar

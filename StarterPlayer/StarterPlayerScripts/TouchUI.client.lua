@@ -22,7 +22,9 @@ local InputBridge = require(ReplicatedStorage:WaitForChild("InputBridge"))
 local player = Players.LocalPlayer
 local Device = require(ReplicatedStorage:WaitForChild("Device"))
 local C = UiTheme.Colors
-local Mobile = require(ReplicatedStorage:WaitForChild("PolishConfig")).MobileHUD
+local Polish = require(ReplicatedStorage:WaitForChild("PolishConfig"))
+local Mobile = Polish.MobileHUD
+local Directional = require(ReplicatedStorage:WaitForChild("CombatConfig")).Directional
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "TouchControlsGui"
@@ -32,7 +34,7 @@ gui.DisplayOrder = 8
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = player:WaitForChild("PlayerGui")
 
-local PAD_W, PAD_H = 360, 330
+local PAD_W, PAD_H = 290, 274
 local rightPad = Instance.new("Frame")
 rightPad.Name = "RightThumbCluster"
 rightPad.AnchorPoint = Vector2.new(1, 1)
@@ -45,20 +47,16 @@ padScale.Parent = rightPad
 
 -- Especificación ergonómica en arco amplio con botones más grandes y mejor separados (D17)
 local BUTTON_SPECS = {
-	-- Botón central grande de ataque básico
-	{ id = "Attack",       labelKey = "ui.touch.attack",   icon = "attack",        x = 248, y = 216, size = 92, color = C.GoldBright,     hold = false },
-	-- Arco interior (Fuerte mantener, Guardia mantener, Esquiva)
-	{ id = "Heavy",        labelKey = "ui.touch.heavy",    icon = "heavy",         x = 146, y = 238, size = 72, color = C.Danger,         hold = true },
-	{ id = "Block",        labelKey = "ui.touch.block",    icon = "block",         x = 156, y = 144, size = 72, color = C.Guard,          hold = true },
-	{ id = "Dodge",        labelKey = "ui.touch.dodge",    icon = "dodge",         x = 252, y = 116, size = 70, color = C.Stamina,        hold = false },
-	-- Arco exterior (Patada mantener para KickRelease, Agarrar/Lanzar, Infusión)
-	{ id = "Kick",         labelKey = "ui.touch.kick",     icon = "kick",          x = 54,  y = 244, size = 66, color = C.Warning,        hold = true },
-	{ id = "Interact",     labelKey = "ui.touch.interact", icon = "interact",      x = 68,  y = 156, size = 66, color = C.Gold,           hold = false },
-	{ id = "Infuse",       labelKey = "ui.touch.infuse",   icon = "Fire",          x = 166, y = 56,  size = 66, color = C.InfusionCharge, hold = false },
-	-- Fila superior de puntería y menú
-	{ id = "LockOn",       labelKey = "ui.touch.lock",     icon = "lockon",        x = 262, y = 32,  size = 58, color = C.GoldBright,     hold = false },
-	{ id = "SwitchTarget", labelKey = "ui.touch.switch",   icon = "switch_target", x = 82,  y = 74,  size = 56, color = C.TextPrimary,    hold = false },
-	{ id = "Menu",         labelKey = "ui.touch.menu",     icon = "armory",        x = 10,  y = 12,  size = 52, color = C.Gold,           hold = false },
+	{ id = "Attack", labelKey = "ui.touch.attack", icon = "attack", x = 199, y = 191, size = 82, color = C.GoldBright },
+	{ id = "Heavy", labelKey = "ui.touch.heavy", icon = "heavy", x = 125, y = 201, size = 62, color = C.Danger, hold = true },
+	{ id = "Block", labelKey = "ui.touch.block", icon = "block", x = 199, y = 115, size = 66, color = C.Guard, hold = true },
+	{ id = "Dodge", labelKey = "ui.touch.dodge", icon = "dodge", x = 122, y = 122, size = 62, color = C.Stamina },
+	{ id = "Kick", labelKey = "ui.touch.kick", icon = "kick", x = 52, y = 205, size = 57, color = C.Warning, hold = true },
+	{ id = "Interact", labelKey = "ui.touch.interact", icon = "interact", x = 52, y = 130, size = 57, color = C.Gold },
+	{ id = "Infuse", labelKey = "ui.touch.infuse", icon = "Fire", x = 52, y = 55, size = 57, color = C.InfusionCharge },
+	{ id = "LockOn", labelKey = "ui.touch.lock", icon = "lockon", x = 52, y = 0, size = 49, color = C.GoldBright },
+	{ id = "SwitchTarget", labelKey = "ui.touch.switch", icon = "switch_target", x = 0, y = 0, size = 49, color = C.TextPrimary },
+	{ id = "Menu", labelKey = "ui.touch.menu", icon = "armory", x = 0, y = 56, size = 48, color = C.Gold },
 }
 
 local touchButtons = {}
@@ -71,11 +69,16 @@ local dragStartMouse = Vector2.zero
 local dragStartPos = Vector2.zero
 
 local function loadSavedLayout()
+	customLayout = {}
 	local raw = player:GetAttribute("TouchLayoutJson")
 	if type(raw) == "string" and raw ~= "" then
 		local ok, decoded = pcall(HttpService.JSONDecode, HttpService, raw)
 		if ok and type(decoded) == "table" then
-			customLayout = decoded
+			for id, spec in decoded do
+				if type(spec) == "table" and type(spec.x) == "number" and type(spec.y) == "number" then
+					customLayout[id] = { x = math.min(spec.x, PAD_W - 48), y = math.min(spec.y, PAD_H - 48), scale = spec.scale }
+				end
+			end
 		end
 	end
 end
@@ -429,29 +432,84 @@ UserInputService.InputChanged:Connect(function(input)
 	end
 end)
 
--- Claude 9/11: en celular con mando los botones táctiles se ocultan.
+-- La cruceta usa la misma predicción, bloqueo de animación y validación que mouse y mando.
+local directionPad = Instance.new("Frame")
+directionPad.Name = "StancePad"
+directionPad.BackgroundTransparency = 1
+directionPad.Position = UDim2.fromOffset(119, 3)
+directionPad.Size = UDim2.fromOffset(165, 107)
+directionPad.Parent = rightPad
+local directionCaption = UiTheme.label({ parent = directionPad, position = UDim2.fromOffset(0, 1),
+	size = UDim2.new(1, 0, 0, 16), text = L.t("gt.directionPad"), font = "Bold", textSize = 14,
+	alignX = Enum.TextXAlignment.Center, color = C.TextPrimary, stroke = true })
+local directionButtons = {}
+for _, item in { { "Up", "↑", 56, 17 }, { "Left", "←", 1, 56 }, { "Right", "→", 111, 56 } } do
+	local direction = item[1]
+	local button = UiTheme.button({ name = direction, parent = directionPad,
+		position = UDim2.fromOffset(item[3], item[4]), size = UDim2.fromOffset(52, 47),
+		text = item[2], textSize = 26, variant = "secondary",
+		onClick = function() if not editMode then InputBridge.selectStance(direction) end end })
+	button.Selectable = false
+	directionButtons[direction] = button
+end
+
+local tutorialButtons = {
+	lock = { LockOn = true }, switch = { SwitchTarget = true, LockOn = true },
+	light = { Attack = true, LockOn = true }, heavy = { Heavy = true, LockOn = true },
+	dirs = { Attack = true, LockOn = true }, combo = { Attack = true, LockOn = true },
+	dodge = { Dodge = true }, down = { Attack = true, Heavy = true, Kick = true, LockOn = true, SwitchTarget = true },
+	carry = { Kick = true, Attack = true, Heavy = true, LockOn = true },
+	throw = { Kick = true, Attack = true, Heavy = true, LockOn = true },
+	block = { Block = true, LockOn = true, SwitchTarget = true }, parry = { Block = true, LockOn = true, SwitchTarget = true },
+	infuse = { Infuse = true },
+}
+
+-- En celular con mando, Device elige el dispositivo activo.
 local function updateVisibilityAndScale()
 	editMode = player:GetAttribute("TouchEditMode") == true
 	editorBanner.Visible = editMode
 
 	local isTouch = Device.isTouch()
 	local menuOpen = player:GetAttribute("MenuOpen") == true
-	local show = editMode or (isTouch and not menuOpen)
-	if rightPad.Visible and not show then
-		for _, entry in touchButtons do entry.release() end
-	end
+	local inTutorial = player:GetAttribute("InTutorial") == true
+	local inMatch = player:GetAttribute("InMatch") == true
+	local canFight = not inMatch or player:GetAttribute("MatchPhase") == "Round"
+	local lesson = player:GetAttribute("TutorialLesson")
+	local lessonButtons = tutorialButtons[lesson]
+	local show = editMode or (isTouch and canFight and not menuOpen and not player:GetAttribute("MainMenuOpen")
+		and not player:GetAttribute("InitialLoading") and (not inTutorial or lessonButtons ~= nil))
 	rightPad.Visible = show
+	for id, entry in touchButtons do
+		local visible = show and (editMode or not inTutorial or (lessonButtons and lessonButtons[id] == true))
+		if entry.button.Visible and not visible then entry.release() end
+		entry.button.Visible = visible == true
+	end
+	local lock = player:FindFirstChild("LockTarget")
+	local char = player.Character
+	local stance = char and (char:GetAttribute("AttackDir") or "")
+	if stance == "" and char then
+		local predicted = player:FindFirstChild("PredictedStance")
+		stance = predicted and os.clock() - (predicted:GetAttribute("At") or 0) < Directional.Input.PredictHold
+			and predicted.Value or char:GetAttribute("Stance")
+	end
+	directionPad.Visible = Directional.Enabled and show and not editMode and lock ~= nil and lock.Value ~= nil
+		and (not inTutorial or lesson == "dirs" or lesson == "block" or lesson == "parry")
+	for direction, button in directionButtons do
+		local selected = direction == stance
+		button.BackgroundColor3 = selected and C.BgCardSelected or C.BgPanel
+		button.TextColor3 = selected and Polish.Directional.Stance or C.TextSecondary
+	end
 
 	local vp = gui.AbsoluteSize
 	if vp.X <= 0 or vp.Y <= 0 then return end
-	local inMatch = player:GetAttribute("InMatch") == true
-	local bottom = (inMatch or editMode) and Mobile.PadEdge
+	local bottom = (inMatch or inTutorial or editMode) and Mobile.PadEdge
 		or Mobile.QueueBottom + Mobile.QueueHeight + Mobile.Gap
 	rightPad.Position = UDim2.new(1, -Mobile.PadEdge, 1, -bottom)
 
 	local opt = player:GetAttribute("OptUiScale") or 1
 	local widthCap = (vp.X * Mobile.PadWidthShare - Mobile.PadEdge) / PAD_W
-	local heightCap = math.min(vp.Y * Mobile.PadHeightShare, vp.Y - bottom - Mobile.Margin) / PAD_H
+	local topInset = inTutorial and (vp.Y < 440 and 132 or 163) or Mobile.Margin
+	local heightCap = math.min(vp.Y * Mobile.PadHeightShare, vp.Y - bottom - topInset) / PAD_H
 	padScale.Scale = math.max(0.1, math.min(widthCap, heightCap, Mobile.PadMaxScale * opt))
 	editorScale.Scale = UiTheme.computeScale(vp, 660, 480, player)
 end
@@ -464,9 +522,9 @@ end)
 
 Device.Changed:Connect(updateVisibilityAndScale)
 gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateVisibilityAndScale)
-player:GetAttributeChangedSignal("InMatch"):Connect(updateVisibilityAndScale)
-player:GetAttributeChangedSignal("MenuOpen"):Connect(updateVisibilityAndScale)
-player:GetAttributeChangedSignal("OptUiScale"):Connect(updateVisibilityAndScale)
+for _, attr in { "InMatch", "InTutorial", "TutorialLesson", "MenuOpen", "MatchPhase", "InitialLoading", "MainMenuOpen", "OptUiScale" } do
+	player:GetAttributeChangedSignal(attr):Connect(updateVisibilityAndScale)
+end
 -- 11/11 (rendimiento): 10 veces por segundo en vez de cada frame
 local touchAcc = 0
 RunService.Heartbeat:Connect(function(dt)
@@ -478,6 +536,7 @@ end)
 updateVisibilityAndScale()
 
 L.Changed:Connect(function()
+	directionCaption.Text = L.t("gt.directionPad")
 	editorTitleLbl.Text = L.t("ui.touch.editorTitle")
 	editorHintLbl.Text = L.t("ui.touch.editorHint")
 	resetLayoutBtn.Text = L.t("ui.touch.resetLayout")

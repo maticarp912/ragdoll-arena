@@ -377,7 +377,7 @@ local function renderCinematicCards()
 		-- Insignia de Rol (si tiene Role en atributos, p. ej. OWNER / DEV / ADMIN / TESTER)
 		local roleStr = fighter:GetAttribute("Role")
 		if type(roleStr) == "string" and #roleStr > 0 then
-			local rCol = ROLE_COLORS[string.upper(roleStr)] or C.GoldBright
+			local rCol = ROLE_COLORS[UiTheme.upper(roleStr)] or C.GoldBright
 			local roleBadge = Instance.new("Frame")
 			roleBadge.Position = UDim2.fromOffset(82, 14)
 			roleBadge.Size = UDim2.fromOffset(84, 24)
@@ -389,7 +389,7 @@ local function renderCinematicCards()
 			UiTheme.label({
 				parent = roleBadge,
 				size = UDim2.fromScale(1, 1),
-				text = "[" .. string.upper(roleStr) .. "]",
+				text = "[" .. UiTheme.upper(roleStr) .. "]",
 				font = "Bold",
 				textSize = UiTheme.TextSizes.XS,
 				color = rCol,

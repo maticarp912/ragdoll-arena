@@ -26,7 +26,7 @@ local function text(class, key, y)
  if class == "TextBox" then obj.ClearTextOnFocus = false obj.PlaceholderText = obj.Text obj.Text = "" obj.PlaceholderColor3 = UI.Colors.TextMuted or UI.Colors.TextPrimary end
  return obj
 end
-local toggle = Instance.new("TextButton") toggle.Size = UDim2.fromOffset(110, 36) toggle.Position = UDim2.fromScale(0.01, 0.12)
+local toggle = Instance.new("TextButton") toggle.Size = UDim2.fromOffset(110, 36) toggle.AnchorPoint = Vector2.new(1, 0) toggle.Position = UDim2.new(1, -12, 0, 52) -- 12/11/2026: arriba a la derecha, debajo del contador de FPS (antes tapaba el retrato)
 toggle.Text = L.t("cx.admin.title") toggle.BackgroundColor3 = UI.Colors.BgPanel toggle.TextColor3 = UI.Colors.TextGold toggle.Parent = gui
 local target = text("TextBox", "cx.admin.target", 0.03)
 local action = text("TextButton", "cx.admin.action", 0.15)

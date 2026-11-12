@@ -131,7 +131,8 @@ local function render()
 		if wid then table.insert(list, { id = wid, games = tonumber(games), wins = tonumber(won) }) end
 	end
 	table.sort(list, function(a, b) return a.games > b.games end)
-	for i = 1, 3 do
+	-- 12/11/2026: sin partidas, un solo aviso en vez de tres filas vacías iguales
+	for i = 1, math.max(1, math.min(3, #list)) do
 		local e = list[i]
 		local row = box(panel, UDim2.fromOffset(28, 236 + (i - 1) * 96), UDim2.fromOffset(380, 86))
 		UiTheme.label({ parent = row, position = UDim2.fromOffset(16, 8), size = UDim2.fromOffset(60, 30), text = "#" .. i,

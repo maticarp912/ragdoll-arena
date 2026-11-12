@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 
 const root = process.argv[2] || ".";
-const DIRS = ["ReplicatedFirst", "ReplicatedStorage", "ServerScriptService", path.join("StarterPlayer", "StarterPlayerScripts")];
+const DIRS = ["ReplicatedFirst", "ReplicatedStorage", "ServerScriptService", path.join("StarterPlayer", "StarterPlayerScripts"), path.join("StarterPlayer", "StarterCharacterScripts")];
 
 const KEYWORDS = new Set(("and break do else elseif end false for function if in local nil not or repeat return then true until while continue").split(" "));
 const GLOBALS = new Set(("game workspace script Instance Vector3 Vector2 CFrame Color3 ColorSequence ColorSequenceKeypoint NumberSequence " +

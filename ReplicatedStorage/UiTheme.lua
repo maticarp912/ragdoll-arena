@@ -87,6 +87,9 @@ UiTheme.Colors = {
 	InfusionCharge = Color3.fromRGB(190, 128, 255),
 	TeamRed        = Color3.fromRGB(232, 70, 78),
 	TeamBlue       = Color3.fromRGB(84, 156, 244),
+	-- 12/11/2026: acento único de la acción principal (carmesí del Eclipse)
+	Focal = Color3.fromRGB(122, 20, 36), FocalHover = Color3.fromRGB(150, 30, 46), FocalPress = Color3.fromRGB(84, 12, 24),
+	FocalBorder = Color3.fromRGB(226, 214, 200),
 }
 
 ----------------------------------------------------------------------
@@ -260,14 +263,18 @@ function UiTheme.playSound(key)
 	end)
 end
 
+-- 12/11/2026: descuenta la barra de Roblox de arriba (antes Ajustes se salía por abajo) y la escala elegida
+-- por el jugador nunca hace que una ventana no entre en la pantalla.
 function UiTheme.computeScale(viewportSize, refWidth, refHeight, player)
+	local inset = Vector2.zero
+	pcall(function() inset = game:GetService("GuiService"):GetGuiInset() end)
 	local vw = math.max(320, viewportSize.X)
-	local vh = math.max(240, viewportSize.Y)
+	local vh = math.max(240, viewportSize.Y - inset.Y)
 	local fitW = (vw - 24) / math.max(1, refWidth or 1040)
 	local fitH = (vh - 24) / math.max(1, refHeight or 640)
-	local base = math.min(1.15, fitW, fitH)
+	local fit = math.min(fitW, fitH)
 	local opt = (player and player:GetAttribute("OptUiScale")) or 1
-	return math.clamp(base * opt, 0.45, 1.35)
+	return math.clamp(math.min(math.min(1.15, fit) * opt, fit), 0.45, 1.35)
 end
 
 function UiTheme.applyFont(instance, kind)
@@ -349,7 +356,8 @@ UiTheme.FrameArt = {
 	Window = { id = 115146949745382, rect = { 100, 24, 312, 464 }, slice = { 70, 70, 242, 394 }, scale = 0.42 },
 	Card = { id = 109248225662281, rect = { 99, 25, 314, 462 }, slice = { 66, 66, 248, 396 }, scale = 0.3 },
 	Loading = { id = 128983919450093, rect = { 98, 14, 316, 488 }, slice = { 100, 132, 216, 446 }, scale = 0.44 },
-	Inset = 4, -- px que el marco sobresale del panel
+	Inset = 4, -- px que el marco sobresale del panel (ventanas)
+	CardInset = -2, -- 12/11/2026: en tarjetas el marco va 2 px adentro, así no se pisa con la tarjeta vecina
 	MinHeight = 56, -- paneles más bajos que esto no llevan marco
 }
 
@@ -361,7 +369,12 @@ function UiTheme.frameArt(frame, kind)
 	img.Name = "FrameArt"
 	img.AnchorPoint = Vector2.new(0.5, 0.5)
 	img.Position = UDim2.fromScale(0.5, 0.5)
-	img.Size = UDim2.new(1, fa.Inset * 2, 1, fa.Inset * 2)
+	-- el marco sobresale solo en ventanas sueltas; dentro de listas (títulos, bóveda, racha) va por dentro
+	local parent = frame.Parent
+	local isWindow = parent ~= nil and (parent:IsA("LayerCollector") or (parent.Parent ~= nil and parent.Parent:IsA("LayerCollector")))
+	-- un CanvasGroup recorta lo que sale de sus bordes: ahí el marco también va por dentro
+	local inset = ((kind or "Card") == "Card" or not isWindow or frame:IsA("CanvasGroup")) and (fa.CardInset or fa.Inset) or fa.Inset
+	img.Size = UDim2.new(1, inset * 2, 1, inset * 2)
 	img.BackgroundTransparency = 1
 	img.Image = "rbxassetid://" .. spec.id
 	img.ImageRectOffset = Vector2.new(spec.rect[1], spec.rect[2])
@@ -369,7 +382,8 @@ function UiTheme.frameArt(frame, kind)
 	img.ScaleType = Enum.ScaleType.Slice
 	img.SliceCenter = Rect.new(spec.slice[1], spec.slice[2], spec.slice[3], spec.slice[4])
 	img.SliceScale = spec.scale
-	img.ZIndex = frame.ZIndex + 1
+	-- 12/11/2026: encima del contenido (los encabezados tapaban el borde de arriba); el centro es transparente
+	img.ZIndex = frame.ZIndex + 20
 	img.Parent = frame
 	-- Se oculta el contorno plateado (lo reemplaza el marco); los de color propio (rareza, equipo) se conservan
 	local stroke = frame:FindFirstChildOfClass("UIStroke")
@@ -521,6 +535,14 @@ function UiTheme.panel(props)
 end
 
 -- Etiqueta de texto con tipografía del sistema
+-- 12/11/2026: string.upper no conoce las tildes («CLASIFICACIóN»). Esta sí (español y portugués).
+local ACCENTS = { ["á"] = "Á", ["é"] = "É", ["í"] = "Í", ["ó"] = "Ó", ["ú"] = "Ú", ["ñ"] = "Ñ", ["ü"] = "Ü",
+	["ã"] = "Ã", ["õ"] = "Õ", ["â"] = "Â", ["ê"] = "Ê", ["ô"] = "Ô", ["ç"] = "Ç", ["à"] = "À" }
+function UiTheme.upper(text)
+	text = string.upper(tostring(text or ""))
+	return (text:gsub("[\195][\128-\191]", function(ch) return ACCENTS[ch] or ch end))
+end
+
 function UiTheme.label(props)
 	local lbl = Instance.new("TextLabel")
 	lbl.Name = props.name or "Label"
@@ -567,6 +589,13 @@ function UiTheme.button(props)
 		bgHover = UiTheme.Colors.IronLight
 		bgPress = UiTheme.Colors.IronDark
 		borderCol = UiTheme.Colors.GoldBright -- (UiTheme.stroke lo pasa a plata si FrameArt está prendido)
+		textCol = UiTheme.Colors.TextPrimary
+	elseif variant == "focal" then
+		-- 12/11/2026: la UNA acción principal de la pantalla (JUGAR, GIRAR): carmesí del Eclipse con borde de plata
+		bgBase = UiTheme.Colors.Focal
+		bgHover = UiTheme.Colors.FocalHover
+		bgPress = UiTheme.Colors.FocalPress
+		borderCol = UiTheme.Colors.FocalBorder
 		textCol = UiTheme.Colors.TextPrimary
 	elseif variant == "robux" then
 		-- 11/11/2026: compras con Robux en verde, como en Roblox
@@ -771,7 +800,7 @@ function UiTheme.rarityBadge(parent, rarityId, labelText, position, anchor)
 	txt.BackgroundTransparency = 1
 	txt.TextColor3 = spec.color
 	txt.TextSize = UiTheme.TextSizes.XS
-	txt.Text = spec.symbol .. " " .. string.upper(labelText or rarityId or "")
+	txt.Text = spec.symbol .. " " .. UiTheme.upper(labelText or rarityId or "")
 	UiTheme.applyFont(txt, "Bold")
 	txt.Parent = badge
 
@@ -827,6 +856,9 @@ function UiTheme.progressBar(props)
 			alignX = Enum.TextXAlignment.Center,
 			zIndex = bg.ZIndex + 3,
 		})
+		-- 12/11/2026: contorno oscuro; sin él, el número blanco no se leía sobre un relleno claro
+		valueLabel.TextStrokeColor3 = UiTheme.Colors.BgAbyss
+		valueLabel.TextStrokeTransparency = 0.2
 	end
 
 	return bg, fill, trail, valueLabel

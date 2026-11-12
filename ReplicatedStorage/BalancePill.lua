@@ -42,7 +42,7 @@ function BalancePill.create(parent, position, size, kind, amount, getGems)
 		color = C.TextPrimary, alignX = Enum.TextXAlignment.Left })
 	amountLbl.Name = "Amount"
 	UiTheme.label({ parent = pill, position = UDim2.new(0, left, 0.58, -2), size = UDim2.new(1, -(left + right), 0.42, -2),
-		text = string.upper(L.t(gems and "mz.gemsWord" or "ui.soulsWord")), font = "Bold", scaled = true,
+		text = UiTheme.upper(L.t(gems and "mz.gemsWord" or "ui.soulsWord")), font = "Bold", scaled = true,
 		textSize = UiTheme.TextSizes.XS, minTextSize = 8, color = tint, alignX = Enum.TextXAlignment.Left })
 
 	if gems then

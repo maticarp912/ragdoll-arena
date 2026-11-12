@@ -53,6 +53,7 @@ local Theme = require(ReplicatedStorage:WaitForChild("Theme"))
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local Input = remotes:WaitForChild("Input")
 local SettingsRF = remotes:WaitForChild("Settings")
+local Device = require(ReplicatedStorage:WaitForChild("Device"))
 local InputMap = require(ReplicatedStorage:WaitForChild("InputMap"))
 local L = require(ReplicatedStorage:WaitForChild("Localization"))
 local InputBridge = require(ReplicatedStorage:WaitForChild("InputBridge"))
@@ -74,12 +75,13 @@ bindsChanged.Parent = player
 bindsChanged.Event:Connect(function(newBinds) binds = newBinds end)
 task.spawn(function()
 	local ok, result = pcall(function() return SettingsRF:InvokeServer("GetBinds") end)
-	if ok and result then binds = result end
+	if ok and result then bindsChanged:Fire(result) end
 end)
 
 -- Sin mochila: el arma no se puede soltar ni cambiar con las teclas numéricas
 pcall(function()
 	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
 end)
 
 local function getChar()
@@ -114,6 +116,7 @@ local function canLock(model)
 	local mine = char and char:FindFirstChildOfClass("Humanoid")
 	return model ~= nil and model.Parent ~= nil and isAlive(hum)
 		and mine ~= nil and mine.Health > 0
+		and model:GetAttribute("TutorialOwnerUserId") == char:GetAttribute("TutorialOwnerUserId")
 		and not char:GetAttribute("Carrying") and not char:GetAttribute("CarriedBy")
 		and char:GetAttribute("Action") ~= "PickUp"
 		and not model:GetAttribute("CarriedBy")
@@ -335,7 +338,7 @@ RunService:BindToRenderStep("LockOn", Enum.RenderPriority.Camera.Value + 1, func
 
 	-- Direccional (D2): con objetivo fijado el mouse no gira la cámara; queda centrado y sus gestos eligen el lado
 	local phase = workspace:GetAttribute("MatchPhase")
-	local wantDirMouse = directionalOn() and locked ~= nil and UserInputService.MouseEnabled and not aiming
+	local wantDirMouse = directionalOn() and locked ~= nil and UserInputService.MouseEnabled and not Device.isTouch() and not Device.isGamepad() and not aiming
 		and not player:GetAttribute("MenuOpen") and hum.Health > 0
 		and (phase == nil or phase == "" or phase == "Round" or phase == "Lobby")
 	if wantDirMouse then
@@ -570,13 +573,17 @@ local function sectorOf(x, upY)
 	return nil
 end
 
+InputBridge.Stance:Connect(function(direction)
+	if stanceInputActive() then setStance(direction) end
+end)
+
 UserInputService.InputChanged:Connect(function(input)
 	if not stanceInputActive() then
 		gestureX, gestureY = 0, 0
 		stickSector = nil
 		return
 	end
-	if input.UserInputType == Enum.UserInputType.MouseMovement then
+	if input.UserInputType == Enum.UserInputType.MouseMovement and not Device.isTouch() and not Device.isGamepad() then
 		gestureX += input.Delta.X
 		gestureY += input.Delta.Y
 		local up = -gestureY
@@ -811,7 +818,7 @@ task.spawn(function()
 	while true do
 		task.wait(0.12)
 		local text = ""
-		local char = getChar()
+		local char = not player:GetAttribute("InTutorial") and getChar()
 		local hum = char and char:FindFirstChildOfClass("Humanoid")
 		if hum and hum.Health > 0 and not isDown(char) then
 			if char:GetAttribute("Carrying") then
@@ -897,7 +904,7 @@ local function onAction(action, began)
 			if nextTarget then setLock(nextTarget) end
 		end
 	elseif action == "Menu" then
-		if began then toggleMenu:Fire() end
+		if began and not player:GetAttribute("InTutorial") then toggleMenu:Fire() end
 	elseif action == "Armory" then
 		-- I3 (integración 0.2): tecla propia; la armería decide si se puede abrir (ciudad o previa)
 		if began then
@@ -955,7 +962,7 @@ end)
 
 -- Botones táctiles (TouchUI de Gemini, contrato C12): mismas acciones que teclado y mando
 InputBridge.Action:Connect(function(action, isDown)
-	if player:GetAttribute("MenuOpen") and action ~= "Menu" and action ~= "Armory" then return end
+	if isDown and player:GetAttribute("MenuOpen") and action ~= "Menu" and action ~= "Armory" then return end
 	if isDown then
 		onAction(action, true)
 	elseif action == "Block" or action == "Heavy" or action == "Kick" then

@@ -652,6 +652,9 @@ local function renderArsenal(width, height, top, compact, equippedWeapon, equipp
 end
 
 function render()
+	local inTutorial = player:GetAttribute("InTutorial") == true
+	if inTutorial and tab ~= "Weapons" and tab ~= "Infusions" then tab = "Weapons" end
+	if inTutorial and opened then player:SetAttribute("TutorialArmoryTab", tab) end
 	if titleScroll and titleScroll.Parent then titleScrollPosition = titleScroll.CanvasPosition end
 	titleScroll = nil
 	table.clear(spins)
@@ -711,7 +714,7 @@ function render()
 	})
 
 	-- Botón para ir a la Tienda (si no está en partida)
-	if not player:GetAttribute("InMatch") then
+	if not inTutorial and not player:GetAttribute("InMatch") then
 		UiTheme.button({
 			name = "OpenShopBtn",
 			parent = header,
@@ -765,6 +768,7 @@ function render()
 		{ id = "Auras", label = L.t("ui.tab.Auras") },
 		{ id = "Titles", label = L.t("mz.titles") },
 	}
+	if inTutorial then tabDefs = { tabDefs[1], tabDefs[3] } end
 	for i, def in tabDefs do
 		local b = UiTheme.tabButton({
 			name = "Tab_" .. def.id,
@@ -875,6 +879,11 @@ function render()
 	content.ScrollBarThickness = 6
 	content.ScrollBarImageColor3 = C.Gold
 	content.Parent = panel
+	-- 12/11/2026: sin esto el borde de arriba de la primera fila de tarjetas quedaba cortado
+	local contentPad = Instance.new("UIPadding")
+	contentPad.PaddingTop = UDim.new(0, 3)
+	contentPad.PaddingLeft = UDim.new(0, 2)
+	contentPad.Parent = content
 
 	-- Panel derecho: Vista 3D del Personaje + resumen de pieza seleccionada
 	local rightX = mobile and 20 or (listX + 8 + leftW)
@@ -931,7 +940,7 @@ function render()
 				parent = card,
 				position = UDim2.new(0, 6, 0.50, 0),
 				size = UDim2.new(1, -12, 0, 28),
-				text = string.upper(itemName(id)),
+				text = UiTheme.upper(itemName(id)),
 				font = "Title",
 				textSize = UiTheme.TextSizes.LG,
 				color = C.GoldBright,
@@ -1376,13 +1385,15 @@ function setOpen(value)
 	UiTheme.playSound(value and "UI_MenuOpen" or "UI_MenuClose")
 
 	if value then
+		if player:GetAttribute("InTutorial") then tab = "Weapons" end
 		weaponFilter = player:GetAttribute("WeaponId") or "Sword"
 		backdrop.Visible = true
 		panel.Visible = true
-		loadTitles()
+		if not player:GetAttribute("InTutorial") then loadTitles() end
 		render()
 		panel.Position = UDim2.fromScale(0.5, 0.53)
 	else
+		player:SetAttribute("TutorialArmoryTab", nil)
 		dragInput = nil
 		stick = Vector2.zero
 		zoomAxis = 0

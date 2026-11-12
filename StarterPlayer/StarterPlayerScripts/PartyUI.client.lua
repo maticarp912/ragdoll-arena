@@ -257,14 +257,17 @@ end
 
 local function refreshVisible()
 	local inMatch = player:GetAttribute("InMatch") == true
+	local inTutorial = player:GetAttribute("InTutorial") == true
+	gui.Enabled = not inTutorial
 	statusLbl.Visible = not inMatch
-	if inMatch then closePanel() end
+	if inMatch or inTutorial then closePanel() end
 end
 
 player:GetAttributeChangedSignal("PartyInvite"):Connect(refreshInvite)
 player:GetAttributeChangedSignal("PartyLeader"):Connect(refreshStatus)
 player:GetAttributeChangedSignal("PartyPartner"):Connect(refreshStatus)
 player:GetAttributeChangedSignal("InMatch"):Connect(refreshVisible)
+player:GetAttributeChangedSignal("InTutorial"):Connect(refreshVisible)
 Players.PlayerAdded:Connect(function() if panel then openPanel() end end)
 Players.PlayerRemoving:Connect(function() task.defer(function() if panel then openPanel() end end) end)
 L.Changed:Connect(function() refreshStatus() refreshInvite() end)

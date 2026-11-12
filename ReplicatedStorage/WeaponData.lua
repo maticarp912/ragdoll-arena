@@ -59,18 +59,18 @@ WeaponData.Data = {
 	-- e hiperarmadura en los golpes 2 y 3 (los golpes rápidos del rival no lo frenan). Empuja lejos.
 	Greatsword = {
 		archetype = "TwoHand", name = "Espadón", desc = "Lento y previsible, pero con alcance, barridos anchos y presión que no se frena.",
-		hp = 290, speed = 12.5, guardMax = 115, -- etapa 8: +35 % (era 215)
+		hp = 260, speed = 12.5, guardMax = 115,
 		combo = {
 			-- 0.2 (D3): 17·19·26 → 19·21·29 y alcance 9,5 → 10
 			-- 10/11/2026: más rápido (el usuario: «contra alguien que te spamee no tenés oportunidad»)
 			-- duración 0,92·0,92·1,05 → 0,78·0,78·0,90 e impacto 0,50·0,50·0,58 → 0,40·0,40·0,48
-			damage = { 19, 21, 29 }, stun = { 25, 28, 45 }, knockback = { 14, 14, 32 },
+			damage = { 17, 19, 26 }, stun = { 25, 28, 45 }, knockback = { 14, 14, 32 },
 			duration = { 0.78, 0.78, 0.9 }, hitTime = { 0.4, 0.4, 0.48 },
 			reach = 10, width = 7.5,
 			hyperArmor = { false, true, true }, guardDrainMult = 1.6, staggerMult = 1.3,
 		},
 		heavy = {
-			name = "Tajo Aplastante", damage = 50, stun = 70, knockback = 55, -- 0.2 (D3): 45 → 50
+			name = "Tajo Aplastante", damage = 45, stun = 70, knockback = 50,
 			windup = 0.56, hitDelay = 0.1, recovery = 0.6, reach = 10, width = 7, -- 10/11: 0,64 / 0,66 → 0,56 / 0,60
 			feintable = true, hyperArmor = true, unblockable = false,
 			blockDamageMult = 0.5, guardBreakStunMult = 1.6,
@@ -132,11 +132,11 @@ WeaponData.Data = {
 	-- y pesada para esquivar.
 	Mace = {
 		archetype = "Hammer", name = "Maza", desc = "Presión sobre la Guardia y el Stun. Rompe bloqueos y aturde; lenta y corta.",
-		hp = 317, speed = 12.5, guardMax = 110, -- etapa 8: +35 % (era 235)
+		hp = 270, speed = 12.5, guardMax = 110,
 		combo = {
 			-- 0.2 (D3): 13·15·20 → 17·19·26, alcance 7 → 8, golpe 3 más ancho (5 → 6,5)
 			-- 10/11/2026: más rápida. Duración 1,00·1,00·1,12 → 0,84·0,84·0,95 e impacto 0,56·0,56·0,63 → 0,44·0,44·0,52
-			damage = { 17, 19, 26 }, stun = { 32, 32, 52 }, knockback = { 8, 8, 22 },
+			damage = { 15, 17, 22 }, stun = { 30, 30, 48 }, knockback = { 8, 8, 22 },
 			-- 11/11: más rápida todavía (0,84·0,84·0,95 → 0,70·0,70·0,80; impacto 0,44·0,44·0,52 → 0,36·0,36·0,42).
 			-- Queda un poco más rápida que el espadón pero con menos alcance (8 contra 10).
 			duration = { 0.7, 0.7, 0.8 }, hitTime = { 0.36, 0.36, 0.42 },
@@ -145,7 +145,7 @@ WeaponData.Data = {
 		},
 		heavy = {
 			-- 10/11: el knockback = 36 había quedado adentro del comentario (el fuerte no empujaba)
-			name = "Machaque Pesado", damage = 46, stun = 85, knockback = 36, -- 0.2 (D3): 40 → 46
+			name = "Machaque Pesado", damage = 41, stun = 77, knockback = 36,
 			windup = 0.46, hitDelay = 0.1, recovery = 0.5, reach = 7.5, width = 5.5, -- 11/11: 0,52 / 0,62 → 0,46 / 0,50 -- 9/11: 7 → 7.5 · 10/11: 0,60 / 0,68 → 0,52 / 0,62
 			feintable = true, hyperArmor = false, unblockable = true,
 			blockDamageMult = 1.0, guardBreakStunMult = 1,
@@ -157,16 +157,7 @@ WeaponData.Data = {
 	},
 }
 
--- Stamina por arma (etapa 8): cada golpe básico (m1) y cada fuerte (heavy) la gastan.
--- Máximo 100, se recupera 30/s tras 0,8 s sin gastar (CombatConfig.Stamina). Las armas pesadas
--- vacían la barra con menos golpes: un combo completo de espadón cuesta 30 y uno de dagas 12.
--- 11/11/2026 (pedido del usuario): cada golpe gasta mucho más. Con la barra llena (100) se puede encadenar:
---   Espada   4 básicos, o 2 básicos + 1 fuerte          (25 / 50)
---   Espadón  3 básicos, o 1 fuerte + 1 básico           (33 / 67)
---   Maza     igual que el espadón                       (33 / 67)
---   Estoque  5 básicos, o 3 básicos + 1 fuerte (entre espada y dagas)  (20 / 40)
---   Dagas    6 básicos, o 4 básicos + 1 fuerte          (16 / 32)
--- Antes: 6/20, 10/28, 11/30, 5/16 y 4/14.
+-- Los costos de ataque y esquiva dejan margen para combinar golpes con movimiento.
 -- 11/11/2026: curva de derribo según la vida del rival (ver CombatConfig.StunByHealth).
 -- full = multiplicador con el rival a vida llena · empty = con el rival casi muerto.
 -- Espadón y maza derriban bien aunque el rival tenga vida; dagas y estoque casi solo cuando ya está bajo.
@@ -179,11 +170,11 @@ WeaponData.StunVsHealth = {
 }
 
 WeaponData.Stamina = {
-	Sword = { m1 = 25, heavy = 50 },
-	Greatsword = { m1 = 33, heavy = 67 },
-	Dagger = { m1 = 16, heavy = 32 },
-	Rapier = { m1 = 20, heavy = 40 },
-	Mace = { m1 = 33, heavy = 67 },
+	Sword = { m1 = 22, heavy = 45 },
+	Greatsword = { m1 = 29, heavy = 60 },
+	Dagger = { m1 = 15, heavy = 29 },
+	Rapier = { m1 = 18, heavy = 36 },
+	Mace = { m1 = 29, heavy = 60 },
 }
 
 function WeaponData.staminaCost(id, kind)

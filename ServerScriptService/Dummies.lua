@@ -38,7 +38,7 @@ Dummies.ModeNames = {
 }
 -- Pausa entre elegir el lado y empezar el golpe (para que se lea en el triángulo)
 local DIR_TELL = 0.3
-local MAX_DUMMIES = 10 -- 6 del patio + los del tutorial guiado
+local MAX_PUBLIC_DUMMIES = 10
 local TARGET_RANGE = 26   -- solo persigue a jugadores cerca de su sitio
 
 local folder = workspace:FindFirstChild("Dummies")
@@ -52,12 +52,14 @@ workspace:SetAttribute("DummyMode", workspace:GetAttribute("DummyMode") or "Idle
 workspace:SetAttribute("DummyWeapon", workspace:GetAttribute("DummyWeapon") or "Sword")
 workspace:SetAttribute("DummyDir", workspace:GetAttribute("DummyDir") or "Left")
 
-local slots = {} -- { home = CFrame, model = Model?, brain = {} }
+local slots = {} -- claves: muñecos activos, incluidos los que se están construyendo
+local publicCount = 0
 
 ----------------------------------------------------------------------
 -- Construcción
 ----------------------------------------------------------------------
-local function build(home)
+local function build(slot)
+	local home = slot.home
 	local desc = Instance.new("HumanoidDescription")
 	local body = Theme.Arena.DummyBody
 	desc.HeadColor = body
@@ -74,7 +76,9 @@ local function build(home)
 		warn("[Dummies] No se pudo crear el muñeco:", model)
 		return nil
 	end
+	if not slots[slot] then model:Destroy() return nil end
 	model.Name = "Muñeco"
+	model:SetAttribute("TutorialOwnerUserId", slot.ownerUserId)
 	-- Su script Animate es local y no corre en un NPC: lo quitamos
 	local animate = model:FindFirstChild("Animate")
 	if animate then animate:Destroy() end
@@ -90,7 +94,7 @@ local function build(home)
 	pcall(function() root:SetNetworkOwner(nil) end)
 
 	model:SetAttribute("IsDummy", true)
-	local weaponId = workspace:GetAttribute("DummyWeapon") or "Sword"
+	local weaponId = slot.ownerUserId and "Sword" or workspace:GetAttribute("DummyWeapon") or "Sword"
 	Combat.setupCombatant(model, weaponId)
 	model:SetAttribute("CanFight", true)
 	hum.AutoRotate = false
@@ -108,10 +112,17 @@ local function flat(v)
 	return Vector3.new(v.X, 0, v.Z)
 end
 
+local function targets(model)
+	local owner = model:GetAttribute("TutorialOwnerUserId")
+	if owner == nil then return Players:GetPlayers() end
+	local player = Players:GetPlayerByUserId(owner)
+	return player and { player } or {}
+end
+
 local function findTarget(model, home)
 	local best, bestDist = nil, math.huge
 	local root = model:FindFirstChild("HumanoidRootPart")
-	for _, p in Players:GetPlayers() do
+	for _, p in targets(model) do
 		local c = p.Character
 		local r = c and c:FindFirstChild("HumanoidRootPart")
 		if r and root and Combat.getHum(c) and c:GetAttribute("CanFight") and Combat.isEnemy(model, c)
@@ -131,7 +142,7 @@ local function incoming(model)
 	if not root then return nil end
 	local t = now()
 	local bestDt, bestChar, bestAt = nil, nil, nil
-	for _, p in Players:GetPlayers() do
+	for _, p in targets(model) do
 		local c = p.Character
 		local r = c and c:FindFirstChild("HumanoidRootPart")
 		local hitAt = c and c:GetAttribute("HitAt") or 0
@@ -288,11 +299,21 @@ end
 -- Gestión
 ----------------------------------------------------------------------
 local function respawn(slot)
+	if not slots[slot] or slot.spawning then return end
+	slot.spawning = true
 	if slot.model then slot.model:Destroy() end
-	slot.model = build(slot.home)
+	slot.model = nil
+	local model = build(slot)
+	slot.spawning = false
+	if not slots[slot] then return end
+	slot.model = model
 	slot.brain = {}
-	local model = slot.model
-	if not model then return end
+	if not model then
+		task.delay(CFG.Debug.DummyRespawn, function()
+			if not slot.model then respawn(slot) end
+		end)
+		return
+	end
 	local hum = model:FindFirstChildOfClass("Humanoid")
 	hum.Died:Connect(function()
 		task.delay(CFG.Debug.DummyRespawn, function()
@@ -301,12 +322,24 @@ local function respawn(slot)
 	end)
 end
 
-function Dummies.add(home, mode)
-	if #slots >= MAX_DUMMIES then return false end
-	local slot = { home = home, model = nil, brain = {}, mode = mode }
-	table.insert(slots, slot)
-	respawn(slot)
+function Dummies.add(home, mode, ownerUserId)
+	if ownerUserId == nil and publicCount >= MAX_PUBLIC_DUMMIES then return false end
+	local slot = { home = home, brain = {}, mode = mode, ownerUserId = ownerUserId }
+	slots[slot] = true
+	if ownerUserId == nil then
+		publicCount += 1
+		respawn(slot)
+	else
+		task.defer(respawn, slot)
+	end
 	return true, slot
+end
+
+function Dummies.remove(slot)
+	if not slots[slot] then return end
+	slots[slot] = nil
+	if slot.ownerUserId == nil then publicCount -= 1 end
+	if slot.model then slot.model:Destroy() slot.model = nil end
 end
 
 function Dummies.setup(homes)
@@ -316,18 +349,18 @@ function Dummies.setup(homes)
 end
 
 function Dummies.resetAll()
-	for _, slot in slots do
-		respawn(slot)
+	for slot in slots do
+		if slot.ownerUserId == nil then respawn(slot) end
 	end
 end
 
 function Dummies.setMode(mode)
 	if not Dummies.ModeNames[mode] then return end
 	workspace:SetAttribute("DummyMode", mode)
-	for _, slot in slots do
-		slot.brain = {}
-		if slot.model and slot.model:GetAttribute("Blocking") then
-			Combat.blockEnd(slot.model, true)
+	for slot in slots do
+		if slot.ownerUserId == nil then
+			slot.brain = {}
+			if slot.model and slot.model:GetAttribute("Blocking") then Combat.blockEnd(slot.model, true) end
 		end
 	end
 end
@@ -363,7 +396,7 @@ RunService.Heartbeat:Connect(function(dt)
 	acc += dt
 	if acc < 0.05 then return end
 	acc = 0
-	for _, slot in slots do
+	for slot in slots do
 		local model = slot.model
 		if model and model.Parent then
 			local root = model:FindFirstChild("HumanoidRootPart")

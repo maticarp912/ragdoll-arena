@@ -42,7 +42,7 @@ local function rankTags(p)
 	for _, r in CARD.Ranks do
 		if role == r then
 			local color = ok and Roles.Data and Roles.Data[r] and Roles.Data[r].color or C.GoldBright
-			table.insert(tags, ('<font color="#%s">[%s]</font>'):format(color:ToHex(), string.upper(r)))
+			table.insert(tags, ('<font color="#%s">[%s]</font>'):format(color:ToHex(), UiTheme.upper(r)))
 		end
 	end
 	if p:GetAttribute("Pass_VIP") == true then

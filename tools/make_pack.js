@@ -31,6 +31,7 @@ const pack = folder("__PACK", [
   folder("RS", scriptsIn(path.join(src, "ReplicatedStorage"), "ModuleScript")),
   folder("SSS", scriptsIn(path.join(src, "ServerScriptService"), "ModuleScript")),
   folder("SPS", scriptsIn(path.join(src, "StarterPlayer", "StarterPlayerScripts"), "LocalScript")),
+  folder("SCS", scriptsIn(path.join(src, "StarterPlayer", "StarterCharacterScripts"), "Script")),
   folder("RF", scriptsIn(path.join(src, "ReplicatedFirst"), "LocalScript")),
 ]);
 fs.writeFileSync(out, `<?xml version="1.0" encoding="utf-8"?>\n<roblox version="4">${pack}</roblox>\n`, "utf8");

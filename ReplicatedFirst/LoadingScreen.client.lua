@@ -307,7 +307,8 @@ local function initialWorldReady()
 	local character = player.Character
 	local profile = player:GetAttribute("ProfileState")
 	local map = workspace:FindFirstChild("GeneratedMap")
-	return game:IsLoaded() and map and character and character:FindFirstChild("HumanoidRootPart")
+	return game:IsLoaded() and map and character and character:GetAttribute("LobbySpawnReady")
+		and character:FindFirstChild("HumanoidRootPart")
 		and (profile == "Ready" or profile == "Temporary")
 end
 

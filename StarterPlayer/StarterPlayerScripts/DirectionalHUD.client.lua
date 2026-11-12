@@ -221,6 +221,11 @@ RunService.RenderStepped:Connect(function()
 	local target = lockValue and lockValue.Value
 	local show = DIR.Enabled and char ~= nil and hum ~= nil and hum.Health > 0 and target ~= nil and aliveModel(target)
 		and not char:GetAttribute("KnockedDown") and not char:GetAttribute("CarriedBy")
+	local lesson = player:GetAttribute("TutorialLesson")
+	show = show and not player:GetAttribute("MenuOpen") and not player:GetAttribute("MainMenuOpen")
+		and not player:GetAttribute("InitialLoading")
+		and (not player:GetAttribute("InMatch") or player:GetAttribute("MatchPhase") == "Round")
+		and (not player:GetAttribute("InTutorial") or lesson == "dirs" or lesson == "block" or lesson == "parry")
 	gui.Enabled = show == true
 	if not show then return end
 

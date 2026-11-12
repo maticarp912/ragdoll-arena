@@ -398,7 +398,7 @@ function render(messageKey)
 		parent = header,
 		position = UDim2.fromOffset(22, 0),
 		size = UDim2.fromOffset(420, 54),
-		text = string.upper(L.t("settings")),
+		text = UiTheme.upper(L.t("settings")),
 		font = "Title",
 		textSize = UiTheme.TextSizes.XXL,
 		color = C.GoldBright,
@@ -526,7 +526,7 @@ function render(messageKey)
 				position = UDim2.fromOffset(318, 23),
 				size = UDim2.fromOffset(320, 20),
 				fraction = frac,
-				fillColor = C.Gold,
+				fillColor = C.GoldDim, -- 12/11/2026: plata apagada para que se lea el número
 				showText = true,
 				text = pctText,
 			})
@@ -698,6 +698,7 @@ function render(messageKey)
 end
 
 function setOpen(value)
+	if value and player:GetAttribute("InTutorial") and not player:GetAttribute("MainMenuOpen") then return end
 	capturing = nil
 	panel.Visible = value
 	veil.Visible = value

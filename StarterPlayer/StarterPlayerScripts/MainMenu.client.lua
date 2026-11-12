@@ -417,7 +417,7 @@ local function wakeUp()
 end
 
 function play()
-	if started then return end
+	if started or player:GetAttribute("InitialLoading") ~= false then return end
 	started = true
 	news.Visible = false
 	GuiService.SelectedObject = nil
@@ -432,8 +432,12 @@ function play()
 		warn("[MainMenu] despertar:", err)
 		RunService:UnbindFromRenderStep("MainMenuCamera")
 		camera.CameraType = Enum.CameraType.Custom
-		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-		if root then root.Anchored = false end
+		local char = player.Character
+		if char then
+			setLocalVisible(char, 0)
+			local root = char:FindFirstChild("HumanoidRootPart")
+			if root then root.Anchored = false end
+		end
 	end
 	ContextActionService:UnbindAction(BLOCK_ACTION)
 	restoreOthers()

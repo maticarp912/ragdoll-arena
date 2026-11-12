@@ -375,6 +375,12 @@ local stamNumber = UiTheme.label({ parent = stamHeader, anchor = Vector2.new(1, 
 	size = UDim2.new(0, 30, 1, 0), text = "100", font = "Number", textSize = UiTheme.TextSizes.XS, color = C.TextPrimary,
 	alignX = Enum.TextXAlignment.Right })
 
+-- 12/11/2026: contorno oscuro para que los textos se lean sobre el arte de la barra y sobre el escenario
+for _, lbl in { hpTitleLbl, hpNumber, infText, infState, stamCaption, stamNumber } do
+	lbl.TextStrokeColor3 = C.BgAbyss
+	lbl.TextStrokeTransparency = 0.25
+end
+
 local infArtId
 local function applyInfusionArt(infusionId, color)
 	if infArtId == infusionId then return end
@@ -789,7 +795,8 @@ local function updateLayout()
 	statusBanner.Position = UDim2.new(0.5, 0, 0, Mobile.Margin)
 	do
 		holder.AnchorPoint = Vector2.new(0.5, 1)
-		local bottom = inMatch and Mobile.Margin or (Mobile.QueueBottom + Mobile.QueueHeight + Mobile.Gap)
+		-- 12/11/2026: en el lobby, arriba del botón JUGAR y de la barra de cola (antes quedaba tapada)
+		local bottom = inMatch and Mobile.Margin or (Mobile.QueueBottom + Mobile.QueueHeight + Mobile.Gap * 2 + Polish.QuickPlayHeight)
 		holder.Position = UDim2.new(Device.isTouch() and Mobile.TouchBarsCenter or 0.5, 0, 1, -bottom)
 	end
 end
@@ -814,10 +821,13 @@ RunService.Heartbeat:Connect(function(dt)
 	end
 
 	local inMatch = player:GetAttribute("InMatch") == true
+	local inRound = player:GetAttribute("MatchPhase") == "Round"
+	gui.Enabled = not player:GetAttribute("InTutorial") and not player:GetAttribute("MainMenuOpen")
+		and not player:GetAttribute("InitialLoading")
 	local lockTarget = player:FindFirstChild("LockTarget")
 	local locking = lockTarget ~= nil and lockTarget.Value ~= nil
 	-- 12/11/2026 (pedido del usuario): el HUD de combate está oculto y aparece solo al fijar un objetivo
-	local inCombat = locking
+	local inCombat = (not inMatch or inRound) and locking
 	local targetAlpha = inCombat and 0 or 1
 	if holder.GroupTransparency ~= targetAlpha then
 		local cur = holder.GroupTransparency
@@ -831,10 +841,10 @@ RunService.Heartbeat:Connect(function(dt)
 	holder.Visible = holder.GroupTransparency < 0.99 and not player:GetAttribute("MenuOpen")
 	topHolder.GroupTransparency = holder.GroupTransparency
 	topHolder.Visible = holder.Visible
-	progBarHolder.Visible = not topHolder.Visible or holder.GroupTransparency > 0.5
+	progBarHolder.Visible = not inMatch and (not topHolder.Visible or holder.GroupTransparency > 0.5)
 
 	local enemies = {}
-	if player:GetAttribute("InMatch") and player.Team then
+	if inMatch and inRound and player.Team then
 		for _, other in Players:GetPlayers() do
 			if other ~= player and other:GetAttribute("InMatch") and other.Team and other.Team ~= player.Team then
 				table.insert(enemies, other)

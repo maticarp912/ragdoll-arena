@@ -13,6 +13,12 @@ local InputBridge = {}
 
 local event = Instance.new("BindableEvent")
 InputBridge.Action = event.Event
+local stance = Instance.new("BindableEvent")
+InputBridge.Stance = stance.Event
+
+function InputBridge.selectStance(direction)
+	stance:Fire(direction)
+end
 
 function InputBridge.press(actionId, isDown)
 	event:Fire(actionId, isDown == true)

@@ -5,6 +5,7 @@
 -- La arena está hecha de baldosas que se desmoronan de fuera hacia dentro.
 
 local Players = game:GetService("Players")
+Players.CharacterAutoLoads = false
 local Teams = game:GetService("Teams")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -17,6 +18,7 @@ local CombatConfig = require(ReplicatedStorage:WaitForChild("CombatConfig"))
 local Combat = require(ServerScriptService:WaitForChild("Combat"))
 local PlayerData = require(ServerScriptService:WaitForChild("PlayerData"))
 local Dummies = require(ServerScriptService:WaitForChild("Dummies"))
+local GuidedTutorial = require(ServerScriptService:WaitForChild("GuidedTutorial"))
 require(ServerScriptService:WaitForChild("Remotes"))
 
 local ArenaConfig = require(ReplicatedStorage:WaitForChild("ArenaConfig"))
@@ -38,8 +40,6 @@ end
 phase("Lobby")
 local CONFIG = ArenaConfig.Match
 local MODES = ArenaConfig.Modes
-
-Players.CharacterAutoLoads = false
 
 ----------------------------------------------------------------------
 -- Iluminación dark fantasy (valores en Theme.Lighting)
@@ -245,7 +245,7 @@ local function watchDeath(player: Player, char: Model, hum: Humanoid)
 		Ragdoll.enable(char, nil, true)
 		if not player:GetAttribute("InMatch") then
 			task.delay(3, function()
-				if player.Parent and not player:GetAttribute("InMatch") then
+				if player.Parent and player.Character == char and not player:GetAttribute("InMatch") then
 					spawnInLobby(player)
 				end
 			end)
@@ -282,15 +282,17 @@ local function spawnAt(player: Player, cf: CFrame)
 	local hum = char:FindFirstChildOfClass("Humanoid")
 	if not hum then return nil, nil end
 	char:PivotTo(cf)
-	Combat.setupCharacter(player, char)
+	if not Combat.setupCharacter(player, char) then return nil, nil end
 	watchDeath(player, char, hum)
 	return char, hum
 end
 
 function spawnInLobby(player: Player)
 	local char = spawnAt(player, lobbyCFrame)
-	-- En el lobby se puede pelear, pero solo contra los muñecos (Combat.isEnemy evita el PvP)
-	if char then char:SetAttribute("CanFight", true) end
+	if not char then return end
+	GuidedTutorial.arrive(player, char)
+	char:SetAttribute("CanFight", true)
+	char:SetAttribute("LobbySpawnReady", true)
 end
 
 ----------------------------------------------------------------------
@@ -577,7 +579,7 @@ QueueRemote.OnServerEvent:Connect(function(player, action, mode)
 	-- 11/11: en party solo el líder busca partida; el otro entra con él
 	if Party.inParty(player) and not Party.isLeader(player) then return end
 	local partner = Party.partner(player)
-	if action == "Join" and type(mode) == "string" and (QUEUE_NEED[mode] or mode == "Any") and not player:GetAttribute("InMatch") then
+	if action == "Join" and type(mode) == "string" and (QUEUE_NEED[mode] or mode == "Any") and not player:GetAttribute("InMatch") and not player:GetAttribute("InTutorial") then
 		queueRequests[player] = mode
 	elseif action == "Leave" then
 		queueRequests[player] = nil
@@ -591,7 +593,8 @@ Party.Changed:Connect(function(p) queueRequests[p] = nil end)
 local function eligible(p)
 	local char = p.Character
 	local hum = char and char:FindFirstChildOfClass("Humanoid")
-	return p.Parent and hum and hum.Health > 0 and not p:GetAttribute("InMatch") and PlayerData.get(p) ~= nil
+	return p.Parent and hum and hum.Health > 0 and not p:GetAttribute("InMatch")
+		and not p:GetAttribute("InTutorial") and PlayerData.get(p) ~= nil
 end
 
 -- Arma la lista de la cola en unidades: el líder y su compañero juntos, o un jugador solo.
@@ -642,8 +645,7 @@ local function playersInZone(zone)
 	for _, p in Players:GetPlayers() do
 		local char = p.Character
 		local root = char and char:FindFirstChild("HumanoidRootPart")
-		local hum = char and char:FindFirstChildOfClass("Humanoid")
-		if root and hum and hum.Health > 0 and not p:GetAttribute("InMatch") and PlayerData.get(p) then
+		if root and eligible(p) then
 			local d = (root.Position - zone.center) * Vector3.new(1, 0, 1)
 			if d.Magnitude <= zone.radius and math.abs(root.Position.Y - zone.center.Y) < 8 then
 				table.insert(list, p)
@@ -675,9 +677,7 @@ task.spawn(function()
     end
    end
    for p, mode in queueRequests do
-    local char = p.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if not physical[p] and p.Parent and hum and hum.Health > 0 and not p:GetAttribute("InMatch") and PlayerData.get(p) then
+    if not physical[p] and eligible(p) then
      if mode == "Any" then
       -- JUGAR: en las dos colas. Una party solo va a 2v2 (si no, se armaría un duelo entre ellos).
       table.insert(queued["2v2"], p)
@@ -725,7 +725,7 @@ task.spawn(function()
 		else
 			local waiting = {}
 			for _, p in Players:GetPlayers() do
-				if not p:GetAttribute("InMatch") and not p:GetAttribute("PracticeOnly") and p.Character and PlayerData.get(p) then
+				if eligible(p) and not p:GetAttribute("PracticeOnly") then
 					table.insert(waiting, p)
 				end
 			end

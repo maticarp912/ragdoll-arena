@@ -240,7 +240,9 @@ local function loadVault()
  end)
 end
 
+local vaultCoinsOnly = false -- 12/11/2026: la sección Monedas muestra solo los paquetes de monedas
 local function openVault(section)
+ vaultCoinsOnly = section == "Gems"
  if player:GetAttribute("InMatch") then return end
  vaultTarget = section
  tab = "Vault" inspecting = false
@@ -1055,7 +1057,7 @@ local function renderVault(parent, width, mobile)
  for _, group in { "Pass", "Product" } do
   local offers = {}
   for _, item in vaultEntries or {} do
-   if item.available and item.type == group then table.insert(offers, item) end
+   if item.available and item.type == group and (not vaultCoinsOnly or item.kind == "Gems") then table.insert(offers, item) end
   end
   if #offers == 0 then continue end
   if group == "Pass" then firstPassY = y else firstPackY = y end
@@ -1086,7 +1088,7 @@ local function renderVault(parent, width, mobile)
    local artByKey = { SkipOpening = "pass_skip", VIP = "pass_vip", Spins3 = "pack_spins_3", Luck30 = "amulet" }
    local iconByKind = { Gems = "gem", Spins = "pack_spins_3", Luck = "amulet", Aura = "crown", Skin = "armory" }
    local iconName = artByKey[item.key] or (item.kind == "Gems" and item.amount and ("pack_gems_" .. item.amount))
-   if not iconName or not UiAssets.Ids[iconName] then iconName = iconByKind[item.kind] or "stamina" end
+   if not iconName or not UiAssets.imageUri(iconName) then iconName = iconByKind[item.kind] or "stamina" end
    local crest = UiAssets.icon(card, iconName, UiAssets.imageUri(iconName) and 40 or 30, item.kind == "Gems" and C.Guard or C.GoldBright)
    crest.Position = UDim2.fromOffset(14, 18)
    UiTheme.label({ parent = card, position = UDim2.fromOffset(54, 12), size = UDim2.new(1, -68, 0, 42),
@@ -1267,9 +1269,9 @@ function render()
 		{ id = "Auras", label = L.t("ui.shop.tab.Auras"), icon = "aura_crown" },
 		{ id = "Boosts", label = L.t("ui.shop.side.Boosts"), icon = "boost_souls" },
 		{ id = "Vault", label = L.t("mz.vault"), icon = "rewards" },
-		{ id = "Coins", label = L.t("ui.shop.side.Souls"), icon = "soul" },
+		{ id = "Coins", label = L.t("ui.shop.side.Souls"), icon = "gem" },
 	}
-	if debugSouls then table.insert(tabDefs, { id = "Souls", label = L.t("ui.shop.tab.Souls"), icon = "gem" }) end
+	if debugSouls then table.insert(tabDefs, { id = "Souls", label = L.t("ui.shop.tab.Souls"), icon = "soul" }) end
 	if tab == "Souls" and not debugSouls then tab = "Showcase" end
 	for i, def in tabDefs do
 		local b = UiTheme.tabButton({
@@ -1304,7 +1306,8 @@ function render()
 		pad.PaddingTop = UDim.new(0, 14)
 		pad.Parent = sidebar
 		for i, def in tabDefs do
-			local active = tab == def.id
+			local active = (def.id == "Coins" and tab == "Vault" and vaultCoinsOnly)
+				or (def.id == tab and not (def.id == "Vault" and vaultCoinsOnly))
 			local b = Instance.new("TextButton")
 			b.Name = "Side_" .. def.id
 			b.LayoutOrder = i
@@ -1326,7 +1329,7 @@ function render()
 			ic.AnchorPoint = Vector2.new(0, 0.5)
 			ic.Position = UDim2.new(0, 18, 0.5, 0)
 			UiTheme.label({ parent = b, position = UDim2.fromOffset(52, 0), size = UDim2.new(1, -58, 1, 0),
-				text = string.upper(def.label), font = "Title", textSize = UiTheme.TextSizes.LG, scaled = true, maxTextSize = 24,
+				text = UiTheme.upper(def.label), font = "Title", textSize = UiTheme.TextSizes.LG, scaled = true, maxTextSize = 24,
 				minTextSize = 12, color = active and C.GoldBright or C.TextSecondary })
 			b.MouseEnter:Connect(function() if not active then b.BackgroundTransparency = 0.6 end end)
 			b.MouseLeave:Connect(function() if not active then b.BackgroundTransparency = 1 end end)
@@ -1341,9 +1344,13 @@ function render()
 		end
 		-- título grande de la categoría arriba del contenido
 		local current
-		for _, def in tabDefs do if def.id == tab then current = def end end
+		for _, def in tabDefs do
+			if (def.id == "Coins" and tab == "Vault" and vaultCoinsOnly) or (def.id == tab and not (tab == "Vault" and vaultCoinsOnly)) then
+				current = def
+			end
+		end
 		UiTheme.label({ parent = panel, position = UDim2.fromOffset(20, 66), size = UDim2.new(1, -40, 0, 42),
-			text = string.upper(current and current.label or ""), font = "Title", textSize = UiTheme.TextSizes.XXL or 30,
+			text = UiTheme.upper(current and current.label or ""), font = "Title", textSize = UiTheme.TextSizes.XXL or 30,
 			scaled = true, maxTextSize = 34, color = C.TextPrimary })
 	end
 
@@ -1424,6 +1431,11 @@ function render()
 	content.ScrollBarThickness = 6
 	content.ScrollBarImageColor3 = C.Gold
 	content.Parent = panel
+	-- 12/11/2026: sin esto el borde de arriba de la primera fila de tarjetas quedaba cortado
+	local contentPad = Instance.new("UIPadding")
+	contentPad.PaddingTop = UDim.new(0, 3)
+	contentPad.PaddingLeft = UDim.new(0, 2)
+	contentPad.Parent = content
 
 	detail = UiTheme.panel({
 		name = "DetailPanel",
@@ -1773,7 +1785,7 @@ end
 ----------------------------------------------------------------------
 function setOpen(value)
 	if opened == value then return end
-	if value and player:GetAttribute("InMatch") then
+	if value and (player:GetAttribute("InMatch") or player:GetAttribute("InTutorial")) then
 		return
 	end
 	opened = value
