@@ -92,3 +92,6 @@ Publicar el .rbxlx entero se colgaba. Se hizo así:
 2. En Studio, abrir la experiencia publicada desde Roblox → Archivo → Importar modelos Roblox → ese archivo.
 3. En la barra de comandos, mover el contenido de __PACK a ReplicatedStorage, ServerScriptService, StarterPlayerScripts y ReplicatedFirst (comando en el historial de la sesión), y sacar __PACK.
 4. Archivo → Publicar. Salió como versión 7.
+
+## Publicación 0.3 (12/11/2026, Claude)
+Con el MCP de Studio: abrir la experiencia desde Roblox, copiar los scripts del repo con execute_luau (solo cambia Source; crea los que faltan), borrar los scripts que ya no están en el repo, probar Play y Archivo → Publicar (Alt+P). Publicar el .rbxlx entero con «Publicar como» se queda en «Carga en curso».
