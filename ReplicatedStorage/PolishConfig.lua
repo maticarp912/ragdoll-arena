@@ -13,9 +13,10 @@ return {
   -- icono de infusión: latido activa / carga llena, ladeo agotada
   -- 12/11/2026: barras de arte (UiAssets.BarArt, solo la infusión) y disposición del HUD propio (px, sin escalar)
   ArtBars = { EmptyTransparency = 0.18, LostTransparency = 0.45 },
-  Bars = { TopWidth = 330, TopHeight = 96, HealthY = 2, HealthWidth = 320, HealthHeight = 20, WeaponWidth = 120,
-   StaminaY = 28, StaminaWidth = 190, StaminaHeight = 7, StaminaCaption = 120,
-   InfusionY = 38, InfusionWidth = 220, InfusionIcon = 26, ShadowTintLift = 0.35, RivalWidth = 300,
+  Bars = { TopWidth = 420, TopHeight = 130, HealthY = 0, HealthWidth = 360, WeaponWidth = 120, BarsX = 72,
+   InfusionY = 76, InfusionWidth = 210, InfusionHeight = 9, InfusionIcon = 22, InfusionCaption = 130,
+   UltiColor = Color3.fromRGB(255, 214, 64), ShadowTintLift = 0.35,
+   StaminaY = 98, StaminaWidth = 230, StaminaHeight = 8, StaminaCaption = 120, RivalWidth = 300, HealthHeight = 18,
    StunWidth = 260, StunHeight = 8, GuardY = 26, GuardWidth = 440, GuardHeight = 14, Shield = 34 },
   InfusionIcon = { Size = 28, ActiveAmp = 0.14, ActiveSpeed = 9, FullAmp = 0.06, FullSpeed = 4, ActiveWobble = 40, ExhaustTilt = 14 } },
  -- 12/11/2026: menú inicial (MainMenu.client): escena del caballero, opciones y despertar

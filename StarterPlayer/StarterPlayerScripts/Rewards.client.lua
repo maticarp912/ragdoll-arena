@@ -36,6 +36,13 @@ local REVEAL = {
 	FixedSeconds = 0.9, OpenSeconds = 0.55, BrakePower = 3,
 	WheelSeconds = 2.7, WheelPause = 0.24, WheelFinalSeconds = 0.38,
 	WheelTurns = 4, Circle = 360, FinalSectorFraction = 0.72,
+	-- 12/11/2026: ruleta tipo timón (medidas en fracción del diámetro)
+	Helm = { Diameter = 380, Ring = 0.25, Orbit = 0.395, Medallion = 0.2, Hub = 0.15, RingThickness = 6, Spoke = 6, Stem = 7,
+		MedallionRim = 3, WinRim = 5, Pointer = 22, Silver = Color3.fromRGB(200, 204, 214),
+		Sheen = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(150, 154, 166)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(225, 228, 236)) }),
+		Icons = { Souls = "soul", Coins = "soul", Gems = "gem", Spin = "pack_spins_3", Spins = "pack_spins_3", Boost = "boost_xp", XP = "boost_xp",
+			Box = "rewards", SkinPool = "armory", Skin = "armory", WeeklySkin = "trophy", Weekly = "trophy", Aura = "aura_crown" } },
 	JackpotSeconds = 2.5, FlashSeconds = 0.55, JackpotFlashSeconds = 1.2,
 	FlashTransparency = 0.35, JackpotFlashTransparency = 0.08,
 	StripCount = 32, StripTail = 3, CardWidth = 128, CardHeight = 154, CardGap = 10,
@@ -597,8 +604,13 @@ local function animateWheel(job, options)
 	local finish = start + REVEAL.Circle * REVEAL.WheelTurns + (target - start) % REVEAL.Circle
 	local before = finish - step * REVEAL.FinalSectorFraction
 	local lastTick = math.floor((start + step / 2) / step)
+	local medallions = {}
+	for _, m in wheel:GetChildren() do
+		if m.Name:sub(1, 10) == "Medallion_" then table.insert(medallions, m) end
+	end
 	local function rotate(angle)
 		wheel.Rotation = angle
+		for _, m in medallions do m.Rotation = -angle end
 		local crossing = math.floor((angle + step / 2) / step)
 		if not job.skip then
 			for _ = lastTick + 1, crossing do UiTheme.playSound(REVEAL.TickSound) end
@@ -609,6 +621,15 @@ local function animateWheel(job, options)
 	animateReveal(job, REVEAL.WheelPause, function() end)
 	animateReveal(job, REVEAL.WheelFinalSeconds, function(t) rotate(before + (finish - before) * t) end)
 	currentWheelAngle = target wheel.Rotation = target
+	for _, m in medallions do m.Rotation = -target end
+	local won = wheel:FindFirstChild("Medallion_" .. sector)
+	local rim = won and won:FindFirstChild("Rim")
+	if rim then
+		rim.Color = C.GoldBright
+		rim.Thickness = REVEAL.Helm.WinRim
+		TweenService:Create(won, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 1, true),
+			{ Size = won.Size + UDim2.fromOffset(10, 10) }):Play()
+	end
 end
 
 local function animateCarousel(job, stage, pool, reward)
@@ -1609,18 +1630,18 @@ function render()
 			onClick = function() showOddsModal() end,
 		})
 
-		-- Rueda circular de 8 sectores
-		local wheelDia = math.min(REVEAL.WheelDiameter, leftW - REVEAL.Margin * 2, bodyH - REVEAL.WheelTop - REVEAL.WheelControlsHeight)
+		-- 12/11/2026 (pedido del usuario): ruleta tipo timón según Referencias 0.2/ruleta .jpg.
+		-- Aro de plata con 8 rayos y centro; afuera, 8 medallones (uno por premio) sobre un vástago. Gira todo junto
+		-- y el contenido de cada medallón se mantiene derecho. El puntero de arriba marca el premio.
+		local WH = REVEAL.Helm
+		local wheelDia = math.min(WH.Diameter, leftW - REVEAL.Margin * 2, bodyH - REVEAL.WheelTop - REVEAL.WheelControlsHeight)
 		local wheelOuter = Instance.new("Frame")
 		wheelOuter.Name = "WheelOuter"
 		wheelOuter.AnchorPoint = Vector2.new(0.5, 0)
 		wheelOuter.Position = UDim2.new(0.5, 0, 0, REVEAL.WheelTop)
 		wheelOuter.Size = UDim2.fromOffset(wheelDia, wheelDia)
-		wheelOuter.BackgroundColor3 = C.BgAbyss
-		wheelOuter.BorderSizePixel = 0
+		wheelOuter.BackgroundTransparency = 1
 		wheelOuter.Parent = wheelPanel
-		UiTheme.corner(wheelOuter, math.floor(wheelDia / 2))
-		UiTheme.stroke(wheelOuter, C.GoldBright, 3, 0)
 
 		local wheelInner = Instance.new("Frame")
 		wheelInner.Name = "WheelRotatable"
@@ -1632,79 +1653,110 @@ function render()
 		wheelInner.Parent = wheelOuter
 
 		local sectors = state.roulette or DEFAULT_SECTORS
-		local radius = wheelDia * 0.34
+		local ringR = wheelDia * WH.Ring
+		local medR = wheelDia * WH.Orbit
+		local medD = math.floor(wheelDia * WH.Medallion)
+		local function bar(name, fromR, toR, deg, thick, color, z)
+			local rad = math.rad(deg)
+			local mid = (fromR + toR) / 2
+			local f = Instance.new("Frame")
+			f.Name = name
+			f.AnchorPoint = Vector2.new(0.5, 0.5)
+			f.Position = UDim2.new(0.5, math.sin(rad) * mid, 0.5, -math.cos(rad) * mid)
+			f.Size = UDim2.fromOffset(thick, toR - fromR)
+			f.Rotation = deg
+			f.BackgroundColor3 = color
+			f.BorderSizePixel = 0
+			f.ZIndex = z
+			f.Parent = wheelInner
+			local g = Instance.new("UIGradient")
+			g.Color = WH.Sheen
+			g.Parent = f
+			return f
+		end
+		-- disco oscuro y aro de plata
+		local disc = Instance.new("Frame")
+		disc.Name = "Disc"
+		disc.AnchorPoint = Vector2.new(0.5, 0.5)
+		disc.Position = UDim2.fromScale(0.5, 0.5)
+		disc.Size = UDim2.fromOffset(ringR * 2, ringR * 2)
+		disc.BackgroundColor3 = C.BgAbyss
+		disc.BackgroundTransparency = 0.25
+		disc.ZIndex = 2
+		disc.Parent = wheelInner
+		UiTheme.corner(disc, math.floor(ringR))
+		local ringStroke = Instance.new("UIStroke")
+		ringStroke.Color = WH.Silver
+		ringStroke.Thickness = WH.RingThickness
+		ringStroke.Parent = disc
 		for i = 1, 8 do
 			local sec = sectors[i] or DEFAULT_SECTORS[i]
 			local deg = (i - 1) * 45
+			bar("Spoke_" .. i, 0, ringR, deg, WH.Spoke, WH.Silver, 3)
+			bar("Stem_" .. i, ringR, medR - medD / 2 + 2, deg, WH.Stem, WH.Silver, 3)
+
 			local rad = math.rad(deg)
-
-			-- Línea divisoria entre sectores
-			local spoke = Instance.new("Frame")
-			spoke.AnchorPoint = Vector2.new(0.5, 0.5)
-			spoke.Position = UDim2.fromScale(0.5, 0.5)
-			spoke.Size = UDim2.fromOffset(2, wheelDia - 8)
-			spoke.BackgroundColor3 = C.GoldDim
-			spoke.BackgroundTransparency = 0.35
-			spoke.BorderSizePixel = 0
-			spoke.Rotation = deg + 22.5
-			spoke.Parent = wheelInner
-
-			-- Medallón del sector
-			local sx = math.sin(rad) * radius
-			local sy = -math.cos(rad) * radius
 			local node = Instance.new("Frame")
-			node.Name = "Sector_" .. i
+			node.Name = "Medallion_" .. i
 			node.AnchorPoint = Vector2.new(0.5, 0.5)
-			node.Position = UDim2.new(0.5, sx, 0.5, sy)
-			node.Size = UDim2.fromOffset(78, 44)
+			node.Position = UDim2.new(0.5, math.sin(rad) * medR, 0.5, -math.cos(rad) * medR)
+			node.Size = UDim2.fromOffset(medD, medD)
 			node.BackgroundColor3 = sectorColor(sec, i)
 			node.BorderSizePixel = 0
-			node.Rotation = deg
+			node.Rotation = -currentWheelAngle
+			node.ZIndex = 4
 			node.Parent = wheelInner
-			UiTheme.corner(node, UiTheme.Radius.SM)
-			UiTheme.stroke(node, (sec and (sec.kind == "WeeklySkin" or sec.kind == "Weekly")) and C.GoldBright or C.GoldDim, 1.4, 0.1)
-
+			UiTheme.corner(node, math.floor(medD / 2))
+			local nStroke = Instance.new("UIStroke")
+			nStroke.Name = "Rim"
+			nStroke.Color = (sec and (sec.kind == "WeeklySkin" or sec.kind == "Weekly")) and C.GoldBright or WH.Silver
+			nStroke.Thickness = WH.MedallionRim
+			nStroke.Parent = node
+			local shade = Instance.new("UIGradient")
+			shade.Rotation = 90
+			shade.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 150, 160))
+			shade.Parent = node
+			local ic = UiAssets.icon(node, WH.Icons[sec and sec.kind or ""] or "rewards", math.floor(medD * 0.42), C.TextPrimary)
+			ic.AnchorPoint = Vector2.new(0.5, 0.5)
+			ic.Position = UDim2.fromScale(0.5, 0.36)
+			ic.ZIndex = 5
 			UiTheme.label({
-				parent = node,
-				position = UDim2.fromOffset(4, 2),
-				size = UDim2.new(1, -8, 1, -4),
-				text = formatSectorLabel(sec),
-				font = "Bold",
-				textSize = 10,
-				maxTextSize = 11,
-				minTextSize = 8,
-				scaled = true,
-				color = C.TextPrimary,
-				alignX = Enum.TextXAlignment.Center,
+				parent = node, anchor = Vector2.new(0.5, 0), position = UDim2.fromScale(0.5, 0.58),
+				size = UDim2.fromScale(0.86, 0.3), text = formatSectorLabel(sec), font = "Bold", textSize = 10,
+				maxTextSize = 13, minTextSize = 7, scaled = true, color = C.TextPrimary, alignX = Enum.TextXAlignment.Center, zIndex = 5,
 			})
 		end
 
-		-- Núcleo central gótico de la rueda
+		-- centro
 		local hub = Instance.new("Frame")
+		hub.Name = "Hub"
 		hub.AnchorPoint = Vector2.new(0.5, 0.5)
 		hub.Position = UDim2.fromScale(0.5, 0.5)
-		hub.Size = UDim2.fromOffset(58, 58)
-		hub.BackgroundColor3 = C.BgPrimary
+		hub.Size = UDim2.fromOffset(wheelDia * WH.Hub, wheelDia * WH.Hub)
+		hub.BackgroundColor3 = WH.Silver
 		hub.BorderSizePixel = 0
 		hub.ZIndex = 6
 		hub.Parent = wheelOuter
-		UiTheme.corner(hub, 29)
-		UiTheme.stroke(hub, C.GoldBright, 2.2, 0)
-		local hubIc = UiAssets.icon(hub, "trophy", 30, C.GoldBright)
+		UiTheme.corner(hub, math.floor(wheelDia * WH.Hub / 2))
+		local hubGrad = Instance.new("UIGradient")
+		hubGrad.Rotation = 45
+		hubGrad.Color = WH.Sheen
+		hubGrad.Parent = hub
+		local hubIc = UiAssets.icon(hub, "skull", math.floor(wheelDia * WH.Hub * 0.55), C.BgAbyss)
 		hubIc.AnchorPoint = Vector2.new(0.5, 0.5)
 		hubIc.Position = UDim2.fromScale(0.5, 0.5)
 		hubIc.ZIndex = 7
 
-		-- Puntero superior fijo (12 en punto)
+		-- puntero arriba: flecha de plata que apunta al medallón de las 12
 		local pointer = Instance.new("Frame")
 		pointer.Name = "TopPointer"
-		pointer.AnchorPoint = Vector2.new(0.5, 0)
-		pointer.Position = UDim2.new(0.5, 0, 0, REVEAL.WheelTop - REVEAL.MobileGap)
-		pointer.Size = UDim2.fromOffset(22, 22)
+		pointer.AnchorPoint = Vector2.new(0.5, 1)
+		pointer.Position = UDim2.new(0.5, 0, 0, REVEAL.WheelTop + wheelDia / 2 - medR - medD / 2 + 4)
+		pointer.Size = UDim2.fromOffset(WH.Pointer, WH.Pointer)
 		pointer.Rotation = 45
 		pointer.BackgroundColor3 = C.GoldBright
 		pointer.BorderSizePixel = 0
-		pointer.ZIndex = 8
+		pointer.ZIndex = 9
 		pointer.Parent = wheelPanel
 		UiTheme.stroke(pointer, C.BgAbyss, 2, 0)
 

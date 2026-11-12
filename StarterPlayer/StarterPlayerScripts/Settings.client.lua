@@ -129,6 +129,180 @@ local options = {
 }
 local capturing = nil
 local busy = false
+----------------------------------------------------------------------
+-- 12/11/2026 (pedido del usuario): teclado completo y mando detallado en Controles.
+-- Las teclas/botones asignados a una acción brillan en dorado; WASD (moverse) en plata.
+----------------------------------------------------------------------
+local KEY_ROWS = {
+	{ { "Escape", 1, "Esc" }, { "", 0.6 }, { "F1" }, { "F2" }, { "F3" }, { "F4" }, { "", 0.4 }, { "F5" }, { "F6" }, { "F7" }, { "F8" },
+		{ "", 0.4 }, { "F9" }, { "F10" }, { "F11" }, { "F12" } },
+	{ { "Backquote", 1, "`" }, { "One", 1, "1" }, { "Two", 1, "2" }, { "Three", 1, "3" }, { "Four", 1, "4" }, { "Five", 1, "5" },
+		{ "Six", 1, "6" }, { "Seven", 1, "7" }, { "Eight", 1, "8" }, { "Nine", 1, "9" }, { "Zero", 1, "0" }, { "Minus", 1, "-" },
+		{ "Equals", 1, "=" }, { "Backspace", 2, "⌫" } },
+	{ { "Tab", 1.5, "Tab" }, { "Q" }, { "W" }, { "E" }, { "R" }, { "T" }, { "Y" }, { "U" }, { "I" }, { "O" }, { "P" },
+		{ "LeftBracket", 1, "[" }, { "RightBracket", 1, "]" }, { "BackSlash", 1.5, "\\" } },
+	{ { "CapsLock", 1.75, "Bloq" }, { "A" }, { "S" }, { "D" }, { "F" }, { "G" }, { "H" }, { "J" }, { "K" }, { "L" },
+		{ "Semicolon", 1, "Ñ" }, { "Quote", 1, "'" }, { "Return", 2.25, "Enter" } },
+	{ { "LeftShift", 2.25, "Shift" }, { "Z" }, { "X" }, { "C" }, { "V" }, { "B" }, { "N" }, { "M" }, { "Comma", 1, "," },
+		{ "Period", 1, "." }, { "Slash", 1, "-" }, { "RightShift", 2.75, "Shift" } },
+	{ { "LeftControl", 1.5, "Ctrl" }, { "LeftAlt", 1.5, "Alt" }, { "Space", 9, "Espacio" }, { "RightAlt", 1.5, "Alt Gr" },
+		{ "RightControl", 1.5, "Ctrl" } },
+}
+local MOVE_KEYS = { W = true, A = true, S = true, D = true }
+
+local function keyCap(parent, x, y, w, h, text, state, z)
+	local k = Instance.new("Frame")
+	k.Position = UDim2.fromOffset(x, y)
+	k.Size = UDim2.fromOffset(w, h)
+	k.BackgroundColor3 = state == "bound" and C.GoldBright or (state == "move" and C.BorderStrong or C.BgAbyss)
+	k.BorderSizePixel = 0
+	k.ZIndex = z or 3
+	k.Parent = parent
+	UiTheme.corner(k, 4)
+	local st = Instance.new("UIStroke")
+	st.Color = state == "bound" and C.GoldBright or C.BorderDefault
+	st.Thickness = state == "bound" and 2 or 1
+	st.Transparency = state == "bound" and 0 or 0.4
+	st.Parent = k
+	if state == "bound" then
+		local glow = Instance.new("UIGradient")
+		glow.Rotation = 90
+		glow.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(200, 170, 110))
+		glow.Parent = k
+	end
+	local lbl = Instance.new("TextLabel")
+	lbl.BackgroundTransparency = 1
+	lbl.Size = UDim2.fromScale(1, 1)
+	lbl.Text = text
+	lbl.TextScaled = true
+	lbl.FontFace = UiTheme.FontFaces.Bold
+	lbl.TextColor3 = state == "bound" and C.BgAbyss or (state == "move" and C.BgAbyss or C.TextSecondary)
+	lbl.ZIndex = (z or 3) + 1
+	lbl.Parent = k
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0.18, 0) pad.PaddingBottom = UDim.new(0.18, 0)
+	pad.PaddingLeft = UDim.new(0, 3) pad.PaddingRight = UDim.new(0, 3)
+	pad.Parent = lbl
+	return k
+end
+
+-- acciones por tecla: { ["Q"] = { "Block" }, ... }
+local function reverseBinds(map)
+	local out = {}
+	for action, key in map or {} do
+		if type(key) == "string" and action ~= "__layout" then
+			out[key] = out[key] or {}
+			table.insert(out[key], action)
+		end
+	end
+	return out
+end
+
+local function drawKeyboard(parent, w, h, map, caption)
+	local bound = reverseBinds(map)
+	local mouseW = 96
+	local unit = math.floor((w - mouseW - 40) / 15)
+	local keyH = math.floor((h - 24) / 6) - 3
+	local x0, y0 = 12, 12
+	for r, row in KEY_ROWS do
+		local x = x0
+		for _, key in row do
+			local name, units, text = key[1], key[2] or 1, key[3] or key[1]
+			local kw = math.floor(units * unit) - 3
+			if name ~= "" then
+				local state = bound[name] and "bound" or (MOVE_KEYS[name] and "move" or nil)
+				local cap = keyCap(parent, x, y0 + (r - 1) * (keyH + 3), kw, keyH, text, state)
+				if bound[name] then
+					cap.MouseEnter:Connect(function() caption(text, bound[name]) end)
+				end
+			end
+			x += math.floor(units * unit)
+		end
+	end
+	-- mouse
+	local mx = w - mouseW - 12
+	local body = Instance.new("Frame")
+	body.Position = UDim2.fromOffset(mx, y0 + 6)
+	body.Size = UDim2.fromOffset(mouseW - 12, h - 36)
+	body.BackgroundColor3 = C.BgAbyss
+	body.BorderSizePixel = 0
+	body.Parent = parent
+	UiTheme.corner(body, 34)
+	UiTheme.stroke(body, C.BorderDefault, 1, 0.3)
+	local bw = math.floor((mouseW - 12) / 2) - 2
+	for i, btn in { { "MouseButton1", "M1" }, { "MouseButton2", "M2" } } do
+		keyCap(body, (i - 1) * (bw + 4), 0, bw, 46, btn[2], bound[btn[1]] and "bound" or nil, 5)
+	end
+	keyCap(body, bw - 6, 10, 16, 24, "", bound.MouseButton3 and "bound" or nil, 7)
+end
+
+local PAD_BUTTONS = {
+	-- nombre, x, y, ancho, alto, texto, lado de la etiqueta
+	{ "ButtonL2", 0.30, 0.02, 0.10, 0.10, "LT", "L" }, { "ButtonL1", 0.30, 0.14, 0.10, 0.08, "LB", "L" },
+	{ "ButtonR2", 0.60, 0.02, 0.10, 0.10, "RT", "R" }, { "ButtonR1", 0.60, 0.14, 0.10, 0.08, "RB", "R" },
+	{ "ButtonL3", 0.335, 0.36, 0.075, 0.2, "L3", "L" }, { "ButtonR3", 0.545, 0.58, 0.075, 0.2, "R3", "R" },
+	{ "DPadUp", 0.415, 0.55, 0.03, 0.09, "▲", "L" }, { "DPadDown", 0.415, 0.75, 0.03, 0.09, "▼", "L" },
+	{ "DPadLeft", 0.385, 0.65, 0.03, 0.09, "◀", "L" }, { "DPadRight", 0.445, 0.65, 0.03, 0.09, "▶", "L" },
+	{ "ButtonY", 0.615, 0.27, 0.04, 0.12, "Y", "R" }, { "ButtonX", 0.578, 0.39, 0.04, 0.12, "X", "R" },
+	{ "ButtonB", 0.652, 0.39, 0.04, 0.12, "B", "R" }, { "ButtonA", 0.615, 0.51, 0.04, 0.12, "A", "R" },
+	{ "ButtonSelect", 0.455, 0.36, 0.035, 0.08, "⧉", "L" }, { "ButtonStart", 0.51, 0.36, 0.035, 0.08, "≡", "R" },
+}
+
+local function drawGamepad(parent, w, h, map, actionName)
+	local bound = reverseBinds(map)
+	-- cuerpo del mando
+	local body = Instance.new("Frame")
+	body.Position = UDim2.new(0.31, 0, 0.22, 0)
+	body.Size = UDim2.new(0.38, 0, 0.7, 0)
+	body.BackgroundColor3 = C.BgCard
+	body.BorderSizePixel = 0
+	body.Parent = parent
+	UiTheme.corner(body, 40)
+	UiTheme.stroke(body, C.BorderStrong, 1.5, 0.1)
+	for _, side in { 0, 1 } do
+		local grip = Instance.new("Frame")
+		grip.AnchorPoint = Vector2.new(side, 0)
+		grip.Position = UDim2.new(side == 0 and 0.31 or 0.69, 0, 0.5, 0)
+		grip.Size = UDim2.new(0.1, 0, 0.48, 0)
+		grip.BackgroundColor3 = C.BgCard
+		grip.BorderSizePixel = 0
+		grip.Parent = parent
+		UiTheme.corner(grip, 30)
+	end
+	local left, right = {}, {}
+	for _, b in PAD_BUTTONS do
+		local state = bound[b[1]] and "bound" or nil
+		local round = b[1]:match("^Button[ABXY]$") or b[1]:match("[LR]3$")
+		local cap = keyCap(parent, math.floor(b[2] * w), math.floor(b[3] * h), math.max(14, math.floor(b[4] * w)),
+			math.max(12, math.floor(b[5] * h)), b[6], state, 6)
+		if round then UiTheme.corner(cap, 99) end
+		if state then
+			local names = {}
+			for _, a in bound[b[1]] do table.insert(names, actionName(a)) end
+			table.insert(b[7] == "L" and left or right, { y = b[3], text = b[6] .. "  ·  " .. table.concat(names, " / ") })
+		end
+	end
+	-- etiquetas a los costados, ordenadas de arriba a abajo
+	for side, list in { L = left, R = right } do
+		table.sort(list, function(a, b2) return a.y < b2.y end)
+		for i, item in list do
+			local lbl = Instance.new("TextLabel")
+			lbl.BackgroundTransparency = 1
+			lbl.Position = UDim2.new(side == "L" and 0.01 or 0.72, 0, 0, 10 + (i - 1) * 24)
+			lbl.Size = UDim2.new(0.27, 0, 0, 22)
+			lbl.Text = item.text
+			lbl.TextXAlignment = side == "L" and Enum.TextXAlignment.Right or Enum.TextXAlignment.Left
+			lbl.TextColor3 = C.TextPrimary
+			lbl.FontFace = UiTheme.FontFaces.Body
+			lbl.TextScaled = true
+			lbl.Parent = parent
+			local c = Instance.new("UITextSizeConstraint")
+			c.MaxTextSize = 15
+			c.Parent = lbl
+		end
+	end
+end
+
 local render, setOpen
 
 local function syncOptionsFromAttributes()
@@ -409,51 +583,30 @@ function render(messageKey)
 			})
 		end
 
+		local DIAGRAM_H = 216
 		local diagram = UiTheme.panel({
 			name = "InputDiagram", parent = panel, position = UDim2.fromOffset(22, 148),
-			size = UDim2.fromOffset(BASE_W - 44, 140), bg = C.BgPreview,
+			size = UDim2.fromOffset(BASE_W - 44, DIAGRAM_H), bg = C.BgPreview,
 			borderColor = C.BorderSubtle, frameArt = false,
 		})
-		local positions = bindingDevice == "Gamepad" and {
-			{ 22, 12 }, { 572, 12 }, { 22, 48 }, { 572, 48 }, { 572, 84 }, { 22, 84 },
-		} or {
-			{ 530, 15 }, { 530, 58 }, { 14, 15 }, { 14, 58 }, { 210, 58 }, { 210, 15 },
-		}
+		local hint = UiTheme.label({ parent = panel, position = UDim2.fromOffset(22, 148 + DIAGRAM_H + 2),
+			size = UDim2.fromOffset(BASE_W - 44, 18), text = L.t("ctl.hint"), font = "Body",
+			textSize = UiTheme.TextSizes.XS, color = C.TextSecondary })
+		local function actionName(a) return L.t("action." .. a) end
 		if bindingDevice == "Gamepad" then
-			local shell = UiTheme.panel({
-				parent = diagram, position = UDim2.fromOffset(246, 24), size = UDim2.fromOffset(284, 94),
-				bg = C.BgCard, borderColor = C.BorderStrong, radius = 42, frameArt = false,
-			})
-			for _, mark in { { 28, 23, "L" }, { 142, 47, "R" }, { 196, 14, "Y" }, { 228, 36, "B" },
-				{ 196, 58, "A" }, { 164, 36, "X" }, { 80, 47, "✚" } } do
-				local button = UiTheme.panel({ parent = shell, position = UDim2.fromOffset(mark[1], mark[2]),
-					size = UDim2.fromOffset(26, 26), bg = C.BgAbyss, radius = 13, frameArt = false })
-				UiTheme.label({ parent = button, size = UDim2.fromScale(1, 1), text = mark[3],
-					alignX = Enum.TextXAlignment.Center, color = C.TextPrimary, textSize = UiTheme.TextSizes.SM })
-			end
+			drawGamepad(diagram, BASE_W - 44, DIAGRAM_H, binds.Gamepad, actionName)
 		else
-			local board = UiTheme.panel({ parent = diagram, position = UDim2.fromOffset(420, 18),
-				size = UDim2.fromOffset(88, 100), bg = C.BgCard, radius = 12, frameArt = false })
-			for _, key in { { 32, 12, "W" }, { 7, 37, "A" }, { 32, 37, "S" }, { 57, 37, "D" } } do
-				local cap = UiTheme.panel({ parent = board, position = UDim2.fromOffset(key[1], key[2]),
-					size = UDim2.fromOffset(23, 23), bg = C.BgAbyss, frameArt = false })
-				UiTheme.label({ parent = cap, size = UDim2.fromScale(1, 1), text = key[3], alignX = Enum.TextXAlignment.Center })
-			end
-		end
-		for i, action in { "Attack", "Heavy", "Block", "Dodge", "Interact", "Kick" } do
-			local pos = positions[i]
-			UiTheme.label({
-				name = "MapHint_" .. action, parent = diagram, position = UDim2.fromOffset(pos[1], pos[2]),
-				size = UDim2.fromOffset(184, 32),
-				text = displayBinding(binds[bindingDevice][action]) .. "  ·  " .. L.t("action." .. action),
-				color = C.TextSecondary, scaled = true, maxTextSize = UiTheme.TextSizes.SM, minTextSize = 10,
-			})
+			drawKeyboard(diagram, BASE_W - 44, DIAGRAM_H, binds.Keyboard, function(key, actions)
+				local names = {}
+				for _, a in actions do table.insert(names, actionName(a)) end
+				hint.Text = key .. "  ·  " .. table.concat(names, " / ")
+			end)
 		end
 
 		local bindsScroll = Instance.new("ScrollingFrame")
 		bindsScroll.Name = "BindingsList"
-		bindsScroll.Position = UDim2.fromOffset(22, 300)
-		bindsScroll.Size = UDim2.fromOffset(BASE_W - 44, 184)
+		bindsScroll.Position = UDim2.fromOffset(22, 148 + DIAGRAM_H + 24)
+		bindsScroll.Size = UDim2.fromOffset(BASE_W - 44, 162)
 		bindsScroll.BackgroundTransparency = 1
 		bindsScroll.BorderSizePixel = 0
 		bindsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -490,7 +643,7 @@ function render(messageKey)
 
 		UiTheme.button({
 			parent = panel,
-			position = UDim2.fromOffset(22, 494),
+			position = UDim2.fromOffset(22, 560),
 			size = UDim2.fromOffset(214, 40),
 			text = L.t("reset"),
 			variant = "secondary",
@@ -505,7 +658,7 @@ function render(messageKey)
 		UiTheme.button({
 			name = "EditTouchLayoutBtn",
 			parent = panel,
-			position = UDim2.fromOffset(246, 494),
+			position = UDim2.fromOffset(246, 560),
 			size = UDim2.fromOffset(230, 40),
 			text = L.t("ui.touch.editLayout"),
 			variant = "gold",
@@ -517,7 +670,7 @@ function render(messageKey)
 
 		UiTheme.label({
 			parent = panel,
-			position = UDim2.fromOffset(488, 494),
+			position = UDim2.fromOffset(488, 560),
 			size = UDim2.fromOffset(310, 40),
 			text = L.t("fixed"),
 			font = "Body",

@@ -1,7 +1,7 @@
 -- Script: ServerScriptService/TutorialService
 -- Responsable: Claude (0.2, ronda 2). Certifica en el servidor los 3 pasos del tutorial del patio y se los
 -- informa a RewardService.tutorial(player, paso) (Codex), que paga cada paso una sola vez (Rewards.TutorialSouls).
--- El cliente (Tutorial.client) solo muestra el progreso: nunca certifica nada.
+-- 12/11/2026: el panel viejo del patio (Tutorial.client) se sacó; los pasos se siguen pagando en silencio
 --   Paso 1: pegarle 3 veces a un muñeco (CombatEvents "Damage", víctima con IsDummy).
 --   Paso 2: ponerse en guardia cerca de un muñeco (atributo Blocking que pone el servidor).
 --   Paso 3: patear a un muñeco (CombatEvents "Kick").

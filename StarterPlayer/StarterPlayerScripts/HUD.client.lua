@@ -30,7 +30,8 @@ local Mobile = Polish.MobileHUD
 -- 12/11/2026: cada barra usa su arte completo (barra_hud_04 roja, 05 dorada, 08 cian, 14 azul)
 -- 12/11/2026 (pedido del usuario): las barras de color son de la INFUSIÓN, una por elemento
 -- (fuego = 04 roja, hielo = 08 cian, rayo = 14 azul, sombra = 05 teñida del color de sombra).
-local barArt = { infusion = "hud_bar_red" }
+-- 12/11/2026 (aclaración del usuario): es la barra de VIDA la que cambia según la infusión equipada.
+local barArt = { health = "hud_bar_red" }
 local INFUSION_ART = { Fire = "hud_bar_red", Ice = "hud_bar_cyan", Lightning = "hud_bar_blue", Shadow = "hud_bar_05" }
 local ART = H.ArtBars
 
@@ -267,6 +268,7 @@ local weaponHolder = Instance.new("Frame")
 weaponHolder.Name = "WeaponHeader"
 weaponHolder.AnchorPoint = Vector2.new(1, 0)
 weaponHolder.Position = UDim2.new(1, 0, 0, B.StaminaY - 6)
+weaponHolder.Visible = false -- 12/11/2026: el boceto del usuario no lleva el nombre del arma
 weaponHolder.Size = UDim2.fromOffset(B.WeaponWidth, 18)
 weaponHolder.BackgroundTransparency = 1
 weaponHolder.Parent = topHolder
@@ -281,39 +283,85 @@ local weaponLabel = UiTheme.label({
 })
 
 -- Vida
+-- Vida: el arte depende de la infusión (fuego, hielo, rayo y sombra)
 local hpBasePos = UDim2.fromOffset(0, B.HealthY)
-local hpBg, hpFill, hpTrail, hpFlash, hpStroke = createHorizBar(topHolder, "health", hpBasePos, Vector2.zero,
-	UDim2.fromOffset(B.HealthWidth, B.HealthHeight), C.Health, C.Gold, true)
+local hpBg, hpFill, hpTrail, hpFlash, hpStroke, hpChannel = createHorizBar(topHolder, "health", hpBasePos, Vector2.zero,
+	UDim2.fromOffset(B.HealthWidth, B.HealthWidth / 4), C.Health, C.Gold, true)
+local hpCap = Instance.new("Frame")
+hpCap.Name = "Caption"
+hpCap.BackgroundTransparency = 1
+hpCap.ZIndex = 6
+hpCap.Parent = hpBg
 
-local hpIconRoot, hpIconUpdate = UiAssets.icon(hpBg, "health", 14, C.TextPrimary)
+local hpIconRoot, hpIconUpdate = UiAssets.icon(hpCap, "health", 14, C.TextPrimary)
 hpIconRoot.AnchorPoint = Vector2.new(0, 0.5)
-hpIconRoot.Position = UDim2.new(0, 6, 0.5, 0)
+hpIconRoot.Position = UDim2.new(0, 0, 0.5, 0)
 hpIconRoot.ZIndex = 6
-icons.health = { root = hpIconRoot, update = hpIconUpdate, row = hpBg, size = 14 }
+icons.health = { root = hpIconRoot, update = hpIconUpdate, row = hpCap, size = 14 }
 
 local hpTitleLbl = UiTheme.label({
-	name = "HpCaption", parent = hpBg, position = UDim2.fromOffset(24, 0), size = UDim2.new(0.5, -24, 1, 0),
-	text = L.t("health"), font = "Header", textSize = UiTheme.TextSizes.XS, color = C.TextPrimary,
-	alignX = Enum.TextXAlignment.Left, zIndex = 6,
+	name = "HpCaption", parent = hpCap, position = UDim2.fromOffset(18, 0), size = UDim2.new(0.5, -18, 1, 0),
+	text = L.t("health"), font = "Header", textSize = UiTheme.TextSizes.XS, scaled = true, minTextSize = 9, maxTextSize = 16,
+	color = C.TextPrimary, alignX = Enum.TextXAlignment.Left, zIndex = 6,
 })
 rowLabels.health = hpTitleLbl
 
 local hpNumber = UiTheme.label({
-	name = "HpNumbers", parent = hpBg, anchor = Vector2.new(1, 0), position = UDim2.new(1, -8, 0, 0),
-	size = UDim2.new(0.5, 0, 1, 0), text = "100 / 100", font = "Number", textSize = UiTheme.TextSizes.XS,
-	color = C.TextPrimary, alignX = Enum.TextXAlignment.Right, zIndex = 6,
+	name = "HpNumbers", parent = hpCap, anchor = Vector2.new(1, 0), position = UDim2.fromScale(1, 0),
+	size = UDim2.fromScale(0.5, 1), text = "100 / 100", font = "Number", textSize = UiTheme.TextSizes.XS, scaled = true,
+	minTextSize = 9, maxTextSize = 16, color = C.TextPrimary, alignX = Enum.TextXAlignment.Right, zIndex = 6,
 })
 
 local damageTween = nil
 local damageVersion = 0
 
--- Resistencia: fina, debajo de la vida
-local stamBg, stamFill, _, stamFlash = createHorizBar(topHolder, "stamina", UDim2.fromOffset(0, B.StaminaY),
+-- Ulti (carga de infusión): amarilla y fina, con el ícono del elemento y el estado a la derecha
+local infRow = Instance.new("Frame")
+infRow.Name = "InfusionRow"
+infRow.Position = UDim2.fromOffset(B.BarsX, B.InfusionY)
+infRow.Size = UDim2.fromOffset(B.InfusionWidth + 4 + B.InfusionCaption, B.InfusionIcon)
+infRow.BackgroundTransparency = 1
+infRow.Parent = topHolder
+
+local infIconHolder = Instance.new("Frame")
+infIconHolder.Name = "InfIconHolder"
+infIconHolder.AnchorPoint = Vector2.new(1, 0.5)
+infIconHolder.Position = UDim2.new(0, -4, 0.5, 0)
+infIconHolder.Size = UDim2.fromOffset(B.InfusionIcon, B.InfusionIcon)
+infIconHolder.BackgroundTransparency = 1
+infIconHolder.Parent = infRow
+
+local infIconRoot, infIconUpdate = UiAssets.icon(infIconHolder, "Fire", B.InfusionIcon - 2, C.InfusionCharge)
+icons.infusion = { root = infIconRoot, update = infIconUpdate, row = infIconHolder, size = B.InfusionIcon - 2, id = "Fire" }
+
+local infBg, infFill, _, infFlash, infStroke = createHorizBar(infRow, "infusion",
+	UDim2.new(0, 0, 0.5, 0), Vector2.new(0, 0.5), UDim2.fromOffset(B.InfusionWidth, B.InfusionHeight),
+	B.UltiColor, C.GoldDim, false)
+local infCap = Instance.new("Frame")
+infCap.Name = "Caption"
+infCap.BackgroundTransparency = 1
+infCap.Position = UDim2.fromOffset(B.InfusionWidth + 6, 0)
+infCap.Size = UDim2.new(0, B.InfusionCaption, 1, 0)
+infCap.Parent = infRow
+
+local infText = UiTheme.label({
+	name = "InfusionName", parent = infCap, size = UDim2.fromScale(0.55, 1), text = "", font = "Bold",
+	textSize = UiTheme.TextSizes.XS, color = C.TextPrimary, alignX = Enum.TextXAlignment.Left,
+})
+local infState = UiTheme.label({
+	name = "InfusionState", parent = infCap, anchor = Vector2.new(1, 0), position = UDim2.fromScale(1, 0),
+	size = UDim2.fromScale(0.45, 1), text = "", font = "Number", textSize = UiTheme.TextSizes.XS, color = B.UltiColor,
+	alignX = Enum.TextXAlignment.Right,
+})
+rowLabels.infusion = infState
+
+-- Resistencia: verde y fina, debajo de la ulti
+local stamBg, stamFill, _, stamFlash = createHorizBar(topHolder, "stamina", UDim2.fromOffset(B.BarsX, B.StaminaY),
 	Vector2.zero, UDim2.fromOffset(B.StaminaWidth, B.StaminaHeight), C.Stamina, C.BorderDefault, false)
 local stamHeader = Instance.new("Frame")
 stamHeader.Name = "StaminaCaption"
 stamHeader.BackgroundTransparency = 1
-stamHeader.Position = UDim2.fromOffset(B.StaminaWidth + 6, B.StaminaY - 4)
+stamHeader.Position = UDim2.fromOffset(B.BarsX + B.StaminaWidth + 6, B.StaminaY + B.StaminaHeight / 2 - 8)
 stamHeader.Size = UDim2.fromOffset(B.StaminaCaption, 16)
 stamHeader.Parent = topHolder
 local stamIconRoot, stamIconUpdate = UiAssets.icon(stamHeader, "stamina", 12, C.Stamina)
@@ -327,64 +375,24 @@ local stamNumber = UiTheme.label({ parent = stamHeader, anchor = Vector2.new(1, 
 	size = UDim2.new(0, 30, 1, 0), text = "100", font = "Number", textSize = UiTheme.TextSizes.XS, color = C.TextPrimary,
 	alignX = Enum.TextXAlignment.Right })
 
--- Ulti / infusión: ícono del elemento y la barra de arte de ese elemento
-local infRow = Instance.new("Frame")
-infRow.Name = "InfusionRow"
-infRow.Position = UDim2.fromOffset(0, B.InfusionY)
-infRow.Size = UDim2.fromOffset(B.InfusionIcon + 4 + B.InfusionWidth, B.InfusionWidth / 4)
-infRow.BackgroundTransparency = 1
-infRow.Parent = topHolder
-
-local infIconHolder = Instance.new("Frame")
-infIconHolder.Name = "InfIconHolder"
-infIconHolder.AnchorPoint = Vector2.new(0, 0.5)
-infIconHolder.Position = UDim2.fromScale(0, 0.5)
-infIconHolder.Size = UDim2.fromOffset(B.InfusionIcon, B.InfusionIcon)
-infIconHolder.BackgroundTransparency = 1
-infIconHolder.Parent = infRow
-
-local infIconRoot, infIconUpdate = UiAssets.icon(infIconHolder, "Fire", B.InfusionIcon - 2, C.InfusionCharge)
-icons.infusion = { root = infIconRoot, update = infIconUpdate, row = infIconHolder, size = B.InfusionIcon - 2, id = "Fire" }
-
-local infBg, infFill, _, infFlash, infStroke, infChannel = createHorizBar(infRow, "infusion",
-	UDim2.fromOffset(B.InfusionIcon + 4, 0), Vector2.new(0, 0), UDim2.fromOffset(B.InfusionWidth, B.InfusionWidth / 4),
-	C.InfusionCharge, C.GoldDim, false)
-local infCap = Instance.new("Frame")
-infCap.Name = "Caption"
-infCap.BackgroundTransparency = 1
-infCap.ZIndex = 6
-infCap.Parent = infBg
-
-local infText = UiTheme.label({
-	name = "InfusionName", parent = infCap, size = UDim2.fromScale(0.6, 1), text = "", font = "Bold",
-	textSize = UiTheme.TextSizes.XS, scaled = true, minTextSize = 8, maxTextSize = 14, color = C.TextPrimary,
-	alignX = Enum.TextXAlignment.Left, zIndex = 6,
-})
-local infState = UiTheme.label({
-	name = "InfusionState", parent = infCap, anchor = Vector2.new(1, 0), position = UDim2.fromScale(1, 0),
-	size = UDim2.fromScale(0.4, 1), text = "", font = "Number", textSize = UiTheme.TextSizes.XS, scaled = true,
-	minTextSize = 8, maxTextSize = 14, color = C.GoldBright, alignX = Enum.TextXAlignment.Right, zIndex = 6,
-})
-rowLabels.infusion = infState
-
 local infArtId
 local function applyInfusionArt(infusionId, color)
 	if infArtId == infusionId then return end
 	infArtId = infusionId
 	local key = INFUSION_ART[infusionId] or "hud_bar_red"
 	local spec = UiAssets.BarArt[key]
-	local art = infBg:FindFirstChild("BarArt")
+	local art = hpBg:FindFirstChild("BarArt")
 	local uri = UiAssets.imageUri(key)
-	if not (spec and art and uri and infChannel) then return end
+	if not (spec and art and uri and hpChannel) then return end
 	art.Image = uri
 	-- la de sombra es la dorada teñida del tono de la infusión
 	art.ImageColor3 = infusionId == "Shadow" and (color or C.InfusionCharge):Lerp(Color3.new(1, 1, 1), B.ShadowTintLift)
 		or Color3.new(1, 1, 1)
-	infChannel.Position = UDim2.fromScale(spec.x0, spec.y0)
-	infChannel.Size = UDim2.fromScale(spec.x1 - spec.x0, spec.y1 - spec.y0)
+	hpChannel.Position = UDim2.fromScale(spec.x0, spec.y0)
+	hpChannel.Size = UDim2.fromScale(spec.x1 - spec.x0, spec.y1 - spec.y0)
 	local cx = spec.captionX0 or spec.x0
-	infCap.Position = UDim2.fromScale(cx, spec.y0 - spec.captionHeight)
-	infCap.Size = UDim2.fromScale(spec.x1 - cx, spec.captionHeight)
+	hpCap.Position = UDim2.fromScale(cx, spec.y0 - spec.captionHeight)
+	hpCap.Size = UDim2.fromScale(spec.x1 - cx, spec.captionHeight)
 end
 applyInfusionArt("Fire")
 
@@ -808,7 +816,8 @@ RunService.Heartbeat:Connect(function(dt)
 	local inMatch = player:GetAttribute("InMatch") == true
 	local lockTarget = player:FindFirstChild("LockTarget")
 	local locking = lockTarget ~= nil and lockTarget.Value ~= nil
-	local inCombat = inMatch or locking or (os.clock() - lastCombatTime < 8)
+	-- 12/11/2026 (pedido del usuario): el HUD de combate está oculto y aparece solo al fijar un objetivo
+	local inCombat = locking
 	local targetAlpha = inCombat and 0 or 1
 	if holder.GroupTransparency ~= targetAlpha then
 		local cur = holder.GroupTransparency
