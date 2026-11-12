@@ -464,6 +464,9 @@ local function runMatch(group, modeName: string, keepTeams: boolean?)
  task.wait(math.max(E.MinPrematchTime, E.PrematchTime))
  -- Lock BEFORE any yielding character loads. Cinematic timer starts after spawning.
  phase("Cinematic", nil, group)
+ -- 12/11/2026: si algo falla en medio de la partida (la 0.2 publicada cortaba al final por un error de
+ -- Misiones al anotar el resultado), igual se devuelve a todos al lobby. Antes quedaban encerrados en la arena.
+ local matchOk, matchErr = pcall(function()
  Stats.begin(group, modeName)
 	local wins = { Red = 0, Blue = 0 }
 	local round = 0
@@ -503,6 +506,8 @@ local function runMatch(group, modeName: string, keepTeams: boolean?)
 		end
 	end
 	task.wait(E.SummaryTime)
+ end)
+ if not matchOk then warn("[MatchService] la partida falló, vuelven todos al lobby:", matchErr) end
 
 	for _, player in group do
 		if player.Parent then
@@ -510,11 +515,32 @@ local function runMatch(group, modeName: string, keepTeams: boolean?)
    player:SetAttribute("MatchPhase", "Lobby")
 			player:SetAttribute("Eliminated", false)
 			player.Team = nil
-			spawnInLobby(player)
+			local spawned, why = pcall(spawnInLobby, player)
+			if not spawned then warn("[MatchService] no se pudo volver al lobby:", player.Name, why) end
 		end
 	end
-	resetArena(modeName)
+	local resetOk, resetErr = pcall(resetArena, modeName)
+	if not resetOk then warn("[MatchService] no se pudo rearmar la arena:", resetErr) end
  phase("Lobby")
+end
+
+-- 12/11/2026: ningún error de una partida puede dejar gente en la arena ni cortar la cola del servidor
+local runMatchUnsafe = runMatch
+runMatch = function(group, modeName, keepTeams)
+	local ok, err = pcall(runMatchUnsafe, group, modeName, keepTeams)
+	if ok then return end
+	warn("[MatchService] error en la partida, se devuelve a todos al lobby:", err)
+	for _, player in group do
+		if player.Parent and player:GetAttribute("InMatch") then
+			player:SetAttribute("InMatch", false)
+			player:SetAttribute("MatchPhase", "Lobby")
+			player:SetAttribute("Eliminated", false)
+			player.Team = nil
+			pcall(spawnInLobby, player)
+		end
+	end
+	pcall(resetArena, modeName)
+	phase("Lobby")
 end
 
 ----------------------------------------------------------------------
