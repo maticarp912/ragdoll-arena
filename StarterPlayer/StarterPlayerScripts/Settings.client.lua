@@ -113,6 +113,11 @@ scale.Parent = panel
 -- 3. Estado local de opciones y controles
 ----------------------------------------------------------------------
 local activeTab = "Audio" -- "Audio" | "Controls"
+local bindingDevice = Device.isGamepad() and "Gamepad" or "Keyboard"
+local function displayBinding(key)
+	local localized = L.binding(key)
+	return localized == key and InputMap.label(key) or localized
+end
 local binds = InputMap.merge(nil)
 local options = {
 	MusicVolume = 1,
@@ -202,7 +207,7 @@ function render(messageKey)
 	capturing = nil
 	syncOptionsFromAttributes()
 	for _, v in panel:GetChildren() do
-		if v ~= scale and not v:IsA("UIStroke") and not v:IsA("UICorner") and not v:IsA("UIGradient") and v.Name ~= "Ornaments" then
+		if v ~= scale and not v:IsA("UIStroke") and not v:IsA("UICorner") and not v:IsA("UIGradient") and v.Name ~= "Ornaments" and v.Name ~= "FrameArt" then
 			v:Destroy()
 		end
 	end
@@ -393,35 +398,67 @@ function render(messageKey)
 			textSize = UiTheme.TextSizes.LG,
 			color = C.GoldBright,
 		})
-		UiTheme.label({
-			parent = panel,
-			position = UDim2.fromOffset(330, 114),
-			size = UDim2.fromOffset(200, 26),
-			text = L.t("keyboard"),
-			font = "Bold",
-			textSize = UiTheme.TextSizes.SM,
-			color = C.TextSecondary,
-			alignX = Enum.TextXAlignment.Center,
+		for i, device in { "Keyboard", "Gamepad" } do
+			UiTheme.button({
+				name = "Map_" .. device, parent = panel,
+				position = UDim2.fromOffset(380 + (i - 1) * 190, 108),
+				size = UDim2.fromOffset(180, 32),
+				text = L.t(device == "Keyboard" and "keyboard" or "gamepad"),
+				selected = bindingDevice == device,
+				onClick = function() bindingDevice = device render() end,
+			})
+		end
+
+		local diagram = UiTheme.panel({
+			name = "InputDiagram", parent = panel, position = UDim2.fromOffset(22, 148),
+			size = UDim2.fromOffset(BASE_W - 44, 140), bg = C.BgPreview,
+			borderColor = C.BorderSubtle, frameArt = false,
 		})
-		UiTheme.label({
-			parent = panel,
-			position = UDim2.fromOffset(550, 114),
-			size = UDim2.fromOffset(200, 26),
-			text = L.t("gamepad"),
-			font = "Bold",
-			textSize = UiTheme.TextSizes.SM,
-			color = C.TextSecondary,
-			alignX = Enum.TextXAlignment.Center,
-		})
+		local positions = bindingDevice == "Gamepad" and {
+			{ 22, 12 }, { 572, 12 }, { 22, 48 }, { 572, 48 }, { 572, 84 }, { 22, 84 },
+		} or {
+			{ 530, 15 }, { 530, 58 }, { 14, 15 }, { 14, 58 }, { 210, 58 }, { 210, 15 },
+		}
+		if bindingDevice == "Gamepad" then
+			local shell = UiTheme.panel({
+				parent = diagram, position = UDim2.fromOffset(246, 24), size = UDim2.fromOffset(284, 94),
+				bg = C.BgCard, borderColor = C.BorderStrong, radius = 42, frameArt = false,
+			})
+			for _, mark in { { 28, 23, "L" }, { 142, 47, "R" }, { 196, 14, "Y" }, { 228, 36, "B" },
+				{ 196, 58, "A" }, { 164, 36, "X" }, { 80, 47, "✚" } } do
+				local button = UiTheme.panel({ parent = shell, position = UDim2.fromOffset(mark[1], mark[2]),
+					size = UDim2.fromOffset(26, 26), bg = C.BgAbyss, radius = 13, frameArt = false })
+				UiTheme.label({ parent = button, size = UDim2.fromScale(1, 1), text = mark[3],
+					alignX = Enum.TextXAlignment.Center, color = C.TextPrimary, textSize = UiTheme.TextSizes.SM })
+			end
+		else
+			local board = UiTheme.panel({ parent = diagram, position = UDim2.fromOffset(420, 18),
+				size = UDim2.fromOffset(88, 100), bg = C.BgCard, radius = 12, frameArt = false })
+			for _, key in { { 32, 12, "W" }, { 7, 37, "A" }, { 32, 37, "S" }, { 57, 37, "D" } } do
+				local cap = UiTheme.panel({ parent = board, position = UDim2.fromOffset(key[1], key[2]),
+					size = UDim2.fromOffset(23, 23), bg = C.BgAbyss, frameArt = false })
+				UiTheme.label({ parent = cap, size = UDim2.fromScale(1, 1), text = key[3], alignX = Enum.TextXAlignment.Center })
+			end
+		end
+		for i, action in { "Attack", "Heavy", "Block", "Dodge", "Interact", "Kick" } do
+			local pos = positions[i]
+			UiTheme.label({
+				name = "MapHint_" .. action, parent = diagram, position = UDim2.fromOffset(pos[1], pos[2]),
+				size = UDim2.fromOffset(184, 32),
+				text = displayBinding(binds[bindingDevice][action]) .. "  ·  " .. L.t("action." .. action),
+				color = C.TextSecondary, scaled = true, maxTextSize = UiTheme.TextSizes.SM, minTextSize = 10,
+			})
+		end
 
 		local bindsScroll = Instance.new("ScrollingFrame")
-		bindsScroll.Position = UDim2.fromOffset(22, 144)
-		bindsScroll.Size = UDim2.fromOffset(BASE_W - 44, 340)
+		bindsScroll.Name = "BindingsList"
+		bindsScroll.Position = UDim2.fromOffset(22, 300)
+		bindsScroll.Size = UDim2.fromOffset(BASE_W - 44, 184)
 		bindsScroll.BackgroundTransparency = 1
 		bindsScroll.BorderSizePixel = 0
 		bindsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 		bindsScroll.CanvasSize = UDim2.new()
-		bindsScroll.ScrollBarThickness = 6
+		bindsScroll.ScrollBarThickness = 5
 		bindsScroll.ScrollBarImageColor3 = C.Gold
 		bindsScroll.Parent = panel
 
@@ -431,43 +468,24 @@ function render(messageKey)
 		bLayout.Parent = bindsScroll
 
 		for i, action in InputMap.Actions do
-			local row = UiTheme.panel({
-				parent = bindsScroll,
-				layoutOrder = i,
-				size = UDim2.new(1, -10, 0, 42),
-				bg = C.BgCard,
-				borderColor = C.BorderSubtle,
+			local row = UiTheme.panel({ parent = bindsScroll, layoutOrder = i,
+				size = UDim2.new(1, -10, 0, 42), bg = C.BgCard, borderColor = C.BorderSubtle })
+			UiTheme.label({ parent = row, position = UDim2.fromOffset(14, 0), size = UDim2.new(1, -245, 1, 0),
+				text = L.t("action." .. action.id), font = "Body", textSize = UiTheme.TextSizes.MD })
+			local device = bindingDevice
+			local b
+			b = UiTheme.button({
+				name = "Bind_" .. device .. "_" .. action.id, parent = row,
+				anchor = Vector2.new(1, 0), position = UDim2.new(1, -12, 0, 3),
+				size = UDim2.fromOffset(200, 36), text = displayBinding(binds[device][action.id]),
+				textSize = UiTheme.TextSizes.SM, onClick = function()
+					if busy then return end
+					capturing = { device = device, action = action.id }
+					b.Text = L.t("press")
+					local prompt = panel:FindFirstChild("Message")
+					if prompt and prompt:IsA("TextLabel") then prompt.Text = L.t("press") end
+				end,
 			})
-
-			UiTheme.label({
-				parent = row,
-				position = UDim2.fromOffset(14, 0),
-				size = UDim2.fromOffset(290, 42),
-				text = L.t("action." .. action.id),
-				font = "Body",
-				textSize = UiTheme.TextSizes.MD,
-				color = C.TextPrimary,
-			})
-
-			for col, device in { "Keyboard", "Gamepad" } do
-				local b = UiTheme.button({
-					parent = row,
-					position = UDim2.fromOffset(308 + (col - 1) * 220, 3),
-					size = UDim2.fromOffset(200, 36),
-					text = L.binding(binds[device][action.id]),
-					textSize = UiTheme.TextSizes.SM,
-					onClick = function()
-						if busy then return end
-						render()
-						capturing = { device = device, action = action.id }
-						local prompt = panel:FindFirstChild("Message")
-						if prompt and prompt:IsA("TextLabel") then
-							prompt.Text = L.t("press")
-						end
-					end,
-				})
-				b.Name = "Bind_" .. device .. "_" .. action.id
-			end
 		end
 
 		UiTheme.button({

@@ -78,7 +78,7 @@ function Directional.setStance(char, dir)
 	dir = Directional.validDir(dir)
 	if not dir then return false end
 	if char:GetAttribute("KnockedDown") or char:GetAttribute("Ragdolled") or char:GetAttribute("CarriedBy")
-		or char:GetAttribute("Frozen") then
+		or char:GetAttribute("Frozen") or Directional.validDir(char:GetAttribute("AttackDir")) then
 		return false
 	end
 	local d = get(char)

@@ -44,7 +44,7 @@ local function renderBoard(part)
 	local boardName = part:GetAttribute("Board") or "Wins"
 	local root = entry.root
 	for _, ch in root:GetChildren() do
-		if not ch:IsA("UIStroke") and not ch:IsA("UICorner") and not ch:IsA("UIGradient") and ch.Name ~= "Ornaments" then
+		if not ch:IsA("UIStroke") and not ch:IsA("UICorner") and not ch:IsA("UIGradient") and ch.Name ~= "Ornaments" and ch.Name ~= "FrameArt" then
 			ch:Destroy()
 		end
 	end

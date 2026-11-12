@@ -56,7 +56,7 @@ local REVEAL = {
 	CompactTitleHeight = 30, CompactTextSize = 13, WeeklyHeight = 114, DesktopWeeklyHeight = 82,
 	WheelTop = 62, WheelDiameter = 308, WheelControlsHeight = 130, PityBottom = 128,
 	RequestIntervalFallback = 0.35, WheelDescriptionHeight = 36,
-	OddsHeight = 520, OddsRowHeight = 64, OddsNameFraction = 0.65,
+	OddsHeight = 520, OddsRowHeight = 64, OddsNameFraction = 0.65, OddsPreviewHeight = 96,
 	OddsHeaderHeight = 32, HeaderTextX = 52,
 	SecondsPerMinute = 60,
 	Layer = { Veil = 70, Box = 71, Stage = 72, Content = 73, Preview = 74, Pointer = 75, Button = 76, Flash = 77 },
@@ -953,9 +953,71 @@ function showOddsModal(id, messageKey)
  title.TextScaled = true
  UiTheme.textConstraint(title, UiTheme.TextSizes.SM, UiTheme.TextSizes.XL)
 
+ local scrollTop = REVEAL.StageY
+ local previewPanel, previewName, previewRarity, previewViewport, selectedSkin
+ if spec then
+  local backdrop = UiAssets.imageUri("reward_skin_preview")
+  previewPanel = UiTheme.panel({ name = "SkinPreview", parent = box,
+   position = UDim2.fromOffset(REVEAL.Margin, scrollTop),
+   size = UDim2.new(1, -REVEAL.Margin * 2, 0, REVEAL.OddsPreviewHeight),
+   frameArt = not backdrop, zIndex = REVEAL.Layer.Content })
+  if backdrop then
+   previewPanel.ClipsDescendants = true
+   local art = Instance.new("ImageLabel")
+   art.Name = "PreviewBackdrop"
+   art.BackgroundTransparency = 1
+   art.Image = backdrop
+   -- El PNG de ForgeGUI tiene margen alfa. Las proporciones conservan el recorte al escalar.
+   art.Position = UDim2.fromScale(-51 / 1877, -181 / 433)
+   art.Size = UDim2.fromScale(1983 / 1877, 793 / 433)
+   art.ZIndex = REVEAL.Layer.Content
+   art.Parent = previewPanel
+  end
+  previewName = UiTheme.label({ parent = previewPanel, position = UDim2.fromOffset(104, 12),
+   size = UDim2.new(1, -116, 0, 46), text = "", color = C.TextPrimary, zIndex = REVEAL.Layer.Preview })
+  previewName.TextWrapped = true
+  previewName.TextScaled = true
+  UiTheme.textConstraint(previewName, UiTheme.TextSizes.XS, UiTheme.TextSizes.MD)
+  previewRarity = UiTheme.label({ parent = previewPanel, position = UDim2.fromOffset(104, 60),
+   size = UDim2.new(1, -116, 0, 22), text = "", textSize = UiTheme.TextSizes.XS, zIndex = REVEAL.Layer.Preview })
+  scrollTop += REVEAL.OddsPreviewHeight + REVEAL.CardGap
+ end
+
+ local function selectSkin(sid, skin, name, rarity, color)
+  if selectedSkin == sid then return end
+  selectedSkin = sid
+  if previewViewport then previewViewport:Destroy() end
+  local width, height = 88, 84
+  previewViewport = makeWeaponPreview3D(previewPanel, skin.weapon or "Sword", sid, { 6, 6, width, height }, true, true)
+  local world = previewViewport:FindFirstChildOfClass("WorldModel")
+  local model = world and world:FindFirstChildOfClass("Model")
+  if model then
+   -- Encuadrar los extremos incluso en el visor cuadrado y para los mandobles largos.
+   local camera = previewViewport.CurrentCamera
+   local bounds, size = model:GetBoundingBox()
+   local vertical = math.tan(math.rad(camera.FieldOfView / 2)) * 0.85
+   local horizontal = vertical * width / height
+   local distance = 0
+   for _, x in { -1, 1 } do
+    for _, y in { -1, 1 } do
+     for _, z in { -1, 1 } do
+      local corner = bounds:VectorToWorldSpace(size * Vector3.new(x, y, z) / 2)
+      distance = math.max(distance, corner.Z + math.abs(corner.X) / horizontal, corner.Z + math.abs(corner.Y) / vertical)
+     end
+    end
+   end
+   camera.CFrame = CFrame.lookAt(bounds.Position + Vector3.new(0, 0, math.max(distance, 0.1)), bounds.Position)
+  end
+  previewViewport.Name = "SelectedSkin"
+  previewViewport.ZIndex = REVEAL.Layer.Preview
+  previewName.Text = name
+  previewRarity.Text = L.t(rarity)
+  previewRarity.TextColor3 = color
+ end
+
  local scroll = Instance.new("ScrollingFrame")
- scroll.Position = UDim2.fromOffset(REVEAL.Margin, REVEAL.StageY)
- scroll.Size = UDim2.new(1, -REVEAL.Margin * 2, 1, -REVEAL.StageY - REVEAL.ButtonH - REVEAL.Margin * 2)
+ scroll.Position = UDim2.fromOffset(REVEAL.Margin, scrollTop)
+ scroll.Size = UDim2.new(1, -REVEAL.Margin * 2, 1, -scrollTop - REVEAL.ButtonH - REVEAL.Margin * 2)
  scroll.BackgroundTransparency = 1 scroll.BorderSizePixel = 0 scroll.ZIndex = REVEAL.Layer.Content
  scroll.ScrollBarThickness = UiTheme.Spacing.XXS scroll.CanvasSize = UDim2.new() scroll.Parent = box
 
@@ -976,22 +1038,25 @@ function showOddsModal(id, messageKey)
   local card = UiTheme.panel({ parent = scroll, position = UDim2.fromOffset(0, y), size = UDim2.new(1, -REVEAL.CardGap, 0, height),
    borderColor = color, zIndex = REVEAL.Layer.Content })
   local rowTop = y
-  card.Selectable = true
-  card.SelectionGained:Connect(function()
-   local top = scroll.CanvasPosition.Y
-   local bottom = top + scroll.AbsoluteWindowSize.Y
-   local target = rowTop < top and rowTop or math.max(top, rowTop + height - (bottom - top))
-   scroll.CanvasPosition = Vector2.new(0, target)
-  end)
-  if lastRow then lastRow.NextSelectionDown = card card.NextSelectionUp = lastRow else firstRow = card end
-  lastRow = card
+  local focus = card
   local inset = REVEAL.CardGap
   if item then
    local sid = rewardSkin(item)
    local skin = sid and Skins.Data[sid]
    if skin then
-    local thumbnail = makeWeaponPreview3D(card, skin.weapon or "Sword", sid, { 6, 6, 52, height - 12 }, false, true)
-    thumbnail.ZIndex = REVEAL.Layer.Preview
+    UiAssets.skinThumbnail(card, sid, skin, REVEAL.Layer.Preview)
+    if previewPanel then
+     local pick = Instance.new("TextButton")
+     pick.Name = "Pick_" .. sid
+     pick.Text = "" pick.BackgroundTransparency = 1
+     pick.Size = UDim2.fromScale(1, 1) pick.ZIndex = REVEAL.Layer.Pointer
+     pick.Parent = card
+     focus = pick
+     local function choose() selectSkin(sid, skin, name, item.rarity, color) end
+     pick.Activated:Connect(choose)
+     pick.SelectionGained:Connect(choose)
+     if not selectedSkin then choose() end
+    end
    else
     local icon = UiAssets.icon(card, ODDS_ICONS[item.kind] or "rarity_rare", 24, color)
     icon.AnchorPoint = Vector2.new(0, 0.5)
@@ -1006,6 +1071,14 @@ function showOddsModal(id, messageKey)
   UiTheme.label({ parent = card, position = UDim2.fromScale(REVEAL.OddsNameFraction, 0),
    size = UDim2.new(1 - REVEAL.OddsNameFraction, -REVEAL.CardGap, 1, 0), text = formatted,
    textSize = REVEAL.CompactTextSize, alignX = Enum.TextXAlignment.Right, zIndex = REVEAL.Layer.Preview })
+  focus.Selectable = true
+  focus.SelectionGained:Connect(function()
+   local top = scroll.CanvasPosition.Y
+   local target = rowTop < top and rowTop or math.max(top, rowTop + height - scroll.AbsoluteWindowSize.Y)
+   scroll.CanvasPosition = Vector2.new(0, target)
+  end)
+  if lastRow then lastRow.NextSelectionDown = focus focus.NextSelectionUp = lastRow else firstRow = focus end
+  lastRow = focus
   y += height + 4
  end
  if messageKey then section(L.t(messageKey), 48, C.TextPrimary) end
@@ -1124,7 +1197,7 @@ function checkWelcomeModal()
 
 	local function renderWelcomeStep()
 		for _, ch in wBox:GetChildren() do
-			if ch ~= wScale and not ch:IsA("UIStroke") and not ch:IsA("UICorner") and not ch:IsA("UIGradient") and ch.Name ~= "Ornaments" then
+			if ch ~= wScale and not ch:IsA("UIStroke") and not ch:IsA("UICorner") and not ch:IsA("UIGradient") and ch.Name ~= "Ornaments" and ch.Name ~= "FrameArt" then
 				ch:Destroy()
 			end
 		end
@@ -1360,7 +1433,7 @@ function render()
 	end
 
 	for _, ch in panel:GetChildren() do
-		if ch ~= scale and not ch:IsA("UIStroke") and not ch:IsA("UICorner") and not ch:IsA("UIGradient") and ch.Name ~= "Ornaments" then
+		if ch ~= scale and not ch:IsA("UIStroke") and not ch:IsA("UICorner") and not ch:IsA("UIGradient") and ch.Name ~= "Ornaments" and ch.Name ~= "FrameArt" then
 			ch:Destroy()
 		end
 	end

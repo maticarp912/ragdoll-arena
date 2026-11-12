@@ -258,7 +258,9 @@ function Actions.heavy(char)
 	local h = def.heavy
 	local atkSpeed = char:GetAttribute("AttackSpeedMult") or 1
 	local wid = char:GetAttribute("WeaponId") or "Sword"
-	local animKey = "Weapons." .. wid .. ".Heavy"
+	local dirOn = Directional.enabled()
+	local dir = dirOn and (char:GetAttribute("Stance") or CFG.Directional.DefaultStance) or ""
+	local animKey = "Weapons." .. wid .. (dirOn and ".Heavy" .. dir or ".Heavy")
 
 	local baseWindup = h.windup * tempo() / atkSpeed
 	local baseHit = baseWindup + h.hitDelay * tempo() / atkSpeed
@@ -269,8 +271,6 @@ function Actions.heavy(char)
 
 	-- Imbloqueable: por arma, o por estar con la infusión activa (decisión 2, Fase C).
 	-- Direccional: la excepción de cada arma depende de la dirección (Maza: solo arriba).
-	local dirOn = Directional.enabled()
-	local dir = dirOn and (char:GetAttribute("Stance") or CFG.Directional.DefaultStance) or ""
 	local infused = char:GetAttribute("InfusedHeavyUnblockable") == true
 	local unblockable
 	if dirOn then

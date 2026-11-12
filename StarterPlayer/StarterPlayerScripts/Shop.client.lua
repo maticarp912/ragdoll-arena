@@ -181,7 +181,8 @@ local modal = nil
 local savedFocusBeforeModal = nil
 local transition = 0
 
-local spins = {}
+local cardPreviews = {}
+local nextCardPreviewUpdate = 0
 local detailSpin = nil
 local drag = nil
 local lastPosition = Vector2.zero
@@ -578,15 +579,38 @@ local function preview(parent, wid, sid, rect, manual)
 		camera = camera,
 		base = base,
 		distance = dist,
-		horizontal = horizontal,
-		phase = #spins * 0.45,
 		yaw = 0,
 		pitch = 0,
 		zoom = 1,
-		manual = manual,
 	}
-	table.insert(spins, entry)
 	return vp, entry
+end
+
+local function updateCardPreviews()
+	local loadVisible = content and content.Visible and not modal
+	local clipStart = loadVisible and content.AbsolutePosition
+	local clipEnd = loadVisible and (clipStart + content.AbsoluteWindowSize)
+	for _, item in cardPreviews do
+		local card, rect = item.card, item.rect
+		local scale = card.AbsoluteSize.X / card.Size.X.Offset
+		local start = card.AbsolutePosition + Vector2.new(rect[1], rect[2]) * scale
+		local finish = start + Vector2.new(rect[3], rect[4]) * scale
+		item.visible = loadVisible and scale > 0 and start.X < clipEnd.X and finish.X > clipStart.X
+			and start.Y < clipEnd.Y and finish.Y > clipStart.Y
+		if not item.visible and item.viewport then
+			item.viewport:Destroy()
+			item.viewport = nil
+		end
+	end
+	-- Repartir la construcción de los modelos al abrir o desplazar la grilla.
+	local built = 0
+	for _, item in cardPreviews do
+		if item.visible and not item.viewport then
+			item.viewport = preview(item.card, item.weapon, item.id, item.rect, false)
+			built += 1
+			if built == 2 then break end
+		end
+	end
 end
 
 ----------------------------------------------------------------------
@@ -782,7 +806,7 @@ end
 local function inspect(id)
 	selected = id
 	for _, ch in detail:GetChildren() do
-		if not ch:IsA("UIStroke") and not ch:IsA("UICorner") and not ch:IsA("UIGradient") and ch.Name ~= "Ornaments" then
+		if not ch:IsA("UIStroke") and not ch:IsA("UICorner") and not ch:IsA("UIGradient") and ch.Name ~= "Ornaments" and ch.Name ~= "FrameArt" then
 			ch:Destroy()
 		end
 	end
@@ -1104,10 +1128,11 @@ end
 
 function render()
 	if content and content.Parent and content.Name == "VaultScroll" then vaultScroll = content.CanvasPosition end
-	table.clear(spins)
+	table.clear(cardPreviews)
+	nextCardPreviewUpdate = 0
 	detailSpin = nil
 	for _, ch in panel:GetChildren() do
-		if ch ~= scale and ch ~= modal and not ch:IsA("UIStroke") and not ch:IsA("UICorner") and not ch:IsA("UIGradient") and ch.Name ~= "Ornaments" then
+		if ch ~= scale and ch ~= modal and not ch:IsA("UIStroke") and not ch:IsA("UICorner") and not ch:IsA("UIGradient") and ch.Name ~= "Ornaments" and ch.Name ~= "FrameArt" then
 			ch:Destroy()
 		end
 	end
@@ -1390,7 +1415,9 @@ function render()
 
 		local vpH = cardH - 68
 		if kind == "Skin" then
-			preview(card, rec.weapon or weapon, id, { 8, 30, cardW - 16, vpH }, false)
+			table.insert(cardPreviews, {
+				card = card, weapon = rec.weapon or weapon, id = id, rect = { 8, 30, cardW - 16, vpH },
+			})
 		else
 			local emblemHolder = Instance.new("Frame")
 			emblemHolder.AnchorPoint = Vector2.new(0.5, 0)
@@ -1709,7 +1736,14 @@ function setOpen(value)
 		task.delay(UiTheme.Anim.Normal, function()
 			if version == transition then
 				panel.Visible = false
-				table.clear(spins)
+				for _, item in cardPreviews do
+					if item.viewport then item.viewport:Destroy() end
+				end
+				table.clear(cardPreviews)
+				if detailSpin then
+					detailSpin.vp:Destroy()
+					detailSpin = nil
+				end
 			end
 		end)
 	end
@@ -1794,42 +1828,29 @@ RunService.RenderStepped:Connect(function(dt)
 	if not opened then return end
 
 	local now = os.clock()
+	if now >= nextCardPreviewUpdate then
+		nextCardPreviewUpdate = now + 0.08
+		updateCardPreviews()
+	end
 	if timerLabel and timerLabel.Parent and (now - lastClockUpdate >= 1.0) then
 		lastClockUpdate = now
 		timerLabel.Text = L.t("ui.shop.refreshesIn", { time = formatDailyCountdown() })
 	end
 
-	for i = #spins, 1, -1 do
-		local v = spins[i]
-		if not v.vp.Parent then
-			table.remove(spins, i)
-		else
-			local visible = not modal or v.vp:IsDescendantOf(modal)
-			if content and v.vp:IsDescendantOf(content) then
-				local y = v.vp.AbsolutePosition.Y
-				visible = visible and (y + v.vp.AbsoluteSize.Y > content.AbsolutePosition.Y) and (y < content.AbsolutePosition.Y + content.AbsoluteSize.Y)
-			end
-			if visible then
-				if v.manual then
-					v.yaw += stick.X * dt * 2.0
-					v.pitch = math.clamp(v.pitch - stick.Y * dt, -0.65, 0.65)
-					v.zoom = math.clamp(v.zoom + zoomAxis * dt * 0.65, 0.55, 1.65)
-					if drag == nil and stick.Magnitude < 0.05 then
-						v.yaw += dt * 0.35
-					end
-				else
-					-- 10/11: las tarjetas quedan quietas (solo se mueven al tocarlas); antes giraban todas a la vez
-					if not v.flashUntil or os.clock() >= v.flashUntil then continue end
-				end
-				if v.flashUntil and os.clock() < v.flashUntil then
-					v.yaw += dt * 8
-				end
-				local rot = CFrame.Angles(v.pitch, v.yaw, 0)
-				v.model:PivotTo(rot * v.base)
-				v.camera.CFrame = CFrame.lookAt(Vector3.new(0, 0, v.distance * v.zoom), Vector3.zero)
-			end
-		end
+	local v = detailSpin
+	if not v or not v.vp.Parent or modal then return end
+	v.yaw += stick.X * dt * 2.0
+	v.pitch = math.clamp(v.pitch - stick.Y * dt, -0.65, 0.65)
+	v.zoom = math.clamp(v.zoom + zoomAxis * dt * 0.65, 0.55, 1.65)
+	if drag == nil and stick.Magnitude < 0.05 then
+		v.yaw += dt * 0.35
 	end
+	if v.flashUntil and now < v.flashUntil then
+		v.yaw += dt * 8
+	end
+	local rot = CFrame.Angles(v.pitch, v.yaw, 0)
+	v.model:PivotTo(rot * v.base)
+	v.camera.CFrame = CFrame.lookAt(Vector3.new(0, 0, v.distance * v.zoom), Vector3.zero)
 end)
 
 for _, attr in { "Gems", "OwnedSkins", "EquippedSkin", "OwnedAuras", "EquippedAura", "WeaponId", "InfusionId", "InMatch", "OptUiScale" } do

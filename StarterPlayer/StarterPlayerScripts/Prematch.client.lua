@@ -160,7 +160,7 @@ end
 
 local function renderQuickDock()
 	for _, ch in quickDock:GetChildren() do
-		if ch ~= dockScale and not ch:IsA("UIStroke") and not ch:IsA("UICorner") and not ch:IsA("UIGradient") and ch.Name ~= "Ornaments" then
+		if ch ~= dockScale and not ch:IsA("UIStroke") and not ch:IsA("UICorner") and not ch:IsA("UIGradient") and ch.Name ~= "Ornaments" and ch.Name ~= "FrameArt" then
 			ch:Destroy()
 		end
 	end

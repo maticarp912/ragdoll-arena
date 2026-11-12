@@ -90,6 +90,7 @@ UiAssets.Ids = {
 	corner_classic_bl = 78148340074076, corner_classic_br = 122947440560620, -- esquina_clasica_03 y 04
 	separator_classic_1 = 117795436187814, separator_classic_2 = 73562321296609, separator_classic_3 = 102087210021827,
 	ornament_side_1 = 73138940308028, ornament_side_2 = 117707830823722, ornament_side_3 = 81933802141293, ornament_side_4 = 139928985111950,
+	reward_skin_preview = 80032557793597, -- fondo del visor de skins, generado con ForgeGUI
 	-- Cofres del 1 al 6, cerrado y abierto (subidos el 11/11)
 	chest_1_closed     = 117493290127703, chest_1_open = 131124602014011, -- hierro
 	chest_2_closed     = 112102957287363, chest_2_open = 81121421030094,  -- plata
@@ -101,6 +102,15 @@ UiAssets.Ids = {
 
 -- Interruptor general del arte nuevo: false = todo vuelve a los íconos dibujados (para probar y retirar).
 UiAssets.UseArt = true
+
+-- 12/11/2026: barras de HUD (barra_hud_04, 05, 08 y 14). x0..x1 / y0..y1 = canal por donde corre el relleno,
+-- en fracción de la imagen. captionHeight = franja de texto arriba del canal. Calibrar con capturas si se corre.
+UiAssets.BarArt = {
+	hud_bar_red = { x0 = 0.2, x1 = 0.96, y0 = 0.48, y1 = 0.65, captionHeight = 0.3 },
+	hud_bar_05 = { x0 = 0.19, x1 = 0.96, y0 = 0.44, y1 = 0.62, captionHeight = 0.32 },
+	hud_bar_cyan = { x0 = 0.2, x1 = 0.96, y0 = 0.55, y1 = 0.72, captionHeight = 0.32 },
+	hud_bar_blue = { x0 = 0.33, x1 = 0.9, y0 = 0.4, y1 = 0.58, captionHeight = 0.3, tint = false },
+}
 -- Las esquinas de plata de las ventanas las dibuja UiTheme (no puede leer este módulo): se apagan con el mismo interruptor
 UiTheme.CornerArt.Enabled = UiAssets.UseArt
 UiTheme.FrameArt.Enabled = UiAssets.UseArt
@@ -160,7 +170,11 @@ function UiAssets.resolveKey(key)
 end
 
 -- Todas las claves con arte del usuario (11/11): con UiAssets.UseArt = false vuelven todas al dibujo de antes
-UiAssets.ArtKeys = {}
+UiAssets.ArtKeys = {
+	reward_skin_preview = true, frame_avatar = true, frame_arch = true,
+	hud_bar_red = true, hud_bar_cyan = true, hud_bar_blue = true, hud_bar_05 = true,
+	separator_classic_1 = true, separator_classic_2 = true, separator_classic_3 = true,
+}
 for k in FULL_COLOR do UiAssets.ArtKeys[k] = true end
 for _, k in { "armory", "shop", "rewards", "settings", "mission", "leaderboard", "health", "stamina", "guard", "guard_broken",
 	"stun", "knockdown", "skull", "attack", "heavy", "block", "dodge", "kick", "interact", "lockon", "switch_target", "trophy", "ranked" } do
@@ -542,6 +556,41 @@ end
 -- 5. Ilustración temática para tarjetas verticales de Infusiones
 --    (Estilo referencias\infusiones ref2.jpg: fondo atmosférico + rayos/halos + icono reversionado arriba)
 ----------------------------------------------------------------------
+-- Las miniaturas publicadas pueden registrarse como skin_thumb_<id>.
+function UiAssets.skinThumbnail(parent, id, skin, zIndex)
+	local image = UiAssets.UseArt and UiAssets.imageUri("skin_thumb_" .. id)
+	local icon = Instance.new(image and "ImageLabel" or "Frame")
+	icon.Name = "SkinThumbnail"
+	icon.BackgroundTransparency = 1
+	icon.AnchorPoint = Vector2.new(0, 0.5)
+	icon.Position = UDim2.new(0, 10, 0.5, 0)
+	icon.Size = UDim2.fromOffset(44, 44)
+	icon.ZIndex = zIndex
+	if image then
+		icon.Image = image
+		icon.ScaleType = Enum.ScaleType.Fit
+	else
+		icon.Rotation = 36
+		local blade = (skin.blade or UiTheme.Colors.TextPrimary):Lerp(UiTheme.Colors.TextPrimary, 0.28)
+		local accent = (skin.accent or UiTheme.Colors.GoldBright):Lerp(UiTheme.Colors.GoldBright, 0.22)
+		partFrame(icon, 0.5, 0.71, 0.08, 0.32, accent, 0, 0, 0, 1)
+		if skin.weapon == "Mace" then
+			partFrame(icon, 0.5, 0.39, 0.54, 0.28, blade, 0, 0.15, 0, 1)
+			partFrame(icon, 0.32, 0.39, 0.07, 0.28, accent, 0, 0, 0, 2)
+			partFrame(icon, 0.68, 0.39, 0.07, 0.28, accent, 0, 0, 0, 2)
+		else
+			local width = skin.weapon == "Greatsword" and 0.25 or (skin.weapon == "Rapier" and 0.075 or 0.14)
+			local bladeLength = skin.weapon == "Dagger" and 0.28 or 0.46
+			local bladeTop = 0.62 - bladeLength
+			partFrame(icon, 0.5, bladeTop + bladeLength / 2, width, bladeLength, blade, 0, 0, 0, 1)
+			partFrame(icon, 0.5, bladeTop, width * 0.71, width * 0.71, blade, 45, 0, 0, 1)
+			partFrame(icon, 0.5, 0.62, width + 0.18, 0.065, accent, 0, 0, 0, 2)
+		end
+	end
+	icon.Parent = parent
+	return icon
+end
+
 function UiAssets.infusionCardArt(parent, infusionId)
 	local theme = UiTheme.InfusionThemes[infusionId] or UiTheme.InfusionThemes.Fire
 

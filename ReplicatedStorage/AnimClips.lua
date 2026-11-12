@@ -661,6 +661,54 @@ AnimClips.DirMap = {
 	},
 }
 
+-- La carga y el impacto siguen el tajo elegido. Las piernas y los tiempos
+-- vienen del fuerte de cada arma, incluso durante el paso y la recuperación.
+local heavyDirectionCache = {}
+local function directionalHeavy(arch, side)
+	local bySide = heavyDirectionCache[arch] or {}
+	heavyDirectionCache[arch] = bySide
+	if bySide[side] then return bySide[side] end
+	local set = A[arch] or A.OneHand
+	local entry = (AnimClips.DirMap[arch] or AnimClips.DirMap.OneHand)[side]
+	if not entry then return nil end
+
+	local attack, heavy = set[entry.clip], set.Heavy
+	local charge, impact, follow
+	for _, key in attack.keys do
+		if type(key[2]) == "table" then
+			if key[1] < attack.hit then charge = key[2]
+			elseif not impact then impact = key[2]
+			elseif not follow then follow = key[2] end
+		end
+	end
+	local clip = table.clone(heavy)
+	clip.keys = {}
+	clip.dirLayer = entry.layer or AnimClips.Directional.MatchedLayerWeight
+	local mix = arch == "Rapier" and 0.55 or 0.85
+	for _, key in heavy.keys do
+		local t, pose, easing = key[1], key[2], key[3]
+		if type(pose) == "table" then
+			local directional = t < heavy.hit and charge or (t == heavy.hit and impact or follow or impact)
+			local blended = table.clone(pose)
+			for _, joint in AnimClips.Upper do
+				local v = directional and directional[joint]
+				if v then
+					local original = pose[joint] or v
+					blended[joint] = {
+						original[1] + (v[1] - original[1]) * mix,
+						original[2] + (v[2] - original[2]) * mix,
+						original[3] + (v[3] - original[3]) * mix,
+					}
+				end
+			end
+			pose = blended
+		end
+		table.insert(clip.keys, { t, pose, easing })
+	end
+	bySide[side] = clip
+	return clip
+end
+
 local mocapCache = {}
 local function mocapCached(name)
 	if mocapCache[name] == nil then mocapCache[name] = mocap(name) or false end
@@ -673,6 +721,8 @@ end
 function AnimClips.resolve(key, archetype)
 	if not key or key == "" then return nil end
 	local w, k = string.match(key, "^Weapons%.(%w+)%.([%w_]+)$")
+	local heavySide = k and string.match(k, "^Heavy(%a+)$")
+	if heavySide then return directionalHeavy(archetype or "OneHand", heavySide) end
 	local dirName = k and string.match(k, "^Dir(%a+)$")
 	if dirName then
 		local dm = AnimClips.DirMap[archetype or "OneHand"] or AnimClips.DirMap.OneHand

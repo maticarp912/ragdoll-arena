@@ -1,5 +1,10 @@
 return {
  ["ES"] = {
+ ["v3.loading.world"] = "Preparando la ciudad y tu personaje…",
+ ["v3.loading.unavailable"] = "{count} recursos quedaron pendientes.",
+ ["v3.loading.continue"] = "Entrar igualmente",
+ ["v3.duel.round"] = "Asalto {round}",
+ ["v3.duel.fight"] = "¡A luchar!",
  ["mz.coins"] = "Monedas",
  ["mz.gemsAmount"] = "{amount} monedas",
  ["mz.product.Gems"] = "{amount} monedas",
@@ -228,6 +233,11 @@ return {
  ["cx.debug.temporary"] = "Cambio temporal: no se pudo guardar.",
  },
  ["EN"] = {
+ ["v3.loading.world"] = "Preparing the city and your character…",
+ ["v3.loading.unavailable"] = "{count} assets could not be loaded.",
+ ["v3.loading.continue"] = "Enter anyway",
+ ["v3.duel.round"] = "Round {round}",
+ ["v3.duel.fight"] = "Fight!",
  ["mz.coins"] = "Coins",
  ["mz.gemsAmount"] = "{amount} coins",
  ["mz.product.Gems"] = "{amount} coins",
@@ -456,6 +466,11 @@ return {
  ["cx.debug.temporary"] = "Temporary change: saving unavailable.",
  },
  ["PT-BR"] = {
+ ["v3.loading.world"] = "Preparando a cidade e seu personagem…",
+ ["v3.loading.unavailable"] = "{count} recursos não foram carregados.",
+ ["v3.loading.continue"] = "Entrar mesmo assim",
+ ["v3.duel.round"] = "Round {round}",
+ ["v3.duel.fight"] = "Lutem!",
  ["mz.coins"] = "Moedas",
  ["mz.gemsAmount"] = "{amount} moedas",
  ["mz.product.Gems"] = "{amount} moedas",

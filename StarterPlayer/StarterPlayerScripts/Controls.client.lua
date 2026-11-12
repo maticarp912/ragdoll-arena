@@ -466,7 +466,18 @@ local function faceAim(char, aim)
 	root.CFrame = CFrame.lookAt(root.Position, root.Position + aim)
 end
 
+local pendingAttackSeq, pendingAttackUntil = nil, 0
+local function stanceLocked(char)
+	local action = char:GetAttribute("Action")
+	if action == "M1" or action == "Heavy" then
+		pendingAttackSeq, pendingAttackUntil = nil, 0
+		return true
+	end
+	return os.clock() < pendingAttackUntil
+end
+
 local function send(action)
+	if player:GetAttribute("InitialLoading") then return end
 	local char = getChar()
 	if not char then return end
 	local arg, extra = nil, nil
@@ -484,7 +495,12 @@ local function send(action)
 		end
 		if locked and canLock(locked) then extra = locked end -- el servidor elige la animación respecto de él
 	end
-	Input:FireServer(action, arg, extra, nextSeq())
+	local seq = nextSeq()
+	if directionalOn() and (action == "M1" or action == "Heavy") and not char:GetAttribute("Carrying")
+		and not stanceLocked(char) and char:GetAttribute("Action") == "" then
+		pendingAttackSeq, pendingAttackUntil = seq, os.clock() + DIR.Input.PredictHold
+	end
+	Input:FireServer(action, arg, extra, seq)
 end
 
 ----------------------------------------------------------------------
@@ -497,10 +513,12 @@ predictedStance.Name = "PredictedStance"
 predictedStance.Parent = player
 
 local function setStance(dir)
+	if player:GetAttribute("InitialLoading") then return end
 	if not directionalOn() or not table.find(DIR.Dirs, dir) then return end
 	local char = getChar()
-	if not char or isDownLocal(char) then return end
-	local current = predictedStance.Value ~= "" and predictedStance.Value or char:GetAttribute("Stance")
+	if not char or isDownLocal(char) or stanceLocked(char) then return end
+	local recent = os.clock() - (predictedStance:GetAttribute("At") or 0) < DIR.Input.PredictHold
+	local current = recent and predictedStance.Value ~= "" and predictedStance.Value or char:GetAttribute("Stance")
 	if current == dir then return end
 	predictedStance.Value = dir
 	predictedStance:SetAttribute("At", os.clock())
@@ -508,14 +526,26 @@ local function setStance(dir)
 end
 
 -- El servidor rechazó la postura: volver a la real
-Effect.OnClientEvent:Connect(function(kind, _seq, action)
-	if kind == "InputReject" and action == "Stance" then
+Effect.OnClientEvent:Connect(function(kind, seq, action)
+	if kind ~= "InputReject" then return end
+	if seq == pendingAttackSeq and (action == "M1" or action == "Heavy") then
+		pendingAttackSeq, pendingAttackUntil = nil, 0
+	elseif action == "Stance" then
 		local char = getChar()
 		predictedStance.Value = char and (char:GetAttribute("Stance") or "") or ""
 		predictedStance:SetAttribute("At", 0)
 	end
 end)
-player.CharacterAdded:Connect(function()
+local function watchAttack(char)
+	pendingAttackSeq, pendingAttackUntil = nil, 0
+	char:GetAttributeChangedSignal("Action"):Connect(function()
+		if char == player.Character then stanceLocked(char) end
+	end)
+end
+if player.Character then watchAttack(player.Character) end
+
+player.CharacterAdded:Connect(function(char)
+	watchAttack(char)
 	predictedStance.Value = ""
 	predictedStance:SetAttribute("At", 0)
 end)
@@ -523,7 +553,7 @@ end)
 local function stanceInputActive()
 	if not directionalOn() or not locked or player:GetAttribute("MenuOpen") then return false end
 	local char = getChar()
-	return char ~= nil and not isDownLocal(char)
+	return char ~= nil and not isDownLocal(char) and not stanceLocked(char)
 end
 
 -- Gesto del mouse: se acumula el movimiento y se pierde rápido; pasado el umbral elige el lado
@@ -543,6 +573,7 @@ end
 UserInputService.InputChanged:Connect(function(input)
 	if not stanceInputActive() then
 		gestureX, gestureY = 0, 0
+		stickSector = nil
 		return
 	end
 	if input.UserInputType == Enum.UserInputType.MouseMovement then
@@ -598,7 +629,7 @@ hint.Position = UDim2.new(0.5, 0, 1, -130)
 hint.Size = UDim2.fromOffset(460, 22)
 hint.BackgroundTransparency = 1
 hint.TextColor3 = C.Gold
-hint.TextStrokeTransparency = 0.35
+hint.TextStrokeTransparency = 1
 hint.Font = Theme.Fonts.Body
 hint.TextSize = 16
 hint.Text = ""
@@ -611,7 +642,7 @@ toast.Position = UDim2.new(0.5, 0, 1, -156)
 toast.Size = UDim2.fromOffset(520, 26)
 toast.BackgroundTransparency = 1
 toast.TextColor3 = C.Bone
-toast.TextStrokeTransparency = 0.4
+toast.TextStrokeTransparency = 1
 toast.Font = Theme.Fonts.Body
 toast.TextSize = 16
 toast.Text = ""
@@ -819,6 +850,7 @@ local function m2Allowed()
 end
 
 local function onAction(action, began)
+	if player:GetAttribute("InitialLoading") then return end
 	local char = getChar()
 	if began and isDown(char) then
 		-- Derribado o cargado: casi cualquier botón sirve para levantarse / forcejear
@@ -973,7 +1005,7 @@ local function pop(position, text, color)
 	l.BackgroundTransparency = 1
 	l.Text = text
 	l.TextColor3 = color
-	l.TextStrokeTransparency = 0.2
+	l.TextStrokeTransparency = 1
 	l.Font = Theme.Fonts.Title
 	l.TextScaled = true
 	l.Parent = bb

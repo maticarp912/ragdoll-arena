@@ -76,7 +76,7 @@ local function label(y, size, color)
 	l.Font = Theme.Fonts.Body
 	l.TextSize = size
 	l.TextColor3 = color
-	l.TextStrokeTransparency = 0.5
+	l.TextStrokeTransparency = 1
 	l.Parent = panel
 	return l
 end

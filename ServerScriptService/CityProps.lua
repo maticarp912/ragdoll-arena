@@ -50,7 +50,7 @@ function P.build(parent,ctx)
  for _,sign in D.TreeSides do
   box("TavernSide",Vector3.new(D.Width,D.Height,D.Wall),c+Vector3.new(V.n0,D.Height/D.Two,sign*D.Depth/D.Two),D.Wood,Enum.Material.WoodPlanks,true)
   for _,x in D.TreeSides do box("TimberPost",Vector3.new(D.Beam,D.Height,D.Beam),c+Vector3.new(x*D.Width/D.Two,D.Height/D.Two,sign*D.Depth/D.Two),D.Trim,Enum.Material.Wood) end
-  part("PitchedRoof",Vector3.new(D.Width+D.Two,D.Beam,D.Depth/D.Two+D.Two),CFrame.new(c+Vector3.new(V.n0,D.Height+D.RoofRise/D.Two,sign*D.Depth/V.n1))*CFrame.Angles(-sign*D.RoofTilt,V.n0,V.n0),D.Roof,Enum.Material.Slate)
+  part("PitchedRoof",Vector3.new(D.Width+D.Two,D.Beam,D.Depth/D.Two+D.Two),CFrame.new(c+Vector3.new(V.n0,D.Height+D.RoofRise/D.Two,sign*D.Depth/V.n1))*CFrame.Angles(sign*D.RoofTilt,V.n0,V.n0),D.Roof,Enum.Material.Slate) -- 12/11/2026: el signo estaba invertido (techo en V)
   rod("DiagonalBrace",c+Vector3.new(D.Width/D.Two,V.n2,sign*D.Depth/D.Two),c+Vector3.new(D.Width/D.Two,V.n3,sign*V.n4),D.Beam,D.Trim)
  end
  rod("RoofRidge",c+Vector3.new(-V.n5,V.n6,V.n0),c+Vector3.new(V.n5,V.n6,V.n0),D.Beam,D.Trim)

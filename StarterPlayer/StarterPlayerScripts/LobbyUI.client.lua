@@ -12,6 +12,7 @@ local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local GuiService = game:GetService("GuiService")
+local Mobile = require(game:GetService("ReplicatedStorage"):WaitForChild("PolishConfig")).MobileHUD
 local HttpService = game:GetService("HttpService")
 
 local UiTheme = require(ReplicatedStorage:WaitForChild("UiTheme", 10))
@@ -54,7 +55,7 @@ dockLayout.Padding = UDim.new(0, 8)
 dockLayout.SortOrder = Enum.SortOrder.LayoutOrder
 dockLayout.Parent = leftDock
 
-local activeModal = nil -- "Missions" | "Leaderboards" | "Ranked" | nil
+local activeModal = nil -- "Missions" | "Leaderboards" | nil
 local toggleModal
 
 local function makeAlertBadge(parentBtn, name)
@@ -194,14 +195,14 @@ local boardsBtn = UiTheme.button({
 
 ----------------------------------------------------------------------
 -- 2. Barra de cola inferior (Contrato C3)
---    Abajo al centro, bien centrados: Buscar 1v1, 2v2 y RANKED ("Próximamente").
+--    Abajo al centro: buscar 1v1 o 2v2.
 ----------------------------------------------------------------------
 local queueBar = UiTheme.panel({
 	name = "QueueBar",
 	parent = gui,
 	anchor = Vector2.new(0.5, 1),
-	position = UDim2.new(0.5, 0, 1, -16),
-	size = UDim2.fromOffset(560, 54),
+	position = UDim2.new(0.5, 0, 1, -Mobile.QueueBottom),
+	size = UDim2.fromOffset(352, Mobile.QueueHeight),
 	bg = C.BgPanel,
 	transparency = 0.08,
 	borderColor = C.Gold,
@@ -252,43 +253,6 @@ local join2Btn = UiTheme.button({
 		if QueueRemote then QueueRemote:FireServer("Join", "2v2") end
 	end,
 })
-
-local rankedBtn = UiTheme.button({
-	name = "RankedBtn",
-	parent = queueBar,
-	layoutOrder = 3,
-	size = UDim2.fromOffset(168, 42),
-	text = L.t("cx.ui.ranked"),
-	font = "Title",
-	textSize = UiTheme.TextSizes.LG,
-	variant = "secondary",
-	onClick = function()
-		toggleModal("Ranked")
-	end,
-})
-
-local rankedTag = UiTheme.label({
-	name = "RankedTag",
-	parent = rankedBtn,
-	anchor = Vector2.new(1, 0),
-	position = UDim2.new(1, -6, 0, -6),
-	size = UDim2.fromOffset(72, 18),
-	text = L.t("soon"),
-	font = "Bold",
-	textSize = 10,
-	color = C.GoldBright,
-	alignX = Enum.TextXAlignment.Center,
-})
-local tagBg = Instance.new("Frame")
-tagBg.Size = UDim2.fromScale(1, 1)
-tagBg.BackgroundColor3 = C.BgAbyss
-tagBg.BorderSizePixel = 0
-tagBg.ZIndex = rankedTag.ZIndex - 1
-tagBg.Parent = rankedBtn
- tagBg.AnchorPoint=rankedTag.AnchorPoint tagBg.Position=rankedTag.Position tagBg.Size=rankedTag.Size
- rankedTag.ZIndex=rankedBtn.ZIndex+3 tagBg.ZIndex=rankedBtn.ZIndex+2
-UiTheme.corner(tagBg, 4)
-UiTheme.stroke(tagBg, C.Gold, 1, 0.2)
 
 local queueStatusLbl = UiTheme.label({
 	name = "QueueStatus",
@@ -397,7 +361,7 @@ end
 
 function renderModal()
 	for _, ch in modalBox:GetChildren() do
-		if ch ~= modalScale and not ch:IsA("UIStroke") and not ch:IsA("UICorner") and not ch:IsA("UIGradient") and ch.Name ~= "Ornaments" then
+		if ch ~= modalScale and not ch:IsA("UIStroke") and not ch:IsA("UICorner") and not ch:IsA("UIGradient") and ch.Name ~= "Ornaments" and ch.Name ~= "FrameArt" then
 			ch:Destroy()
 		end
 	end
@@ -413,9 +377,20 @@ function renderModal()
 	header.ZIndex = 22
 	header.Parent = modalBox
 	UiTheme.corner(header, UiTheme.Radius.MD)
+	local separator = UiAssets.imageUri("separator_classic_1")
+	if separator then
+		local art = Instance.new("ImageLabel")
+		art.Name = "SilverDivider"
+		art.BackgroundTransparency = 1
+		art.Image = separator
+		art.AnchorPoint = Vector2.new(0.5, 1)
+		art.Position = UDim2.new(0.5, 0, 1, 4)
+		art.Size = UDim2.fromOffset(88, 22)
+		art.ZIndex = header.ZIndex + 1
+		art.Parent = header
+	end
 
-	local titleKey = activeModal == "Missions" and "ui.missions.title"
-		or (activeModal == "Leaderboards" and "ui.lobby.leaderboards" or "ui.ranked.title")
+	local titleKey = activeModal == "Missions" and "ui.missions.title" or "ui.lobby.leaderboards"
 	UiTheme.label({
 		parent = header,
 		position = UDim2.fromOffset(22, 0),
@@ -691,35 +666,6 @@ function renderModal()
 			zIndex = 23,
 		})
 
-	elseif activeModal == "Ranked" then
-		local crest = UiAssets.icon(modalBox, "trophy", 88, C.GoldBright)
-		crest.AnchorPoint = Vector2.new(0.5, 0.5)
-		crest.Position = UDim2.new(0.5, 0, 0.34, 0)
-		crest.ZIndex = 23
-
-		UiTheme.label({
-			parent = modalBox,
-			position = UDim2.new(0.1, 0, 0.52, 0),
-			size = UDim2.new(0.8, 0, 0, 64),
-			text = L.t("ui.ranked.desc"),
-			font = "Body",
-			textSize = UiTheme.TextSizes.LG,
-			color = C.TextPrimary,
-			alignX = Enum.TextXAlignment.Center,
-			zIndex = 23,
-		})
-
-		UiTheme.label({
-			parent = modalBox,
-			position = UDim2.new(0.1, 0, 0.72, 0),
-			size = UDim2.new(0.8, 0, 0, 32),
-			text = L.t("ui.ranked.rewards"),
-			font = "Header",
-			textSize = UiTheme.TextSizes.MD,
-			color = C.GoldBright,
-			alignX = Enum.TextXAlignment.Center,
-			zIndex = 23,
-		})
 	end
 
 	if Device.isGamepad() then
@@ -780,7 +726,6 @@ local function refreshBar()
 	local mode = player:GetAttribute("QueueMode") or requestedMode
 	join1Btn.Text = L.t("ui.queue.1v1")
 	join2Btn.Text = L.t("ui.queue.2v2")
-	rankedBtn.Text = L.t("cx.ui.ranked")
 	leaveBtn.Text = L.t("ui.queue.leave")
 	armoryBtn.Text = L.t("ui.lobby.dock.armory")
 	shopBtn.Text = L.t("ui.lobby.dock.shop")
@@ -792,7 +737,6 @@ local function refreshBar()
 
 	join1Btn.Visible = mode == nil
 	join2Btn.Visible = mode == nil
-	rankedBtn.Visible = mode == nil
 	leaveBtn.Visible = mode ~= nil
 	queueStatusLbl.Visible = mode ~= nil
 	if mode then
@@ -805,8 +749,8 @@ local function refreshBar()
 
 	local cam = workspace.CurrentCamera
 	if cam then
-		local sc = UiTheme.computeScale(cam.ViewportSize, 1060, 640, player)
-		queueScale.Scale = sc
+		local sc = UiTheme.computeScale(gui.AbsoluteSize, 1060, 640, player)
+		queueScale.Scale = math.min(sc, 1)
 		dockScale.Scale = sc
 		modalScale.Scale = sc
 		leftDock.AnchorPoint = Vector2.new(0, 0.5)

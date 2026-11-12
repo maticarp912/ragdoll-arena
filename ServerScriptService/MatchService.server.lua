@@ -336,6 +336,7 @@ local function runRound(roundNumber: number, modeName: string, teamsMap)
   phase("Cinematic", E.CinematicTime, nil)
   task.wait(E.CinematicTime)
  end
+	for _, fighter in fighters do fighter.player:SetAttribute("RoundNumber", roundNumber) end
  phase("Round", CONFIG.RoundTime + CONFIG.Countdown)
  for i = CONFIG.Countdown, 1, -1 do
 		setStatus("cx.match.prepare", { round = roundNumber, seconds = i })

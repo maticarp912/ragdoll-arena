@@ -6,15 +6,17 @@
 
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local ContentProvider = game:GetService("ContentProvider")
+local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-pcall(function()
-	ReplicatedFirst:RemoveDefaultLoadingScreen()
-end)
-
 local player = Players.LocalPlayer or Players.PlayerAdded:Wait()
+local actionName = "InitialLoadingMovement"
+player:SetAttribute("InitialLoading", true)
+ContextActionService:BindActionAtPriority(actionName, function()
+	return Enum.ContextActionResult.Sink
+end, false, Enum.ContextActionPriority.High.Value, table.unpack(Enum.PlayerActions:GetEnumItems()))
 
 -- Traducciones inmediatas (para el primer fotograma antes de que termine de replicar ReplicatedStorage)
 local FALLBACK_TEXT = {
@@ -83,11 +85,11 @@ end
 ----------------------------------------------------------------------
 -- The first loading frame can appear before ReplicatedStorage is available.
 local C = {
- BgAbyss = Color3.fromRGB(7, 6, 10), BgPanel = Color3.fromRGB(22, 17, 25), BgPrimary = Color3.fromRGB(14, 11, 17),
- BgModalVeil = Color3.fromRGB(3, 2, 5), BgHeader = Color3.fromRGB(18, 13, 21), BgBarBack = Color3.fromRGB(10, 8, 12),
- BorderStrong = Color3.fromRGB(204, 40, 60), BorderDefault = Color3.fromRGB(96, 38, 52), Iron = Color3.fromRGB(48, 39, 53),
- Gold = Color3.fromRGB(204, 40, 60), GoldBright = Color3.fromRGB(255, 122, 116), GoldDim = Color3.fromRGB(132, 30, 46),
- TextPrimary = Color3.fromRGB(246, 237, 222), TextSecondary = Color3.fromRGB(200, 188, 178),
+ BgAbyss = Color3.fromRGB(8, 11, 15), BgPanel = Color3.fromRGB(21, 28, 37), BgPrimary = Color3.fromRGB(15, 20, 27),
+ BgModalVeil = Color3.fromRGB(4, 7, 11), BgHeader = Color3.fromRGB(19, 26, 35), BgBarBack = Color3.fromRGB(10, 14, 20),
+ BorderStrong = Color3.fromRGB(162, 183, 205), BorderDefault = Color3.fromRGB(91, 107, 126), Iron = Color3.fromRGB(49, 59, 72),
+ Gold = Color3.fromRGB(177, 193, 210), GoldBright = Color3.fromRGB(228, 237, 247), GoldDim = Color3.fromRGB(105, 125, 147),
+ TextPrimary = Color3.fromRGB(241, 244, 248), TextSecondary = Color3.fromRGB(191, 203, 216),
 }
 local themeModule = ReplicatedStorage:FindFirstChild("UiTheme")
 if themeModule and ReplicatedStorage:FindFirstChild("Assets") then
@@ -101,6 +103,7 @@ gui.DisplayOrder = 100
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = player:WaitForChild("PlayerGui")
+ReplicatedFirst:RemoveDefaultLoadingScreen()
 
 local root = Instance.new("CanvasGroup")
 root.Name = "LoadingRoot"
@@ -109,6 +112,16 @@ root.BackgroundColor3 = C.BgAbyss
 root.BorderSizePixel = 0
 root.Parent = gui
 
+-- 12/11/2026: el degradado va en un fondo propio. Puesto sobre el CanvasGroup teñía TODO el grupo
+-- (textos, emblema y barra) con los colores oscuros y la pantalla de carga se veía casi negra.
+local backdrop = Instance.new("Frame")
+backdrop.Name = "Backdrop"
+backdrop.Size = UDim2.fromScale(1, 1)
+backdrop.BackgroundColor3 = Color3.new(1, 1, 1)
+backdrop.BorderSizePixel = 0
+backdrop.ZIndex = 0
+backdrop.Parent = root
+
 local bgGrad = Instance.new("UIGradient")
 bgGrad.Color = ColorSequence.new({
 	ColorSequenceKeypoint.new(0, C.BgPanel),
@@ -116,7 +129,7 @@ bgGrad.Color = ColorSequence.new({
 	ColorSequenceKeypoint.new(1, C.BgModalVeil),
 })
 bgGrad.Rotation = 90
-bgGrad.Parent = root
+bgGrad.Parent = backdrop
 
 -- Marco perimetral dorado viejo
 local outerFrame = Instance.new("Frame")
@@ -175,20 +188,14 @@ title.AnchorPoint = Vector2.new(0.5, 0)
 title.Position = UDim2.new(0.5, 0, 0.50, 0)
 title.Size = UDim2.new(0.8, 0, 0, 52)
 title.BackgroundTransparency = 1
--- 10/11/2026: si una fuente no existiera en esta versión de Roblox, no se rompe la interfaz (cae a Gotham/Garamond)
-local function safeFont(name)
-	local ok, f = pcall(function() return Enum.Font[name] end)
-	if ok and f then return f end
-	return name == "GrenzeGotisch" and Enum.Font.Garamond or Enum.Font.GothamMedium
-end
-title.Font = safeFont("GrenzeGotisch") -- 10/11: tipografía nueva
+title.Font = Enum.Font.Garamond
 -- 11/11/2026: mismo nombre que la página de Roblox «[BETA] Dark Fantasy Plataforme 2v2 1v1 PVP»
 title.Text = "DARK FANTASY PLATAFORME"
 title.TextColor3 = C.GoldBright
 title.TextSize = 46
 title.TextScaled = true
 local titleMax = Instance.new("UITextSizeConstraint") titleMax.MaxTextSize = 46 titleMax.Parent = title
-title.TextStrokeTransparency = 0.35
+title.TextStrokeTransparency = 1
 title.Parent = root
 
 local tagline = Instance.new("TextLabel")
@@ -196,7 +203,7 @@ tagline.AnchorPoint = Vector2.new(0.5, 1)
 tagline.Position = UDim2.new(0.5, 0, 0.50, -4)
 tagline.Size = UDim2.new(0.8, 0, 0, 22)
 tagline.BackgroundTransparency = 1
-tagline.Font = safeFont("BuilderSansBold")
+tagline.Font = Enum.Font.Garamond
 tagline.Text = "[BETA]  ·  2V2  ·  1V1  ·  PVP"
 tagline.TextColor3 = C.TextSecondary
 tagline.TextSize = 16
@@ -207,7 +214,7 @@ subtitle.AnchorPoint = Vector2.new(0.5, 0)
 subtitle.Position = UDim2.new(0.5, 0, 0.58, 0)
 subtitle.Size = UDim2.new(0.8, 0, 0, 26)
 subtitle.BackgroundTransparency = 1
-subtitle.Font = safeFont("Merriweather")
+subtitle.Font = Enum.Font.Garamond
 subtitle.Text = tr("ui.loading.subtitle")
 subtitle.TextColor3 = C.TextSecondary
 subtitle.TextSize = 15
@@ -234,7 +241,7 @@ local tipLabel = Instance.new("TextLabel")
 tipLabel.Position = UDim2.fromOffset(20, 12)
 tipLabel.Size = UDim2.new(1, -40, 0, 42)
 tipLabel.BackgroundTransparency = 1
-tipLabel.Font = safeFont("Merriweather")
+tipLabel.Font = Enum.Font.Garamond
 tipLabel.TextColor3 = C.TextPrimary
 tipLabel.TextSize = 14
 tipLabel.TextWrapped = true
@@ -268,7 +275,7 @@ local progressLabel = Instance.new("TextLabel")
 progressLabel.Position = UDim2.fromOffset(20, 80)
 progressLabel.Size = UDim2.new(1, -40, 0, 22)
 progressLabel.BackgroundTransparency = 1
-progressLabel.Font = safeFont("BuilderSansBold")
+progressLabel.Font = Enum.Font.Garamond
 progressLabel.TextColor3 = C.GoldDim
 progressLabel.TextSize = 12
 progressLabel.Text = tr("ui.loading.preparing", { pct = 5 })
@@ -277,12 +284,12 @@ progressLabel.Parent = bottomPanel
 local skipBtn = Instance.new("TextButton")
 skipBtn.AnchorPoint = Vector2.new(1, 0)
 skipBtn.Position = UDim2.new(1, -36, 0, 36)
-skipBtn.Size = UDim2.fromOffset(108, 38)
+skipBtn.Size = UDim2.fromOffset(174, 38)
 skipBtn.BackgroundColor3 = C.Iron
 skipBtn.TextColor3 = C.TextPrimary
-skipBtn.Font = safeFont("BuilderSansBold")
+skipBtn.Font = Enum.Font.Garamond
 skipBtn.TextSize = 14
-skipBtn.Text = tr("ui.loading.skip")
+skipBtn.Text = ""
 skipBtn.Visible = false
 skipBtn.Parent = root
 local skCorner = Instance.new("UICorner")
@@ -294,140 +301,173 @@ skStroke.Thickness = 1.4
 skStroke.Parent = skipBtn
 
 ----------------------------------------------------------------------
--- Progreso real de ContentProvider:PreloadAsync y rotación de consejos
--- (Punto 9: precarga de texturas, sonidos, UiAssets, partículas y armas)
-----------------------------------------------------------------------
-local finished = false
-local function finishLoading()
-	if finished then return end
-	finished = true
-	progressLabel.Text = tr("ui.loading.ready")
-	TweenService:Create(barFill, TweenInfo.new(0.2), { Size = UDim2.fromScale(1, 1) }):Play()
-	task.wait(0.22)
-	local fade = TweenService:Create(root, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { GroupTransparency = 1 })
-	fade:Play()
-	fade.Completed:Wait()
-	if gui.Parent then
-		gui:Destroy()
-	end
+-- Primero esperamos al personaje y al mapa inicial. Luego pedimos cada recurso por
+-- su tipo real, con progreso por lote resuelto y una segunda pasada para los fallidos.
+local function initialWorldReady()
+	local character = player.Character
+	local profile = player:GetAttribute("ProfileState")
+	local map = workspace:FindFirstChild("GeneratedMap")
+	return game:IsLoaded() and map and character and character:FindFirstChild("HumanoidRootPart")
+		and (profile == "Ready" or profile == "Temporary")
 end
 
-skipBtn.Activated:Connect(finishLoading)
+local contentProperties = {
+	Animation = { "AnimationId" }, Sound = { "SoundId" },
+	Decal = { "Texture" }, Texture = { "Texture" },
+	ParticleEmitter = { "Texture" }, Trail = { "Texture" }, Beam = { "Texture" },
+	MeshPart = { "MeshId", "TextureID" }, SpecialMesh = { "MeshId", "TextureId" },
+	SurfaceAppearance = { "ColorMap", "MetalnessMap", "NormalMap", "RoughnessMap" },
+	MaterialVariant = { "ColorMap", "MetalnessMap", "NormalMap", "RoughnessMap" },
+	Sky = { "SkyboxBk", "SkyboxDn", "SkyboxFt", "SkyboxLf", "SkyboxRt", "SkyboxUp", "SunTextureId", "MoonTextureId" },
+	ImageLabel = { "Image" }, ImageButton = { "Image" }, ImageHandleAdornment = { "Image" },
+}
+
+local function collect()
+	local resources, seen = {}, {}
+	local function add(id, kind)
+		if type(id) == "number" then
+			if id <= 0 then return end
+			id = "rbxassetid://" .. id
+		end
+		if type(id) ~= "string" or not id:match("^rbxasset") and not id:match("^https?://") then return end
+		local numeric = id:match("[?&]id=(%d+)") or id:match("^rbxassetid://(%d+)$")
+		if numeric == "0" then return end
+		local key = numeric or id
+		if seen[key] then return end
+		seen[key] = true
+		local proxy = Instance.new(kind or "ImageLabel")
+		local property = kind == "Sound" and "SoundId" or kind == "Animation" and "AnimationId"
+			or kind == "SpecialMesh" and "MeshId" or "Image"
+		if kind == "SpecialMesh" then proxy.MeshType = Enum.MeshType.FileMesh end
+		proxy[property] = id
+		table.insert(resources, proxy)
+	end
+	local function walk(tbl, kind)
+		if type(tbl) ~= "table" then return end
+		for _, v in tbl do
+			if type(v) == "table" then walk(v, kind) else add(v, kind) end
+		end
+	end
+	local function module(name)
+		local src = ReplicatedStorage:FindFirstChild(name)
+		if src and src:IsA("ModuleScript") then
+			local ok, value = pcall(require, src)
+			if ok then return value end
+		end
+		return {}
+	end
+	local assets = module("Assets")
+	walk(assets.Animations, "Animation")
+	walk(assets.Sounds, "Sound")
+	walk(assets.VFX)
+	walk(assets.Icons)
+	local ui = module("UiAssets")
+	walk(ui.Ids)
+	local aura = module("Auras").Fx or {}
+	add(aura.SmokeTexture)
+	add(aura.SparkTexture)
+	walk((module("PolishConfig").Aura or {}).Textures)
+	for _, library in { (assets.Models and assets.Models.Weapons) or {}, module("WeaponMeshes") } do
+		for _, spec in library do
+			if type(spec) == "table" then
+				add(spec.MeshId, "SpecialMesh")
+				add(spec.TextureId)
+			end
+		end
+	end
+	for _, service in { workspace, game:GetService("Lighting"), game:GetService("MaterialService"), ReplicatedStorage, gui.Parent } do
+		for _, object in service:GetDescendants() do
+			local properties = contentProperties[object.ClassName]
+			if properties then
+				for _, property in properties do
+					local ok, id = pcall(function() return object[property] end)
+					local kind = property == "MeshId" and "SpecialMesh" or object:IsA("Sound") and "Sound"
+						or object:IsA("Animation") and "Animation" or nil
+					if ok then add(id, kind) end
+				end
+			end
+		end
+	end
+	if ui.imageUri and ui.imageUri("frame_arch") then
+		local theme = module("UiTheme")
+		if theme.frameArt then
+			local rim = theme.frameArt(outerFrame, "Loading")
+			if rim then
+				rim:GetPropertyChangedSignal("IsLoaded"):Connect(function()
+					if rim.IsLoaded then outerStroke.Transparency = 1 end
+				end)
+			end
+		end
+	end
+	return resources
+end
+
+local function finish()
+	skipBtn.Visible = false
+	task.wait(0.2)
+	local fade = TweenService:Create(root, TweenInfo.new(0.35), { GroupTransparency = 1 })
+	fade:Play()
+	fade.Completed:Wait()
+	ContextActionService:UnbindAction(actionName)
+	player:SetAttribute("InitialLoading", false)
+	gui:Destroy()
+end
 
 task.spawn(function()
 	local tips = { "ui.loading.tip1", "ui.loading.tip2", "ui.loading.tip3", "ui.loading.tip4" }
-	local tipIdx = math.random(1, #tips)
-	tipLabel.Text = tr(tips[tipIdx])
-
-	-- Recolección de assets para PreloadAsync
-	local preloadList = {}
-	local seen = {}
- local holders={}
- local function addAsset(id,class,property)
-  if typeof(id)=="Instance" then table.insert(preloadList,id) return end
-  if type(id)=="number" then if id<=0 then return end id="rbxassetid://"..id end
-  if type(id)~="string" or id=="" then return end
-  class=class or "ImageLabel" property=property or "Image"
-  local key=class..id if seen[key] then return end seen[key]=true
-  local obj=Instance.new(class) obj[property]=id table.insert(holders,obj) table.insert(preloadList,obj)
- end
- local function collectIds(tbl,class,property)
-  if type(tbl)~="table" then return end
-  for _,v in pairs(tbl) do
-   if type(v)=="table" then collectIds(v,class,property)
-   elseif type(v)=="number" or (type(v)=="string" and (v:find("rbxasset",1,true) or v:find("roblox.com",1,true))) then addAsset(v,class,property) end
-  end
- end
-
-	-- Esperamos por los módulos principales con límite de seguridad
-	local assetsMod = ReplicatedStorage:WaitForChild("Assets", 6)
-	if assetsMod then
-		local ok, Assets = pcall(require, assetsMod)
-		if ok and type(Assets) == "table" then
-			collectIds(Assets.Sounds,"Sound","SoundId")
-			collectIds(Assets.VFX)
-			collectIds(Assets.Icons)
-		end
+	local tipIndex = 1
+	tipLabel.Text = tr(tips[tipIndex])
+	while not initialWorldReady() do
+		progressLabel.Text = tr("v3.loading.world")
+		task.wait(0.2)
 	end
 
-	local uiAssetsMod = ReplicatedStorage:WaitForChild("UiAssets", 6)
-	if uiAssetsMod then
-		local ok, UiAssets = pcall(require, uiAssetsMod)
-		if ok and type(UiAssets) == "table" and UiAssets.Ids then
-			collectIds(UiAssets.Ids)
-		end
+	local assets = collect()
+	local total, finished, failures = #assets, 0, 0
+	local index = 0
+	local complete = false
+	for _ = 1, math.min(total, 8) do
+		task.spawn(function()
+			while index < total and not complete do
+				index += 1
+				local asset = assets[index]
+				local loaded = false
+				for _attempt = 1, 2 do
+					local ok = pcall(function()
+						ContentProvider:PreloadAsync({ asset }, function(_, status)
+							loaded = status == Enum.AssetFetchStatus.Success
+						end)
+					end)
+					if ok and loaded or complete then break end
+				end
+				if not loaded then failures += 1 end
+				finished += 1
+				asset:Destroy()
+			end
+		end)
 	end
 
-	local aurasMod = ReplicatedStorage:WaitForChild("Auras", 6)
-	if aurasMod then
-		local ok, Auras = pcall(require, aurasMod)
-		if ok and type(Auras) == "table" and Auras.Fx then
-			if Auras.Fx.SmokeTexture then addAsset(Auras.Fx.SmokeTexture) end
-			if Auras.Fx.SparkTexture then addAsset(Auras.Fx.SparkTexture) end
-		end
+	local started = os.clock()
+	while finished < total and os.clock() - started < 75 do
+		local ratio = finished / math.max(1, total)
+		barFill.Size = UDim2.fromScale(ratio, 1)
+		progressLabel.Text = tr("ui.loading.preparing", { pct = math.floor(ratio * 100) })
+		local tip = math.floor((os.clock() - started) / 5) % #tips + 1
+		if tip ~= tipIndex then tipIndex = tip tipLabel.Text = tr(tips[tip]) end
+		task.wait(0.1)
 	end
-
-	local weaponsFolder = ReplicatedStorage:FindFirstChild("Weapons")
-	if weaponsFolder then
-		addAsset(weaponsFolder)
+	complete = true
+	local missing = failures + total - finished
+	player:SetAttribute("InitialAssetsMissing", missing)
+	if missing > 0 then
+		progressLabel.Text = tr("v3.loading.unavailable", { count = missing })
+		skipBtn.Text = tr("v3.loading.continue")
+		skipBtn.Visible = true
+		skipBtn.Activated:Wait()
+	else
+		barFill.Size = UDim2.fromScale(1, 1)
+		progressLabel.Text = tr("ui.loading.ready")
 	end
-
-	local totalAssets = #preloadList
-	local loadedAssets = 0
-	local preloadComplete = false
-
-	task.spawn(function()
-		if totalAssets > 0 then
-			pcall(function()
-				ContentProvider:PreloadAsync(preloadList, function()
-					loadedAssets += 1
-				end)
-			end)
-		end
-		for _,obj in holders do obj:Destroy() end
-  preloadComplete = true
-	end)
-
-	local startTime = os.clock()
-	local peakQueue = math.max(1, ContentProvider.RequestQueueSize)
-	local displayedPct = 0.05
-
-	while not finished do
-		local elapsed = os.clock() - startTime
-		local q = ContentProvider.RequestQueueSize
-		if q > peakQueue then peakQueue = q end
-
-		if elapsed > 1.2 and not skipBtn.Visible then
-			skipBtn.Visible = true
-			skipBtn.Text = tr("ui.loading.skip")
-		end
-
-		if math.floor(elapsed / 3.2) ~= math.floor((elapsed - 0.08) / 3.2) then
-			tipIdx = (tipIdx % #tips) + 1
-			tipLabel.Text = tr(tips[tipIdx])
-		end
-
-		local preloadRatio = totalAssets > 0 and (loadedAssets / totalAssets) or (preloadComplete and 1 or 0.5)
-		local queueRatio = peakQueue > 0 and (1 - (q / peakQueue)) or 1
-		local combinedRatio = (preloadRatio * 0.75) + (queueRatio * 0.25)
-		local timeRatio = math.clamp(elapsed / 2.8, 0, 1)
-
-		local targetPct = math.min(preloadComplete and 1 or 0.95,preloadRatio)
-		displayedPct = math.clamp(math.max(displayedPct, targetPct), 0.05, 1)
-
-		barFill.Size = UDim2.fromScale(displayedPct, 1)
-		progressLabel.Text = tr("ui.loading.preparing", { pct = math.floor(displayedPct * 100) })
-		crest.Rotation = 45 + math.sin(elapsed * 2) * 4
-
-		local readyToFinish = preloadComplete
-			and game:IsLoaded()
-			and (q == 0 or elapsed >= 2.6)
-			and elapsed >= 1.2
-
-		if readyToFinish then
-			finishLoading()
-			break
-		end
-		task.wait(0.05)
-	end
+	for _, asset in assets do asset:Destroy() end
+	finish()
 end)

@@ -11,7 +11,16 @@ return {
  Textures = { Fire = "rbxasset://textures/particles/fire_main.dds", Lightning = "rbxasset://textures/particles/sparkles_main.dds", Ice = "rbxasset://textures/particles/smoke_main.dds", Shadow = "rbxasset://textures/particles/smoke_main.dds" }, Crystal = "rbxasset://textures/particles/sparkles_main.dds" },
  HUD = { DamageDelay = 0.4, DamageTime = 0.65, Top = 0.06, Side = 0.025, Width = 0.34, Height = 80, Portrait = 54, PortraitAngle = 45, BarAngle = -2, NameHeight = 24, BarTop = 35, BarHeight = 16, EnemyStep = 92, Opponents = 2, Max = 100, ScaleWidth = 1100, ScaleMin = 0.5, BottomWidth = 440, StatusWidth = 0.24, StatusHeight = 0.045, NameSize = 16,
   -- icono de infusión: latido activa / carga llena, ladeo agotada
+  -- 12/11/2026: barras de arte (UiAssets.BarArt) y su disposición en el panel propio (px, sin escalar)
+  ArtBars = { EmptyTransparency = 0.18, LostTransparency = 0.45,
+   Layout = { Pad = 10, HeaderY = 8, HeaderHeight = 24, HeaderWidth = 170, HealthY = 22, HealthWidth = 340,
+    SideY = 98, SideWidth = 172, InfusionY = 134, InfusionWidth = 220, InfusionIcon = 30, RivalY = 10, RivalWidth = 250 } },
   InfusionIcon = { Size = 28, ActiveAmp = 0.14, ActiveSpeed = 9, FullAmp = 0.06, FullSpeed = 4, ActiveWobble = 40, ExhaustTilt = 14 } },
+ MobileHUD = {
+  Margin = 8, QueueHeight = 54, QueueBottom = 12, Gap = 10,
+  BarsWidth = 364, BarsHeight = 196, BarsWidthShare = 0.55, BarsMinHeightShare = 0.26, TouchBarsCenter = 0.38,
+  PadWidthShare = 0.43, PadHeightShare = 0.78, PadMaxScale = 1.18, PadEdge = 16,
+ },
  Camera = { Frequency = 24, SeedX = 11, SeedY = 37, SeedRoll = 71, BounceStart = 0.35, BounceTime = 0.22 },
  Impact = { Life = 0.1, SlashLife = 0.18, SlashSize = Vector3.new(0.08, 0.12, 5), SlashAngle = 35, SlashYaw = 90, White = Color3.new(1, 1, 1) },
  Walk = { Phase = 0.5, MaxStep = 4, Speed = 16, Hip = 34, Knee = 52, Ankle = 18, Side = 22, Arm = 22, Bob = 0.13, AirArms = 110, AirWave = 18, AirFrequency = 9 },
@@ -29,9 +38,14 @@ return {
  Directional = {
   -- Integración 0.2: en Studio a 92 px y 0,72 de transparencia casi no se veía; más grande y más opaco
   Side = 140, Thickness = 10, Gap = 8, OffsetY = -10, Edge = 80,
-  IdleTransparency = 0.5, StanceTransparency = 0.05, GuardGlow = 2.5,
-  Idle = Color3.fromRGB(235, 228, 214), Stance = Color3.fromRGB(255, 255, 255), Guard = Color3.fromRGB(150, 205, 255),
-  Attack = Color3.fromRGB(255, 40, 32), Unblockable = Color3.fromRGB(255, 196, 64), Kick = Color3.fromRGB(255, 140, 30),
+  IdleTransparency = 0.4, StanceTransparency = 0.05, GuardGlow = 2.5,
+  -- 12/11/2026: estética de plata (antes Idle era crema 235, 228, 214)
+  Idle = Color3.fromRGB(196, 202, 214), Stance = Color3.fromRGB(255, 255, 255),
+  SilverSheen = ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+   ColorSequenceKeypoint.new(0.45, Color3.fromRGB(170, 175, 188)), ColorSequenceKeypoint.new(0.6, Color3.fromRGB(225, 229, 238)),
+   ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 124, 138)) }),
+  Rim = Color3.fromRGB(16, 18, 24), RimWidth = 2, RimTransparency = 0.35, Vertex = 13, VertexColor = Color3.fromRGB(214, 219, 230), Guard = Color3.fromRGB(150, 205, 255),
+  Committed = Color3.fromRGB(155, 201, 224), Attack = Color3.fromRGB(255, 40, 32), Unblockable = Color3.fromRGB(255, 196, 64), Kick = Color3.fromRGB(255, 140, 30),
   Parry = Color3.fromRGB(255, 226, 120), ParryTime = 0.35, ParryScale = 1.35,
   Pulse = 14, PulseAmp = 0.25, OtherAttackers = 14, KickDot = 16,
  },
@@ -61,6 +75,7 @@ return {
   OrbitRadius = 34, OrbitMin = 26, OrbitHeight = 16, OrbitTurn = 50, -- grados que gira la vista general
   CloseDistance = 7.5, CloseEnd = 5.2, CloseHeight = 1.6, CloseSide = 2.2, LookHeight = 1.3,
   Fov = 55, FovClose = 42,
+  CueEnter = 0.24, CueHold = 0.55, CueExit = 0.33,
   Bars = 0.09, BarsTime = 0.35, -- franjas negras de cine (fracción de la altura de pantalla)
   Range = 260,             -- solo cuenta luchadores a esta distancia (otra partida en otra arena no entra)
  },

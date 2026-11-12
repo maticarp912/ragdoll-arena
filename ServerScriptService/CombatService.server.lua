@@ -104,14 +104,14 @@ Input.OnServerEvent:Connect(function(player, action, arg, extra, seq)
 	elseif action == "M1" then
 		if char:GetAttribute("Carrying") then
 			Combat.throw(char, validDir(arg)) -- tirón corto
-		else
-			Actions.m1(char)
+		elseif not Actions.m1(char) then
+			reject(player, seq, action)
 		end
 	elseif action == "Heavy" then
 		if char:GetAttribute("Carrying") then
 			Combat.throwChargeStart(char) -- mantener para cargar el lanzamiento
-		else
-			Actions.heavy(char)
+		elseif not Actions.heavy(char) then
+			reject(player, seq, action)
 		end
 	elseif action == "HeavyRelease" then
 		if char:GetAttribute("ThrowCharging") then

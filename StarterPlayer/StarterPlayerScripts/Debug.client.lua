@@ -240,7 +240,7 @@ markerFlash.Position = UDim2.fromScale(0.5, 0.3)
 markerFlash.Size = UDim2.fromOffset(300, 60)
 markerFlash.BackgroundTransparency = 1
 markerFlash.TextColor3 = C.TelegraphHeavy
-markerFlash.TextStrokeTransparency = 0.2
+markerFlash.TextStrokeTransparency = 1
 markerFlash.Font = Theme.Fonts.Title
 markerFlash.TextSize = 48
 markerFlash.TextTransparency = 1
@@ -251,7 +251,7 @@ markerFlash.Parent = gui
 local function flashMarker(name)
 	markerFlash.Text = name
 	markerFlash.TextTransparency = 0
-	markerFlash.TextStrokeTransparency = 0.2
+	markerFlash.TextStrokeTransparency = 1
 	TweenService:Create(markerFlash, TweenInfo.new(0.6), { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
 end
 

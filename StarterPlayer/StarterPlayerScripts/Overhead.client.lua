@@ -186,7 +186,7 @@ local function attach(model)
 	name.BackgroundTransparency = N.One
 	name.Font = Theme.Fonts.Title
 	name.TextSize = N.Value_15
-	name.TextStrokeTransparency = N.Value_0_35
+	name.TextStrokeTransparency = 1
 	name.TextColor3 = C.Bone
 	name.Parent = gui
 	-- 11/11/2026: efecto de oscuridad. Humo negro detrás del nombre y una sombra que respira sobre el texto.
@@ -210,7 +210,7 @@ local function attach(model)
 	name.TextScaled = true
 	local nameMax = Instance.new("UITextSizeConstraint") nameMax.MaxTextSize = N.Value_15 nameMax.MinTextSize = 8 nameMax.Parent = name
 	name.TextStrokeColor3 = Color3.fromRGB(10, 0, 4)
-	name.TextStrokeTransparency = 0.1
+	name.TextStrokeTransparency = 1
 	local shade = Instance.new("UIGradient")
 	shade.Rotation = 90
 	shade.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 140, 150))
@@ -240,7 +240,7 @@ local function attach(model)
 
 	local infusion = Instance.new("TextLabel")
  infusion.Size = UDim2.fromScale(N.One,N.One) infusion.BackgroundTransparency = N.One infusion.Font = Theme.Fonts.Number
- infusion.TextSize = Theme.Sizes.TextSmall infusion.TextStrokeTransparency = N.Value_0_35 infusion.Parent = statusRow
+ infusion.TextSize = Theme.Sizes.TextSmall infusion.TextStrokeTransparency = 1 infusion.Parent = statusRow
  local function updateInfusion()
   local def = Infusions.get(model:GetAttribute("InfusionId"))
   infusion.Text = def and (L.t("infusion." .. (model:GetAttribute("InfusionId") or "Fire")) .. (model:GetAttribute("InfusionActive") and " *" or "")) or ""

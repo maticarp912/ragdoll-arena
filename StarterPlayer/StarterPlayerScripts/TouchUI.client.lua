@@ -12,7 +12,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local GuiService = game:GetService("GuiService")
 local HttpService = game:GetService("HttpService")
 
 local UiTheme = require(ReplicatedStorage:WaitForChild("UiTheme"))
@@ -23,6 +22,7 @@ local InputBridge = require(ReplicatedStorage:WaitForChild("InputBridge"))
 local player = Players.LocalPlayer
 local Device = require(ReplicatedStorage:WaitForChild("Device"))
 local C = UiTheme.Colors
+local Mobile = require(ReplicatedStorage:WaitForChild("PolishConfig")).MobileHUD
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "TouchControlsGui"
@@ -442,18 +442,18 @@ local function updateVisibilityAndScale()
 	end
 	rightPad.Visible = show
 
-	local inset = GuiService:GetGuiInset()
-	local safeRight = math.max(18, inset.X + 14)
-	local safeBottom = math.max(16, inset.Y + 12)
-	rightPad.Position = UDim2.new(1, -safeRight, 1, -safeBottom)
+	local vp = gui.AbsoluteSize
+	if vp.X <= 0 or vp.Y <= 0 then return end
+	local inMatch = player:GetAttribute("InMatch") == true
+	local bottom = (inMatch or editMode) and Mobile.PadEdge
+		or Mobile.QueueBottom + Mobile.QueueHeight + Mobile.Gap
+	rightPad.Position = UDim2.new(1, -Mobile.PadEdge, 1, -bottom)
 
-	local cam = workspace.CurrentCamera
-	if cam then
-		local opt = player:GetAttribute("OptUiScale") or 1
-		local base = math.clamp(math.min(cam.ViewportSize.X / 880, cam.ViewportSize.Y / 520), 0.76, 1.18)
-		padScale.Scale = base * opt
-		editorScale.Scale = UiTheme.computeScale(cam.ViewportSize, 660, 480, player)
-	end
+	local opt = player:GetAttribute("OptUiScale") or 1
+	local widthCap = (vp.X * Mobile.PadWidthShare - Mobile.PadEdge) / PAD_W
+	local heightCap = math.min(vp.Y * Mobile.PadHeightShare, vp.Y - bottom - Mobile.Margin) / PAD_H
+	padScale.Scale = math.max(0.1, math.min(widthCap, heightCap, Mobile.PadMaxScale * opt))
+	editorScale.Scale = UiTheme.computeScale(vp, 660, 480, player)
 end
 
 player:GetAttributeChangedSignal("TouchEditMode"):Connect(function()
@@ -463,6 +463,8 @@ player:GetAttributeChangedSignal("TouchEditMode"):Connect(function()
 end)
 
 Device.Changed:Connect(updateVisibilityAndScale)
+gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateVisibilityAndScale)
+player:GetAttributeChangedSignal("InMatch"):Connect(updateVisibilityAndScale)
 player:GetAttributeChangedSignal("MenuOpen"):Connect(updateVisibilityAndScale)
 player:GetAttributeChangedSignal("OptUiScale"):Connect(updateVisibilityAndScale)
 -- 11/11 (rendimiento): 10 veces por segundo en vez de cada frame

@@ -17,53 +17,51 @@ local UiTheme = {}
 -- 1. Paleta de colores (Dark Fantasy)
 ----------------------------------------------------------------------
 UiTheme.Colors = {
-	-- 11/11/2026: paleta «Eclipse» (identidad propia, adiós a los grises y dorados genéricos).
-	--   Obsidiana violácea de fondo · Carmesí del Eclipse como acento de marca · Marfil para el texto ·
-	--   Verdín espectral solo para el foco del mando · El oro queda SOLO para dinero y rareza Legendaria.
-	-- Los nombres viejos (Gold, GoldBright...) se mantienen para no romper nada: ahora son los carmesí.
+	-- 0.3: fondos de pizarra, plata y acero azulado. Los colores de combate y rareza tienen su propia función.
+	-- Gold y sus variantes son tonos de plata para los consumidores históricos de la paleta.
 	-- Fondos y superficies
-	BgAbyss        = Color3.fromRGB(7, 6, 10),
-	BgPrimary      = Color3.fromRGB(14, 11, 17),
-	BgPanel        = Color3.fromRGB(22, 17, 25),
-	BgPanelLight   = Color3.fromRGB(31, 24, 35),
-	BgHeader       = Color3.fromRGB(18, 13, 21),
-	BgCard         = Color3.fromRGB(27, 21, 31),
-	BgCardHover    = Color3.fromRGB(39, 30, 44),
-	BgCardSelected = Color3.fromRGB(58, 20, 32),
-	BgCardDisabled = Color3.fromRGB(17, 14, 19),
-	BgPreview      = Color3.fromRGB(11, 9, 13),
+	BgAbyss        = Color3.fromRGB(8, 11, 15),
+	BgPrimary      = Color3.fromRGB(15, 20, 27),
+	BgPanel        = Color3.fromRGB(21, 28, 37),
+	BgPanelLight   = Color3.fromRGB(34, 43, 55),
+	BgHeader       = Color3.fromRGB(19, 26, 35),
+	BgCard         = Color3.fromRGB(27, 35, 45),
+	BgCardHover    = Color3.fromRGB(41, 53, 67),
+	BgCardSelected = Color3.fromRGB(46, 62, 79),
+	BgCardDisabled = Color3.fromRGB(19, 24, 31),
+	BgPreview      = Color3.fromRGB(13, 18, 25),
 	PreviewAmbient = Color3.fromRGB(170, 168, 184),
-	PreviewLight   = Color3.fromRGB(255, 240, 214),
-	BgBarBack      = Color3.fromRGB(10, 8, 12),
-	BgModalVeil    = Color3.fromRGB(3, 2, 5),
+	PreviewLight   = Color3.fromRGB(241, 243, 255),
+	BgBarBack      = Color3.fromRGB(10, 14, 20),
+	BgModalVeil    = Color3.fromRGB(4, 7, 11),
 
 	-- Ceniza (antes hierro y piedra)
-	IronDark       = Color3.fromRGB(34, 27, 38),
-	Iron           = Color3.fromRGB(48, 39, 53),
-	IronLight      = Color3.fromRGB(70, 58, 76),
-	Stone          = Color3.fromRGB(92, 80, 98),
+	IronDark       = Color3.fromRGB(32, 39, 49),
+	Iron           = Color3.fromRGB(49, 59, 72),
+	IronLight      = Color3.fromRGB(71, 84, 99),
+	Stone          = Color3.fromRGB(91, 104, 119),
 
-	-- Carmesí del Eclipse (acento de marca; los nombres «Gold» quedan por compatibilidad)
-	GoldBright     = Color3.fromRGB(255, 122, 116), -- carmesí claro: títulos, resaltados, borde activo
-	Gold           = Color3.fromRGB(204, 40, 60),   -- carmesí: bordes de paneles y tarjetas
-	GoldDim        = Color3.fromRGB(132, 30, 46),
-	GoldDark       = Color3.fromRGB(64, 14, 24),
+	-- Plata y acero azulado para la interfaz.
+	GoldBright     = Color3.fromRGB(228, 237, 247),
+	Gold           = Color3.fromRGB(177, 193, 210),
+	GoldDim        = Color3.fromRGB(105, 125, 147),
+	GoldDark       = Color3.fromRGB(50, 63, 79),
 
 	-- Acento secundario: verdín espectral (foco de mando, información, elementos interactivos fríos)
 	Accent         = Color3.fromRGB(96, 222, 204),
 	AccentDim      = Color3.fromRGB(40, 112, 104),
 
 	-- Texto (alto contraste sobre fondos oscuros)
-	TextPrimary    = Color3.fromRGB(246, 237, 222), -- marfil
-	TextSecondary  = Color3.fromRGB(200, 188, 178), -- hueso
-	TextMuted      = Color3.fromRGB(142, 128, 128), -- ceniza rosada
-	TextGold       = Color3.fromRGB(255, 140, 128), -- títulos
-	TextDark       = Color3.fromRGB(16, 10, 12),
+	TextPrimary    = Color3.fromRGB(241, 244, 248),
+	TextSecondary  = Color3.fromRGB(191, 203, 216),
+	TextMuted      = Color3.fromRGB(149, 163, 179),
+	TextGold       = Color3.fromRGB(215, 228, 241),
+	TextDark       = Color3.fromRGB(14, 20, 28),
 
 	-- Bordes y foco de mando
-	BorderSubtle   = Color3.fromRGB(52, 42, 56),
-	BorderDefault  = Color3.fromRGB(96, 38, 52),
-	BorderStrong   = Color3.fromRGB(204, 40, 60),
+	BorderSubtle   = Color3.fromRGB(54, 67, 82),
+	BorderDefault  = Color3.fromRGB(91, 107, 126),
+	BorderStrong   = Color3.fromRGB(162, 183, 205),
 	BorderFocus    = Color3.fromRGB(120, 240, 222), -- verdín: el foco del mando se distingue del carmesí
 
 	-- Estados semánticos y monedas
@@ -179,28 +177,14 @@ UiTheme.InfusionThemes = {
 ----------------------------------------------------------------------
 -- 4. Tipografía (FontFace con Font.new / Font.fromEnum + Enum.Font)
 ----------------------------------------------------------------------
--- 10/11/2026: tipografía nueva (pedido del usuario). Títulos góticos, textos en serif clásica y números
--- en sans legible. Para cambiarla, tocar solo estas dos tablas (y Theme.Fonts, que usan los textos del combate).
--- 10/11/2026: si una fuente no existiera en esta versión de Roblox, no se rompe la interfaz (cae a Gotham/Garamond)
-local function safeFont(name)
-	local ok, f = pcall(function() return Enum.Font[name] end)
-	if ok and f then return f end
-	return name == "GrenzeGotisch" and Enum.Font.Garamond or Enum.Font.GothamMedium
-end
-UiTheme.Fonts = {
-	Title  = safeFont("GrenzeGotisch"),
-	Header = safeFont("Merriweather"),
-	Body   = safeFont("Merriweather"),
-	Bold   = safeFont("Merriweather"),
-	Number = safeFont("BuilderSansBold"),
-}
+-- 0.3: serif común para títulos, cuerpo y números. Theme.Fonts cubre los rótulos de combate.
+local serif = Enum.Font.Garamond
+UiTheme.Fonts = { Title = serif, Header = serif, Body = serif, Bold = serif, Number = serif }
 
+local regular = Font.fromEnum(serif)
 UiTheme.FontFaces = {
-	Title  = Font.new("rbxasset://fonts/families/GrenzeGotisch.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
-	Header = Font.new("rbxasset://fonts/families/Merriweather.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
-	Body   = Font.new("rbxasset://fonts/families/Merriweather.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal),
-	Bold   = Font.new("rbxasset://fonts/families/Merriweather.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
-	Number = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal),
+	Title = regular, Header = regular, Body = regular, Number = regular,
+	Bold = Font.new(regular.Family, Enum.FontWeight.Bold, Enum.FontStyle.Normal),
 }
 
 -- 11/11/2026: textos más grandes y legibles (pedido del usuario). Antes 11 · 13 · 15 · 18 · 22 · 28 · 36.
@@ -291,7 +275,7 @@ function UiTheme.applyFont(instance, kind)
 	if face then
 		pcall(function() instance.FontFace = face end)
 	else
-		instance.Font = UiTheme.Fonts[kind or "Body"] or Enum.Font.GothamMedium
+		instance.Font = UiTheme.Fonts[kind or "Body"] or Enum.Font.Garamond
 	end
 end
 
@@ -364,6 +348,7 @@ UiTheme.FrameArt = {
 	Silver = Color3.fromRGB(176, 180, 190),
 	Window = { id = 115146949745382, rect = { 100, 24, 312, 464 }, slice = { 70, 70, 242, 394 }, scale = 0.42 },
 	Card = { id = 109248225662281, rect = { 99, 25, 314, 462 }, slice = { 66, 66, 248, 396 }, scale = 0.3 },
+	Loading = { id = 128983919450093, rect = { 98, 14, 316, 488 }, slice = { 100, 132, 216, 446 }, scale = 0.44 },
 	Inset = 4, -- px que el marco sobresale del panel
 	MinHeight = 56, -- paneles más bajos que esto no llevan marco
 }
@@ -550,7 +535,7 @@ function UiTheme.label(props)
 	lbl.TextScaled = props.scaled == true
 	lbl.TextXAlignment = props.alignX or Enum.TextXAlignment.Left
 	lbl.TextYAlignment = props.alignY or Enum.TextYAlignment.Center
-	lbl.TextStrokeTransparency = props.strokeTrans or 0.55
+	lbl.TextStrokeTransparency = 1
 	lbl.RichText = props.richText == true
 	if props.truncate then lbl.TextTruncate = props.truncate end
 	if props.zIndex then lbl.ZIndex = props.zIndex end
@@ -578,10 +563,9 @@ function UiTheme.button(props)
 		borderCol = UiTheme.Colors.Disabled
 		textCol = UiTheme.Colors.TextMuted
 	elseif variant == "primary" or variant == "gold" then
-		-- 11/11: botón principal carmesí con texto marfil
-		bgBase = Color3.fromRGB(178, 32, 52)
-		bgHover = Color3.fromRGB(214, 48, 68)
-		bgPress = Color3.fromRGB(128, 22, 38)
+		bgBase = UiTheme.Colors.BgCardSelected
+		bgHover = UiTheme.Colors.IronLight
+		bgPress = UiTheme.Colors.IronDark
 		borderCol = UiTheme.Colors.GoldBright -- (UiTheme.stroke lo pasa a plata si FrameArt está prendido)
 		textCol = UiTheme.Colors.TextPrimary
 	elseif variant == "robux" then
@@ -605,8 +589,8 @@ function UiTheme.button(props)
 		textCol = UiTheme.Colors.TextPrimary
 	elseif selected then
 		bgBase = UiTheme.Colors.BgCardSelected
-		bgHover = Color3.fromRGB(76, 28, 42)
-		bgPress = Color3.fromRGB(42, 14, 24)
+		bgHover = UiTheme.Colors.IronLight
+		bgPress = UiTheme.Colors.IronDark
 		borderCol = UiTheme.Colors.GoldBright
 		textCol = UiTheme.Colors.GoldBright
 	else
@@ -629,7 +613,7 @@ function UiTheme.button(props)
 	btn.Text = props.icon and "" or (props.text or "")
 	btn.TextColor3 = props.textColor or textCol
 	btn.TextSize = props.textSize or UiTheme.TextSizes.MD
-	btn.TextStrokeTransparency = 0.55
+	btn.TextStrokeTransparency = 1
 	btn.BorderSizePixel = 0
 	btn.Active = not disabled
 	btn.Selectable = not disabled and (props.selectable ~= false)

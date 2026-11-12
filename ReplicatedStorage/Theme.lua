@@ -64,17 +64,8 @@ Theme.Teams = {
 	OutlineTransparency = 0.55,
 }
 
--- 10/11/2026: si una fuente no existiera en esta versión de Roblox, no se rompe la interfaz (cae a Gotham/Garamond)
-local function safeFont(name)
-	local ok, f = pcall(function() return Enum.Font[name] end)
-	if ok and f then return f end
-	return name == "GrenzeGotisch" and Enum.Font.Garamond or Enum.Font.GothamMedium
-end
-Theme.Fonts = {
-	Title = safeFont("GrenzeGotisch"), -- 10/11: gótica para títulos (antes Garamond)
-	Body = safeFont("Merriweather"),  -- 10/11: serif clásica (antes Gotham)
-	Number = safeFont("BuilderSansBold"), -- números y teclas
-}
+-- Misma familia serif que la interfaz de UiTheme.
+Theme.Fonts = { Title = Enum.Font.Garamond, Body = Enum.Font.Garamond, Number = Enum.Font.Garamond }
 
 Theme.Sizes = {
 	Corner = 4,       -- esquinas casi rectas (piedra/metal)

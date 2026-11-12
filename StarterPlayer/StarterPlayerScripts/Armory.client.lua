@@ -571,13 +571,90 @@ task.spawn(function()
 	end)
 end)
 
+local function renderArsenal(width, height, top, compact, equippedWeapon, equippedSkin)
+	local railWidth = compact and math.floor(width * 0.36) or 218
+	local panelHeight = height - top - 54
+	local stageX = railWidth + 32
+	local stageWidth = width - stageX - 20
+	if not Weapons.Data[selectedId] then selectedId = equippedWeapon end
+	local focus
+	for i, weapon in Weapons.Order do
+		local id = weapon
+		local selected = id == selectedId
+		local row = UiTheme.button({
+			name = "Arsenal_" .. id, parent = panel,
+			position = UDim2.fromOffset(20, top + (i - 1) * 60),
+			size = UDim2.fromOffset(railWidth, 52),
+			text = "", selected = selected, textSize = UiTheme.TextSizes.SM,
+			onClick = function() selectedId = id render() end,
+		})
+		UiAssets.skinThumbnail(row, id, { weapon = id, blade = C.Gold, accent = C.GoldDim }, row.ZIndex + 1)
+		UiTheme.label({
+			parent = row, position = UDim2.fromOffset(54, 2), size = UDim2.new(1, -60, 1, -4),
+			text = itemName(id), scaled = true, minTextSize = 10, maxTextSize = UiTheme.TextSizes.MD,
+			color = selected and C.TextPrimary or C.TextSecondary, zIndex = row.ZIndex + 1,
+		})
+		if selected then focus = row end
+	end
+
+	local id = selectedId
+	local descH = compact and 72 or 48
+	local titleH = compact and 34 or 44
+	local previewY = top + titleH + descH + 10
+	local previewH = math.max(96, panelHeight - titleH - descH - 68)
+	UiTheme.label({
+		name = "ArsenalWeaponName", parent = panel, position = UDim2.fromOffset(stageX, top),
+		size = UDim2.fromOffset(stageWidth, titleH), text = itemName(id), font = "Title",
+		textSize = UiTheme.TextSizes.XXL, scaled = compact, color = C.TextPrimary,
+	})
+	UiTheme.label({
+		parent = panel, position = UDim2.fromOffset(stageX, top + titleH),
+		size = UDim2.fromOffset(stageWidth, descH), text = itemDesc(id), scaled = compact,
+		font = "Body", textSize = UiTheme.TextSizes.SM, minTextSize = 11, alignY = Enum.TextYAlignment.Top,
+		color = C.TextSecondary,
+	})
+
+	local vp = makeWeaponPreview(panel, id, id == equippedWeapon and equippedSkin or "Default",
+		{ stageX, previewY, stageWidth, previewH })
+	vp.Name = "ArsenalViewport"
+	vp.BackgroundTransparency = 1
+	local entry = table.remove(spins)
+	entry.base = CFrame.Angles(0, math.pi / 2, math.rad(30)) * entry.base.Rotation:Inverse() * entry.base
+	local _, modelSize = entry.model:GetBoundingBox()
+	local angle = math.rad(entry.camera.FieldOfView / 2)
+	local aspect = math.min(1, stageWidth / previewH)
+	entry.distance = modelSize.Magnitude * 0.58 / math.sin(math.atan(math.tan(angle) * aspect))
+	entry.lookHeight = 0
+	charSpin = entry
+	vp.Active = true
+	vp.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragInput = input
+			lastMousePos = input.Position
+		end
+	end)
+	vp.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseWheel then
+			entry.zoom = math.clamp(entry.zoom - input.Position.Z * 0.1, 0.65, 1.45)
+		end
+	end)
+	UiTheme.button({
+		name = "ArsenalEquip", parent = panel,
+		position = UDim2.fromOffset(stageX, previewY + previewH + 8),
+		size = UDim2.fromOffset(stageWidth, 42), text = L.t(id == equippedWeapon and "equipped" or "choose"),
+		variant = "primary", disabled = id == equippedWeapon,
+		onClick = function() weaponFilter = id invokeArmory("SelectWeapon", id) end,
+	})
+	return focus
+end
+
 function render()
 	if titleScroll and titleScroll.Parent then titleScrollPosition = titleScroll.CanvasPosition end
 	titleScroll = nil
 	table.clear(spins)
 	charSpin = nil
 	for _, ch in panel:GetChildren() do
-		if ch ~= scale and not ch:IsA("UIStroke") and not ch:IsA("UICorner") and not ch:IsA("UIGradient") and ch.Name ~= "Ornaments" then
+		if ch ~= scale and not ch:IsA("UIStroke") and not ch:IsA("UICorner") and not ch:IsA("UIGradient") and ch.Name ~= "Ornaments" and ch.Name ~= "FrameArt" then
 			ch:Destroy()
 		end
 	end
@@ -707,6 +784,15 @@ function render()
 
 	-- Subbarra de filtros en Skins
 	local top = mobile and 154 or 118
+	if tab == "Weapons" then
+		statusLabel = UiTheme.label({
+			name = "StatusMessage", parent = panel, position = UDim2.fromOffset(20, height - 34),
+			size = UDim2.new(1, -40, 0, 24), textSize = UiTheme.TextSizes.SM, color = C.TextSecondary,
+		})
+		local focus = renderArsenal(width, height, top, mobile, equippedWeapon, equippedSkin)
+		if Device.isGamepad() then GuiService.SelectedObject = focus or firstButton end
+		return
+	end
 	if tab == "Titles" then
 		local titleButton = renderTitles(width, height, top, mobile)
 		if Device.isGamepad() then GuiService.SelectedObject = titleButton or firstButton end
@@ -1352,7 +1438,9 @@ RunService.RenderStepped:Connect(function(dt)
 		charSpin.zoom = math.clamp(charSpin.zoom + zoomAxis * dt * 0.65, 0.65, 1.45)
 		local rot = CFrame.Angles(charSpin.pitch, charSpin.yaw, 0)
 		charSpin.model:PivotTo(rot * charSpin.base)
-		charSpin.camera.CFrame = CFrame.lookAt(Vector3.new(0, 0.4, charSpin.distance * charSpin.zoom), Vector3.new(0, 0.1, 0))
+		local look = charSpin.lookHeight or 0.1
+		local eye = charSpin.lookHeight or 0.4
+		charSpin.camera.CFrame = CFrame.lookAt(Vector3.new(0, eye, charSpin.distance * charSpin.zoom), Vector3.new(0, look, 0))
 	end
 
 	for i = #spins, 1, -1 do

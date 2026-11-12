@@ -822,6 +822,50 @@ end
 ----------------------------------------------------------------------
 -- Cementerio
 ----------------------------------------------------------------------
+local function plazaFinish(plaza)
+	local cfg = Cfg.PlazaFinish
+	local finish = folderIn(plaza, "PlazaFinish")
+	local floorY = 0.05 + 3 * Cfg.FloorLayerStep
+	for i = 1, cfg.PavingSegments do
+		local angle = math.pi * 2 * i / cfg.PavingSegments
+		local x = math.sin(angle) * cfg.PavingRadius
+		local z = -40 + math.cos(angle) * cfg.PavingRadius
+		local width = 1.65 + 0.18 * math.sin(i * 2.4)
+		part(finish, "CutPaving", Vector3.new(width, 0.1, 1.15),
+			at(x, floorY + 0.05, z) * CFrame.Angles(0, angle, 0),
+			cfg.Paving[(i - 1) % #cfg.Paving + 1], M.Slate, false).CastShadow = false
+	end
+
+	for i, pos in cfg.Stalls do
+		local origin = at(pos.X, floorY, pos.Z)
+		local wood = COL.Timber[2]
+		for _, x in { -3.25, 3.25 } do
+			for _, z in { -1.65, 1.65 } do
+				local height = z < 0 and 6 or 5
+				part(finish, "StallPost", Vector3.new(0.25, height, 0.25),
+					origin * CFrame.new(x, height / 2, z), wood, M.Wood, false)
+			end
+		end
+		local awning = origin * CFrame.new(0, 5.55, 0) * CFrame.Angles(math.rad(16), 0, 0)
+		part(finish, "CanvasAwning", Vector3.new(7.3, 0.12, 4.3), awning, cfg.Canvas[i], M.Fabric, false)
+		for _, x in { -3.45, 3.45 } do
+			part(finish, "AwningHem", Vector3.new(0.14, 0.06, 4.29),
+				awning * CFrame.new(x, 0.065, 0), cfg.CanvasHem, M.Fabric, false)
+		end
+		part(finish, "MarketCounter", Vector3.new(6.2, 0.28, 1.75),
+			origin * CFrame.new(0, 2.45, 0.72), COL.DoorWood, M.WoodPlanks, false)
+		for _, x in { -2.72, 2.72 } do
+			part(finish, "CounterLeg", Vector3.new(0.33, 2.4, 0.33),
+				origin * CFrame.new(x, 1.2, 0.72), wood, M.Wood, false)
+		end
+		for _, x in { -1.8, 0.15, 1.7 } do
+			part(finish, "MarketCrate", Vector3.new(0.95, 0.6, 1.12),
+				origin * CFrame.new(x, 2.89, 0.8) * CFrame.Angles(0, x * 0.12, 0),
+				COL.PlanterWood, M.WoodPlanks, false)
+		end
+	end
+end
+
 local function cemetery(root)
 	local f = folderIn(root, "Cemetery")
 	local r = Cfg.Walkable.Cemetery
@@ -930,7 +974,7 @@ local function gateAndAntechamber(root, result)
 		title.TextScaled = true
 		title.Font = Enum.Font.Garamond
 		title.TextColor3 = z.color
-		title.TextStrokeTransparency = 0.3
+		title.TextStrokeTransparency = 1
 		title.Parent = bb
 		local count = Instance.new("TextLabel")
 		count.Position = UDim2.fromScale(0, 0.6)
@@ -938,9 +982,9 @@ local function gateAndAntechamber(root, result)
 		count.BackgroundTransparency = 1
 		count.Text = ""
 		count.TextScaled = true
-		count.Font = Enum.Font.GothamBold
+		count.Font = Enum.Font.Garamond
 		count.TextColor3 = COL.Clock
-		count.TextStrokeTransparency = 0.3
+		count.TextStrokeTransparency = 1
 		count.Parent = bb
 		result.queueZones[mode] = { center = center, radius = z.radius, label = count }
 	end
@@ -1025,7 +1069,7 @@ local function locLabel(parent, key, color, size)
 	l.TextScaled = true
 	l.Font = Enum.Font.Garamond
 	l.TextColor3 = color
-	l.TextStrokeTransparency = 0.4
+	l.TextStrokeTransparency = 1
 	l:SetAttribute("LocKey", key)
 	l.Parent = parent
 	return l
@@ -1141,6 +1185,7 @@ function LobbyBuilder.build(parent)
 	lamps(root)
 	local plaza = folderIn(root, "Plaza")
 	angel(plaza, 0, -40, 1)
+	plazaFinish(plaza)
 	cemetery(root)
 	practiceYard(root)
 	gateAndAntechamber(root, result)

@@ -11,6 +11,12 @@
 --      de `SkinDesigns.lua` / `WeaponBuilder.lua` sin errores ni dependencias externas.
 
 local WeaponMeshes = {
+	-- 0.3: Corte de Plata. Activar después de importar y verificar el agarre en Studio.
+	SilverCut = {
+		MeshId = 0, TextureId = 0, Scale = Vector3.new(1, 1, 1), Offset = CFrame.identity,
+		BladeBase = Vector3.new(0, 0, 0.68), BladeTip = Vector3.new(0, 0.42, 5.30), TipZ = 5.30,
+		SourceFile = "modelos_armas/v0.3/SilverCut.fbx", TextureFile = "modelos_armas/v0.3/SilverCut_tex.png",
+	},
 	----------------------------------------------------------------------
 	-- TANDA 1 DE BLENDER (0.2 D6 / D15): 3 SKINS DE LA RULETA + 5 PILOTOS
 	----------------------------------------------------------------------

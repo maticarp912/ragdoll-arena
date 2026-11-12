@@ -318,7 +318,7 @@ local function update(char, dt, now)
 			st.clip = clip
 			-- la captura de movimiento ya trae su recorrido real: no se exagera
 			local isAttack = string.match(key, "^Weapons%.%w+%.M1_%d$") or string.match(key, "^Weapons%.%w+%.Heavy$")
-				or string.match(key, "^Weapons%.%w+%.Dir%a+$") -- 10/11: golpe básico por dirección
+				or string.match(key, "^Weapons%.%w+%.Dir%a+$") or string.match(key, "^Weapons%.%w+%.Heavy%a+$")
 			st.exag = not clip.mocap and isAttack and AnimClips.Playback.Exaggerate or nil
 			-- 0.2 (C23): recibir un golpe se exagera más
 			if not clip.mocap and string.match(key, "^Generic%.HitReact") then

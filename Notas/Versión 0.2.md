@@ -186,3 +186,31 @@ Medir llegada al primer duelo/desbloqueo, partidas completas, cosméticos reclam
 ## Entrega backend ronda 2 — 10/11/2026 18:20 (Argentina, UTC-3)
 Pedido: ejecutar la sección Codex de [[0.2 Ronda 2 - prompts]] y sus reglas comunes. 🔍 Servidor y datos de recompensas, compras reales de multiplicadores con almas y nuevas acciones administrativas implementados. Alcance, pruebas, decisiones técnicas y pendientes en la sección «Ronda 2» de [[Reporte 0.2 Codex]]; API definitiva y guardado táctil en [[Contratos 0.2]], C19/C10. Se preserva Coins y se denomina almas en LocaleCodex. Sin Studio, sin regenerar place y sin commit/push. Las conexiones pendientes del tutorial y las pantallas siguen en los archivos de Claude/Gemini, según el reparto.
 
+
+## Misiones, vista previa de cofres y visores de tienda
+
+11/11/2026 22:25 (Argentina)
+
+### Implementado
+
+- `git pull --ff-only` en `main`. El repositorio ya estaba al día en `c4f656f`. Reemplacé `ReplicatedStorage.Missions` en la sesión de Studio del place 91305058765116 con el módulo del repositorio.
+- Cofres muestra siluetas 2D por tipo de arma con colores de cada skin. Al seleccionar una recompensa cambia el único visor 3D. Las probabilidades, la garantía, la conversión de repetidas y el botón de abrir conservan su comportamiento.
+- Tienda construye los visores cuando el recuadro del modelo entra en el área visible y los libera al salir. Conserva el detalle interactivo. La construcción se reparte de a dos modelos para evitar cargar todo junto.
+- ForgeGUI generó el fondo del visor. Roblox aprobó el recurso `80032557793597`. El PNG fuente está en `ui_assets/Fondo visor de cofres - ForgeGUI.png`.
+
+### Comprobado en Studio
+
+- En Play del place publicado, Misiones abrió y mostró tres misiones diarias, sin errores en la Salida. Cerré ese Play.
+- En una copia local, comprobé la carga y liberación de visores al desplazar Tienda y el cambio de skin en Cofre Eclipse con un solo visor. El fondo se cargó y el espadón quedó encuadrado por completo.
+- Misma ventana de Studio a 655 × 635. Una muestra de 150 cuadros antes y una de 240 después, con las pantallas ya abiertas. Los tiempos variaron entre repeticiones, especialmente con carga en segundo plano.
+
+| Pantalla | Visores antes → después | Descendientes de los visores | Cuadro promedio | p95 |
+| --- | ---: | ---: | ---: | ---: |
+| Tienda al abrir | 84 → 2 | 10.782 → 171 | 26,10 → 17,08 ms | 38,97 → 20,29 ms |
+| Cofre Eclipse | 34 → 1 | 5.296 → 183 | 17,06 → 17,29 ms | 20,78 → 21,15 ms |
+
+### Pendiente
+
+- Publicar Misiones desde la ventana del place oficial. La revisión automática frenó el comando de publicación por el límite de uso. La sesión del place conserva el cambio.
+- Cofres y Tienda quedaron en el repositorio local y se probaron en una copia. Falta probar esos cambios en el place oficial y medir en un celular real. No hubo compras ni apertura de cofres en el place oficial durante esta prueba.
+

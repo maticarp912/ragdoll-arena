@@ -85,6 +85,50 @@ makeSide("Up", Vector2.new(0, -H / 3), 0)
 makeSide("Left", Vector2.new(-P.Side / 4, H / 6), 60)
 makeSide("Right", Vector2.new(P.Side / 4, H / 6), -60)
 
+-- 12/11/2026: acabado de plata. Cada lado lleva brillo metálico (el gradiente multiplica el color del
+-- estado, así rojo/dorado/celeste se siguen viendo), un borde oscuro detrás y rombos de plata en los vértices.
+for name, s in sides do
+	local g = Instance.new("UIGradient")
+	g.Rotation = 90
+	g.Color = P.SilverSheen
+	g.Parent = s.frame
+	local rim = Instance.new("Frame")
+	rim.Name = name .. "Rim"
+	rim.AnchorPoint = s.frame.AnchorPoint
+	rim.Position = s.frame.Position
+	rim.Rotation = s.frame.Rotation
+	rim.Size = s.frame.Size + UDim2.fromOffset(P.RimWidth * 2, P.RimWidth * 2)
+	rim.BackgroundColor3 = P.Rim
+	rim.BackgroundTransparency = P.RimTransparency
+	rim.BorderSizePixel = 0
+	rim.ZIndex = 0
+	rim.Parent = root
+	local rc = Instance.new("UICorner")
+	rc.CornerRadius = UDim.new(0.5, 0)
+	rc.Parent = rim
+end
+for _, v in { Vector2.new(-P.Side / 2, -H / 3), Vector2.new(P.Side / 2, -H / 3), Vector2.new(0, H * 2 / 3) } do
+	local gem = Instance.new("Frame")
+	gem.Name = "Vertex"
+	gem.AnchorPoint = Vector2.new(0.5, 0.5)
+	gem.Position = UDim2.fromOffset(center.X + v.X, center.Y + v.Y)
+	gem.Size = UDim2.fromOffset(P.Vertex, P.Vertex)
+	gem.Rotation = 45
+	gem.BackgroundColor3 = P.VertexColor
+	gem.BackgroundTransparency = P.IdleTransparency * 0.5
+	gem.BorderSizePixel = 0
+	gem.ZIndex = 2
+	gem.Parent = root
+	local gs = Instance.new("UIStroke")
+	gs.Color = P.Rim
+	gs.Thickness = 1.5
+	gs.Parent = gem
+	local gg = Instance.new("UIGradient")
+	gg.Rotation = 45
+	gg.Color = P.SilverSheen
+	gg.Parent = gem
+end
+
 -- Aviso de patada: punto en el vértice de abajo
 local kickDot = Instance.new("Frame")
 kickDot.Name = "Kick"
@@ -125,6 +169,8 @@ local lockValue = player:WaitForChild("LockTarget", 10)
 local predicted = player:WaitForChild("PredictedStance", 10)
 
 local function myStance(char)
+	local attack = char:GetAttribute("AttackDir")
+	if table.find(DIR.Dirs, attack) then return attack end
 	if predicted and predicted.Value ~= "" and os.clock() - (predicted:GetAttribute("At") or 0) < DIR.Input.PredictHold then
 		return predicted.Value
 	end
@@ -192,6 +238,7 @@ RunService.RenderStepped:Connect(function()
 
 	local stance = myStance(char)
 	local blocking = char:GetAttribute("Blocking") == true
+	local lockedSide = char:GetAttribute("AttackDir") == stance
 	local t = os.clock()
 	local pulse = 1 - P.PulseAmp * (0.5 + 0.5 * math.sin(t * P.Pulse))
 
@@ -199,10 +246,10 @@ RunService.RenderStepped:Connect(function()
 	for name, s in sides do
 		local f = s.frame
 		if name == stance then
-			f.BackgroundColor3 = blocking and P.Guard or P.Stance
+			f.BackgroundColor3 = blocking and P.Guard or (lockedSide and P.Committed or P.Stance)
 			f.BackgroundTransparency = P.StanceTransparency
-			s.stroke.Thickness = blocking and P.GuardGlow or 0
-			s.stroke.Color = P.Guard
+			s.stroke.Thickness = (blocking or lockedSide) and P.GuardGlow or 0
+			s.stroke.Color = blocking and P.Guard or P.Committed
 		else
 			f.BackgroundColor3 = P.Idle
 			f.BackgroundTransparency = P.IdleTransparency

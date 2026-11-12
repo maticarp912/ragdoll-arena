@@ -1,6 +1,6 @@
 -- LocalScript: StarterPlayerScripts/PartyUI
 -- 11/11/2026: party de 2 (servidor: PartyService). Va dentro de la barra de partidas (QueueBar de LobbyUI), a la
--- derecha de RANKED: tu foto de avatar y al lado la de tu compañero, o un «+» para invitar.
+-- al lado de la cola: tu foto y la de tu compañero, o un «+» para invitar.
 -- Al tocar «+» se abre la lista de jugadores del servidor, con tus amigos de Roblox arriba de todo.
 -- Al tocar la foto de tu compañero: salir de la party. Aviso de invitación con Aceptar / Rechazar.
 
@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 local UiTheme = require(ReplicatedStorage:WaitForChild("UiTheme"))
+local UiAssets = require(ReplicatedStorage:WaitForChild("UiAssets"))
 local L = require(ReplicatedStorage:WaitForChild("Localization"))
 local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Party", 20)
 if not remote then return end
@@ -69,7 +70,17 @@ local function avatarCircle(parent, userId, size)
 	img.Image = userId and userId > 0 and thumb(userId) or ""
 	img.Parent = parent
 	UiTheme.corner(img, size)
-	UiTheme.stroke(img, C.Gold, 1.5, 0.15)
+	local portrait = UiAssets.imageUri("frame_avatar")
+	if portrait then
+		local rim = Instance.new("ImageLabel")
+		rim.Name = "SilverPortrait"
+		rim.BackgroundTransparency = 1
+		rim.Size = UDim2.fromScale(1, 1)
+		rim.Image = portrait
+		rim.Parent = img
+	else
+		UiTheme.stroke(img, C.Gold, 1.5, 0.15)
+	end
 	return img
 end
 

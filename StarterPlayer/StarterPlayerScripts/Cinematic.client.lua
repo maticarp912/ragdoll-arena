@@ -15,6 +15,9 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Polish = require(ReplicatedStorage:WaitForChild("PolishConfig"))
+local UiTheme = require(ReplicatedStorage:WaitForChild("UiTheme"))
+local UiAssets = require(ReplicatedStorage:WaitForChild("UiAssets"))
+local L = require(ReplicatedStorage:WaitForChild("Localization"))
 local CIN = Polish.Cinematic
 local player = Players.LocalPlayer
 
@@ -22,7 +25,7 @@ if not CIN then return end
 
 local BIND = "MatchCinematic"
 local playing = 0 -- token de la cinemática en curso
-local savedFov = nil
+local savedFov, activeCamera, originalType
 local currentEnds = nil -- PhaseEnds de la cinemática en curso (no reiniciar si llega repetido)
 
 ----------------------------------------------------------------------
@@ -113,17 +116,15 @@ end
 -- Reproducción
 ----------------------------------------------------------------------
 local function stop(token)
-	if token and token ~= playing then return end
+	if not activeCamera or (token and token ~= playing) then return end
 	playing += 1
 	pcall(function() RunService:UnbindFromRenderStep(BIND) end)
-	local camera = workspace.CurrentCamera
-	if camera and camera.CameraType == Enum.CameraType.Scriptable then
-		camera.CameraType = Enum.CameraType.Custom
-		local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-		if hum then camera.CameraSubject = hum end
+	local camera = activeCamera
+	if camera == workspace.CurrentCamera and camera.CameraType == Enum.CameraType.Scriptable then
+		camera.CameraType = originalType
+		camera.FieldOfView = savedFov
 	end
-	if camera and savedFov then camera.FieldOfView = savedFov end
-	savedFov = nil
+	activeCamera, savedFov, originalType = nil, nil, nil
 	currentEnds = nil
 	showBars(false)
 end
@@ -142,7 +143,8 @@ local function play(endsAt)
 	local token = playing
 	currentEnds = endsAt
 	local camera = workspace.CurrentCamera
-	savedFov = camera.FieldOfView
+	if not camera then currentEnds = nil return end
+	activeCamera, savedFov, originalType = camera, camera.FieldOfView, camera.CameraType
 	camera.CameraType = Enum.CameraType.Scriptable
 	showBars(true)
 
@@ -160,7 +162,7 @@ local function play(endsAt)
 	RunService:BindToRenderStep(BIND, Enum.RenderPriority.Camera.Value + 10, function()
 		if token ~= playing then return end
 		local t = workspace:GetServerTimeNow() - startAt
-		if t >= total or player:GetAttribute("MatchPhase") ~= "Cinematic" then
+		if t >= total or camera ~= workspace.CurrentCamera or player:GetAttribute("MatchPhase") ~= "Cinematic" then
 			stop(token)
 			return
 		end
@@ -195,3 +197,115 @@ end
 player:GetAttributeChangedSignal("MatchPhase"):Connect(check)
 player:GetAttributeChangedSignal("PhaseEnds"):Connect(check)
 player.CharacterRemoving:Connect(function() stop() end)
+
+-- El asalto se anuncia durante la cuenta regresiva. La señal de combate coincide
+-- con el permiso real del servidor, incluso si el cliente recibe la fase con retraso.
+local cueGui = Instance.new("ScreenGui")
+cueGui.Name = "DuelAnnouncement"
+cueGui.ResetOnSpawn = false
+cueGui.DisplayOrder = 14
+cueGui.Parent = gui.Parent
+
+local seal = Instance.new("CanvasGroup")
+seal.Name = "DuelSeal"
+seal.AnchorPoint = Vector2.new(0.5, 0.5)
+seal.Position = UDim2.fromScale(0.5, 0.43)
+seal.Size = UDim2.fromScale(0.74, 0.32)
+seal.BackgroundTransparency = 1
+seal.Visible = false
+seal.Parent = cueGui
+
+-- 12/11/2026: «Asalto» / «¡A luchar!» entre dos separadores de plata (separador_clasico_01 arriba y
+-- el mismo dado vuelta abajo) sobre una franja oscura que se desvanece a los costados.
+local band = Instance.new("Frame")
+band.Name = "Band"
+band.AnchorPoint = Vector2.new(0.5, 0.5)
+band.Position = UDim2.fromScale(0.5, 0.5)
+band.Size = UDim2.fromScale(1, 0.5)
+band.BackgroundColor3 = UiTheme.Colors.BgAbyss
+band.BackgroundTransparency = 0.25
+band.BorderSizePixel = 0
+band.Parent = seal
+local bandFade = Instance.new("UIGradient")
+bandFade.Transparency = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.25, 0.1),
+	NumberSequenceKeypoint.new(0.75, 0.1), NumberSequenceKeypoint.new(1, 1),
+})
+bandFade.Parent = band
+
+for i, spot in { { 0.17, 0 }, { 0.83, 180 } } do
+	local sep = Instance.new("ImageLabel")
+	sep.Name = "Separator" .. i
+	sep.AnchorPoint = Vector2.new(0.5, 0.5)
+	sep.Position = UDim2.fromScale(0.5, spot[1])
+	sep.Size = UDim2.fromScale(0.6, 0.38)
+	sep.Rotation = spot[2]
+	sep.BackgroundTransparency = 1
+	sep.Image = UiAssets.imageUri("separator_classic_1") or ""
+	sep.ScaleType = Enum.ScaleType.Fit
+	sep.ZIndex = 2
+	sep.Parent = seal
+end
+
+local cue = UiTheme.label({
+	name = "DuelCue", parent = seal, anchor = Vector2.new(0.5, 0.5),
+	position = UDim2.fromScale(0.5, 0.5), size = UDim2.fromScale(0.85, 0.37),
+	text = "", font = "Title", scaled = true, minTextSize = 18, maxTextSize = 72,
+	alignX = Enum.TextXAlignment.Center, color = UiTheme.Colors.TextPrimary, zIndex = 2,
+})
+local cueScale = Instance.new("UIScale")
+cueScale.Parent = seal
+local cueVersion = 0
+local cueMode
+local enterTween, exitTween
+local function announce(mode, round)
+	if cueMode == mode then return end
+	cueMode = mode
+	cueVersion += 1
+	local version = cueVersion
+	if enterTween then enterTween:Cancel() end
+	if exitTween then exitTween:Cancel() end
+	seal.Visible = mode ~= nil
+	if not mode then return end
+	cue.Text = mode == "round" and L.t("v3.duel.round", { round = round }) or L.t("v3.duel.fight")
+	seal.GroupTransparency = 0.15
+	cueScale.Scale = 0.83
+	enterTween = TweenService:Create(cueScale, TweenInfo.new(CIN.CueEnter, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 })
+	enterTween:Play()
+	if mode == "fight" then
+		task.delay(CIN.CueHold, function()
+			if version ~= cueVersion then return end
+			exitTween = TweenService:Create(seal, TweenInfo.new(CIN.CueExit), { GroupTransparency = 1 })
+			exitTween:Play()
+			exitTween.Completed:Wait()
+			if version == cueVersion then seal.Visible = false end
+		end)
+	end
+end
+
+local function refreshCue()
+	local char = player.Character
+	if not char or not player:GetAttribute("InMatch") or player:GetAttribute("MatchPhase") ~= "Round" then
+		announce(nil)
+		return
+	end
+	local round = player:GetAttribute("RoundNumber")
+	if type(round) ~= "number" then return end
+	if char:GetAttribute("CanFight") then
+		if cueMode == "round" then announce("fight", round) end
+	elseif char:GetAttribute("Frozen") then
+		announce("round", round)
+	end
+end
+
+local readyConnection
+local function watchCharacter(char)
+	if readyConnection then readyConnection:Disconnect() end
+	readyConnection = char:GetAttributeChangedSignal("CanFight"):Connect(refreshCue)
+	refreshCue()
+end
+player.CharacterAdded:Connect(watchCharacter)
+player:GetAttributeChangedSignal("MatchPhase"):Connect(refreshCue)
+player:GetAttributeChangedSignal("RoundNumber"):Connect(refreshCue)
+player:GetAttributeChangedSignal("InMatch"):Connect(refreshCue)
+if player.Character then watchCharacter(player.Character) end

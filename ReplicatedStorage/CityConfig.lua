@@ -59,12 +59,12 @@ CityConfig.Colors = {
 	Cobble = rgb(96, 98, 108), Street = rgb(78, 80, 90), Plaza = rgb(104, 104, 112),
 	Bricks = { rgb(74, 50, 44), rgb(60, 54, 58), rgb(70, 64, 60), rgb(52, 50, 60), rgb(82, 60, 50) },
 	Plaster = {
-		rgb(186, 172, 148), -- pergamino cálido
+		rgb(153, 149, 137), -- cal envejecida
 		rgb(174, 156, 132), -- ocre arena suave
 		rgb(166, 164, 154), -- caliza ceniza clara
 		rgb(170, 152, 144), -- arcilla rosada vieja
 		rgb(154, 162, 152), -- salvia pálido nocturno
-		rgb(180, 164, 138), -- crema dorado antiguo
+		rgb(147, 145, 134), -- revoque gris cálido
 	},
 	Timber = {
 		rgb(52, 36, 28),    -- roble oscuro
@@ -101,6 +101,14 @@ CityConfig.Colors = {
 -- Orientación hacia la arena y armería (tienda) en la plaza
 CityConfig.Guide = { Color = rgb(235, 200, 120), Transparency = 0.35, ArrowSpacing = 22, BeaconHeight = 140 }
 CityConfig.Shop = { Position = Vector3.new(-26, 0, -60) }
+
+CityConfig.PlazaFinish = {
+	Stalls = { Vector3.new(-26, 0, -63), Vector3.new(26, 0, -63) },
+	Canvas = { rgb(88, 79, 75), rgb(59, 71, 78) },
+	CanvasHem = rgb(143, 134, 117),
+	Paving = { rgb(91, 96, 103), rgb(106, 110, 115), rgb(118, 118, 113) },
+	PavingRadius = 9, PavingSegments = 26,
+}
 
 CityConfig.Seed = 1888
 
