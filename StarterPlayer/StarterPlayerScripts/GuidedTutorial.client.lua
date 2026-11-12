@@ -97,6 +97,15 @@ skipFill.BorderSizePixel = 0
 skipFill.Size = UDim2.fromScale(0, 1)
 skipFill.ZIndex = skip.ZIndex
 skipFill.Parent = skip
+-- queda debajo del panel, a la derecha y por fuera: en pantallas chicas arriba a la derecha lo tapaba
+local function placeSkip()
+	local y = panel.AbsolutePosition.Y - gui.AbsolutePosition.Y + panel.AbsoluteSize.Y + 10
+	skip.Position = UDim2.new(1, -12, 0, math.max(y, 8))
+end
+panel:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeSkip)
+panel:GetPropertyChangedSignal("AbsolutePosition"):Connect(placeSkip)
+gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeSkip)
+task.defer(placeSkip)
 local holdStart
 skip.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch
@@ -211,7 +220,7 @@ local function render()
 	if needs[step] then counter.Text ..= (" · %d/%d"):format(count, needs[step]) end
 	skip.Text = L.t("gt.skipHold")
 	armory.Text = L.t("ui.lobby.dock.armory")
-	skip.Visible = step ~= "done"
+	skip.Visible = step ~= "done" and step ~= "codex" -- la ficha de armas ocupa ese lugar
 	armoryHolder.Visible = step == "armory" and gui.Enabled
 	local showCodex = step == "codex" and gui.Enabled
 	if showCodex and not codexCard.Visible then
@@ -380,7 +389,7 @@ local function refresh()
 	gui.Enabled = inYard and not player:GetAttribute("InitialLoading") and not player:GetAttribute("MainMenuOpen")
 		and not player:GetAttribute("MenuOpen")
 	if gui.Enabled then render() focusTutorial() else armoryHolder.Visible = false codexCard.Visible = false end
-	skip.Visible = gui.Enabled and G.Steps[index] ~= "done"
+	skip.Visible = gui.Enabled and G.Steps[index] ~= "done" and G.Steps[index] ~= "codex"
 end
 for _, attr in { "InTutorial", "InitialLoading", "MainMenuOpen", "MenuOpen" } do
 	player:GetAttributeChangedSignal(attr):Connect(refresh)
