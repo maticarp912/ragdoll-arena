@@ -11,9 +11,11 @@
 --      de `SkinDesigns.lua` / `WeaponBuilder.lua` sin errores ni dependencias externas.
 
 local WeaponMeshes = {
-	-- Piloto Vigilia Violeta (Relic10). Completar IDs después de importar y verificar el pivote.
+	-- Vigilia Violeta (Relic10). El importador amplió la malla 100 veces y la centró en su caja.
 	Violet = {
-		MeshId = 0, TextureId = 0, Scale = Vector3.new(1, 1, 1), Offset = CFrame.identity,
+		MeshId = 126787978862481, TextureId = 103125359509994,
+		Scale = Vector3.one * 0.01, PartSize = Vector3.new(0.196, 1.27884, 5.92402),
+		Offset = CFrame.new(0, 0, 2.33053),
 		BladeBase = Vector3.new(0, 0, 0.7714), BladeTip = Vector3.new(0, 0, 5.3), TipZ = 5.3,
 		SourceFile = "modelos_armas/v0.3/Vigilia Violeta/VigiliaVioleta.fbx",
 		TextureFile = "modelos_armas/v0.3/Vigilia Violeta/VigiliaVioleta_tex.jpg",

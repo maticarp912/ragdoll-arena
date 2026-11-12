@@ -26,3 +26,8 @@ Studio puede conservar accesos viejos en Recientes. Para ir al archivo actual, a
 ## Mocap por arma (punto A)
 - **Ragdoll Sword pilot test.rbxlx** quedó guardado por MCP con el índice y los cuatro módulos. Es la copia local que se usó para probar los fuertes de Espada después de la división.
 - El módulo más grande tiene 86.747 bytes. El detalle de las pruebas y las capturas está en [[Versión 0.3#Mocap por arma (punto A)]].
+
+## Vigilia Violeta (punto B)
+
+- **Ragdoll Sword pilot test.rbxlx** quedó guardado en F: con la skin Relic10 conectada. La ventana en la que se importó el FBX pedía Guardar como, por lo que se guardó desde la otra ventana editable del mismo archivo de prueba. La skin se construye por ID y el place guardado no contiene la malla gigante de la importación.
+- Pruebas y capturas en [[Versión 0.3#Vigilia Violeta en Studio (punto B)]].

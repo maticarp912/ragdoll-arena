@@ -780,11 +780,14 @@ local function populateFromMesh(container, weaponId, skinId)
 	local tex = Assets.toContent(meshSpec.TextureId)
 	if tex then mesh.TextureId = tex end
 	mesh.Parent = body
+	local offset = meshSpec.Offset or CFrame.identity
+	-- Los visores pueden anclar la malla antes de que el Weld llegue a resolver su posición.
+	body.CFrame = handle.CFrame * offset
 	body.Parent = container
 	local w = Instance.new("Weld")
 	w.Part0 = handle
 	w.Part1 = body
-	if meshSpec.Offset then w.C0 = meshSpec.Offset end
+	w.C0 = offset
 	w.Parent = body
 	local info = WeaponBuilder.Info[weaponId] or WeaponBuilder.Info.Sword
 	local tipPos = meshSpec.BladeTip or (meshSpec.TipZ and Vector3.new(0, 0, meshSpec.TipZ)) or nil

@@ -175,3 +175,22 @@ La prueba local fue integrada a `Ragdoll Arena.rbxlx` en la raíz del proyecto d
 
 - Revisar las capturas y esperar el OK para empezar B, la importación y prueba de Vigilia Violeta. Las otras 21 animaciones y las infusiones de cinco capas quedan para C y D.
 - La publicación sigue pendiente de indicación del usuario.
+
+## Vigilia Violeta en Studio (punto B)
+
+### Implementado
+
+- El FBX que importó el usuario quedó conectado a Relic10 en `WeaponMeshes.lua` con MeshId 126787978862481 y TextureId 103125359509994.
+- La malla importada medía 592,40 studs de largo. La escala visual quedó en 0,01 y el largo en 5,924 studs, con el centro de la malla a 2,33053 studs del origen del mango. Las posiciones de la base y la punta de la hoja siguen referidas al mango.
+- `WeaponBuilder` coloca la malla antes de soldarla para que la vista previa pueda anclarla en su posición. Se guardaron los scripts en la copia local `Ragdoll Sword pilot test.rbxlx`.
+
+### Comprobado en Studio
+
+- En Play, el remoto de equipamiento aplicó Relic10 al Tool de Espada. Comprobé la soldadura y la posición relativa al mango. La miniatura y el maniquí de Armería → Skins usaron la misma malla y textura.
+- El precargador informó Success para ambos IDs tanto en Play como al abrir el modelo desde la copia local editable. Studio emitió un aviso de representación de textura en la sesión de Play; la textura se vio en las dos capturas.
+- Capturas en `F:/RobloxJuegos/Archivo Ragdoll Arena/Capturas Vigilia Violeta`. El chequeo de Luau pasó los 113 archivos.
+
+### Pendiente
+
+- Confirmar que la experiencia publicada puede cargar ambos assets cuando se publique esta tanda.
+- Esperar el OK para el punto C y empezar por Espadón.
